@@ -31,3 +31,5 @@
 - Nine integration tests observed failing before their implementations, then passing.
 - Independent agent review found no actionable issues; extra checks covered binary/symlink replacement cache eviction.
 - Local `make check`, workflow YAML parsing and shell syntax checks pass. Setup commit `257437b` pushed; PR #1 opened; an initial reviewer request was removed per the user’s subsequent instruction to review personally. Future agents must not automatically request organization reviewers. GitHub Actions run 43772999213 passed validation and confirmed Slack notification delivery. Final documentation handoff triggers a fresh CI run.
+
+- The user merged PR #1 into main (`c42344f`) while the reviewer-preference change was being saved. Follow-up PR #2 on docs/personal-pr-review contains only that preference and the corrected handoff; no organization reviewers requested.
