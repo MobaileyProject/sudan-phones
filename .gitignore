@@ -45,3 +45,7 @@ local.properties
 # Scratch & Logs
 *.log
 scratch/
+
+# Local search cache (one per checkout) and isolated task worktrees
+.search_index.db*
+.worktrees/
