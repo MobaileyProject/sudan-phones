@@ -16,7 +16,7 @@
 - [x] 2. Write CLI integration tests before implementation: symbol/route/Kotlin/bug retrieval, ignored files, query punctuation, cache update/deletion, bounded output and invocation outside root.
 - [x] 3. Implement scripts/search_codebase.py with Git-aware file discovery, incremental content hashing, AST symbols and bounded chunks, literal FTS queries, automatic cache refresh.
 - [x] 4. Add tested deterministic OpenAPI export/check commands; wire tests, syntax checks and contract checks into existing CI without changing Slack secrets.
-- [ ] 5. Run make check, verify ignored caches and agent links, get independent review, update state, commit with the requested message, publish and monitor CI.
+- [x] 5. Run make check, verify ignored caches and agent links, get independent review, update state, commit with the requested message, publish and monitor CI.
 
 ## Review focus
 - Ignored secrets and symlinks must not enter the search cache.
@@ -30,4 +30,4 @@
 - Tasks 1–4 implemented in place on the requested feature branch; no unrelated work was stashed or changed.
 - Nine integration tests observed failing before their implementations, then passing.
 - Independent agent review found no actionable issues; extra checks covered binary/symlink replacement cache eviction.
-- Local `make check`, workflow YAML parsing and shell syntax checks pass. Remote publication/CI remains task 5.
+- Local `make check`, workflow YAML parsing and shell syntax checks pass. Setup commit `257437b` pushed; PR #1 opened and review requested from @MoatazAbdElmutaal. GitHub Actions run 43772999213 passed validation and confirmed Slack notification delivery. Final documentation handoff triggers a fresh CI run.
