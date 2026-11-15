@@ -53,6 +53,9 @@ repository convention. Never put credentials or private chat transcripts in memo
   ```
   If sandbox permissions prevent a sibling worktree, use an allowed temporary
   directory. Never force-remove a dirty review worktree.
+- Do not automatically request review from the other founder or organization members.
+  The user will review PRs personally; request another reviewer only when explicitly
+  instructed. Preserve this preference when opening future PRs.
 - Merge only with passing automated checks, a non-draft PR, and recorded peer
   human/agent approval: `gh pr merge <id> --squash --delete-branch`. Do not approve
   your own PR or bypass the review gate.

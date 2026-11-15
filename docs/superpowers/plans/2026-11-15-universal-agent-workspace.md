@@ -30,4 +30,4 @@
 - Tasks 1–4 implemented in place on the requested feature branch; no unrelated work was stashed or changed.
 - Nine integration tests observed failing before their implementations, then passing.
 - Independent agent review found no actionable issues; extra checks covered binary/symlink replacement cache eviction.
-- Local `make check`, workflow YAML parsing and shell syntax checks pass. Setup commit `257437b` pushed; PR #1 opened and review requested from @MoatazAbdElmutaal. GitHub Actions run 43772999213 passed validation and confirmed Slack notification delivery. Final documentation handoff triggers a fresh CI run.
+- Local `make check`, workflow YAML parsing and shell syntax checks pass. Setup commit `257437b` pushed; PR #1 opened; an initial reviewer request was removed per the user’s subsequent instruction to review personally. Future agents must not automatically request organization reviewers. GitHub Actions run 43772999213 passed validation and confirmed Slack notification delivery. Final documentation handoff triggers a fresh CI run.
