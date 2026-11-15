@@ -1,0 +1,55 @@
+name: CI & Slack Integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validation & Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Run Secret Scan
+        run: python3 scripts/check_secrets.py
+
+  notify:
+    name: Notify Slack
+    needs: [validate]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Slack Notification
+        if: env.SLACK_BOT_TOKEN != ''
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_UPDATES || 'C0CHSASMZMK' }}
+          WORKFLOW_STATUS: ${{ needs.validate.result }}
+        run: |
+          EMOJI="✅"
+          STATUS_TEXT="passed"
+          if [ "$WORKFLOW_STATUS" != "success" ]; then
+            EMOJI="❌"
+            STATUS_TEXT="failed"
+          fi
+          
+          PAYLOAD=$(cat <<EOF
+          {
+            "channel": "$SLACK_CHANNEL",
+            "text": "$EMOJI *GitHub Actions CI ($GITHUB_REF_NAME)*: Validation $STATUS_TEXT on commit \`${GITHUB_SHA:0:7}\` by @$GITHUB_ACTOR.\n<https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|View Workflow Run>"
+          }
+          EOF
+          )
+          
+          curl -s -X POST -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H "Content-type: application/json; charset=utf-8" \
+            -d "$PAYLOAD" \
+            https://slack.com/api/chat.postMessage
