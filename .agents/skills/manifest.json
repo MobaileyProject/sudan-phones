@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "skills": [
+    {
+      "name": "api-domain-workflow",
+      "kind": "custom"
+    },
+    {
+      "name": "arabic-offline-qa",
+      "kind": "custom"
+    },
+    {
+      "name": "defect-to-regression",
+      "kind": "custom"
+    },
+    {
+      "name": "gh-fix-ci",
+      "kind": "upstream",
+      "source": {
+        "repo": "openai/skills",
+        "revision": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/gh-fix-ci"
+      },
+      "payload_sha256": "eec20d60b0a5394bb67006d72119b0751f1cf66e070e4cf8683d9cf403ac3e27",
+      "license_files": [
+        "upstream/LICENSE.txt"
+      ],
+      "adaptation": "Local SKILL.md is project-authored. Original entry renamed to upstream/GUIDE.md; upstream resources and license retained unchanged."
+    },
+    {
+      "name": "inventory-transactions",
+      "kind": "custom"
+    },
+    {
+      "name": "migration-safety",
+      "kind": "custom"
+    },
+    {
+      "name": "navigation-3",
+      "kind": "upstream",
+      "source": {
+        "repo": "android/skills",
+        "revision": "c72942584fff970dac86ced78b367fce0c441e52",
+        "path": "navigation/navigation-3"
+      },
+      "payload_sha256": "4250d7c294d645b9dde431b655fcbdb54d02bd2d6f1677fce04c64b3c197f702",
+      "license_files": [
+        "upstream/LICENSE.txt"
+      ],
+      "adaptation": "Local SKILL.md is project-authored. Original entry renamed to upstream/GUIDE.md; upstream resources and license retained unchanged."
+    },
+    {
+      "name": "playwright-cli",
+      "kind": "upstream",
+      "source": {
+        "repo": "microsoft/playwright-cli",
+        "revision": "b21724888b8100b05ef8dee3a92f2bb03bf4dcde",
+        "path": "skills/playwright-cli"
+      },
+      "payload_sha256": "dc27be5479b3f2b2ccbbb2bd4b1b95f7626978e282c0a82971c422bae9e7ae86",
+      "license_files": [
+        "upstream/LICENSE"
+      ],
+      "adaptation": "Local SKILL.md is project-authored. Original entry renamed to upstream/GUIDE.md; upstream resources and license retained unchanged."
+    },
+    {
+      "name": "property-based-testing",
+      "kind": "upstream",
+      "source": {
+        "repo": "trailofbits/skills",
+        "revision": "149d7b21f4067765b82e67029730b42d228ef4b4",
+        "path": "plugins/property-based-testing/skills/property-based-testing"
+      },
+      "payload_sha256": "66d191f6ea35aca2fb4fb655172d47c9cb3b1b0677f82c950510b3d5035b4ddc",
+      "license_files": [
+        "upstream/LICENSE"
+      ],
+      "adaptation": "Local SKILL.md is project-authored. Original entry renamed to upstream/GUIDE.md; upstream resources and license retained unchanged."
+    },
+    {
+      "name": "secure-media-workflow",
+      "kind": "custom"
+    },
+    {
+      "name": "security-best-practices",
+      "kind": "upstream",
+      "source": {
+        "repo": "openai/skills",
+        "revision": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/security-best-practices"
+      },
+      "payload_sha256": "b93c1fa931ea79a884a727fa3c2232dc74aebd13bec8ab1177d028026f9209a3",
+      "license_files": [
+        "upstream/LICENSE.txt"
+      ],
+      "adaptation": "Local SKILL.md is project-authored. Original entry renamed to upstream/GUIDE.md; upstream resources and license retained unchanged."
+    },
+    {
+      "name": "store-authorization",
+      "kind": "custom"
+    },
+    {
+      "name": "supabase-postgres-best-practices",
+      "kind": "upstream",
+      "source": {
+        "repo": "supabase/agent-skills",
+        "revision": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+        "path": "skills/supabase-postgres-best-practices"
+      },
+      "payload_sha256": "bfdc06aded198bfc49ea50b81292506b6fdbc4965bd350f7914975cab3e15ff6",
+      "license_files": [
+        "upstream/LICENSE"
+      ],
+      "adaptation": "Local SKILL.md is project-authored. Original entry renamed to upstream/GUIDE.md; upstream resources and license retained unchanged."
+    },
+    {
+      "name": "testing-setup",
+      "kind": "upstream",
+      "source": {
+        "repo": "android/skills",
+        "revision": "c72942584fff970dac86ced78b367fce0c441e52",
+        "path": "testing/testing-setup"
+      },
+      "payload_sha256": "caa4227677f17cd08fc7bf3d41d0c8d9f202d0013a41d7e9008f8bd12d0e35aa",
+      "license_files": [
+        "upstream/LICENSE.txt"
+      ],
+      "adaptation": "Local SKILL.md is project-authored. Original entry renamed to upstream/GUIDE.md; upstream resources and license retained unchanged."
+    }
+  ]
+}

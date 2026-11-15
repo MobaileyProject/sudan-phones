@@ -25,6 +25,8 @@ jobs:
         run: make test
       - name: Check Python and JSON Syntax
         run: make lint
+      - name: Validate Shared Skill Packages
+        run: make skills-check
       - name: Install Backend Dependencies When Scaffolded
         if: hashFiles('backend/requirements.txt') != ''
         run: python3 -m pip install -r backend/requirements.txt
