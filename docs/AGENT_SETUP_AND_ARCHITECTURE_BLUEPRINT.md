@@ -3,6 +3,14 @@
 
 ---
 
+> Implementation status: [AGENTS.md](../AGENTS.md) is the canonical operating
+> contract and [STATE.md](STATE.md) is the current handoff. This document is the
+> original planning reference; proposed skills and slash commands below are not
+> evidence that they are installed or available. The implemented local search
+> uses lexical SQLite FTS5, not semantic embeddings, and lives entirely in
+> `scripts/search_codebase.py`. See [ARCHITECTURE.md](ARCHITECTURE.md) for the
+> actual OpenAPI lifecycle and pending backend scaffold.
+
 ## Executive Summary
 This document establishes the foundational rules, tools, and practices for developing our API-first marketplace application with Antigravity AI agents. It establishes strict separation of concerns, exhaustive API contract documentation, a standardized bug/defect schema, a local Retrieval-Augmented Generation (RAG) indexing engine to eliminate token burning, recommended custom skills, and an Antigravity Slash Commands playbook.
 
@@ -127,5 +135,5 @@ How founders and agents leverage Antigravity's slash commands:
 - [x] **Code Ownership:** `.github/CODEOWNERS` assigns both founders (`@marco47t` & `@MoatazAbdElmutaal`).
 - [x] **Pre-Commit Security:** `scripts/check_secrets.py` blocks accidental token or private key commits.
 - [ ] **API Layering Scaffold:** Directory hierarchy established (`routers/`, `schemas/`, `services/`, `repositories/`, `models/`).
-- [ ] **Local Search / RAG Utility:** `scripts/search_codebase.py` initialized for instant symbol and bug lookups.
-- [ ] **Bug Registry Directory:** `docs/bugs/` created with schema validation.
+- [x] **Local Search / RAG Utility:** `scripts/search_codebase.py` initialized for instant symbol and bug lookups.
+- [x] **Bug Registry Directory:** `docs/bugs/` created with JSON Schema and investigation template.

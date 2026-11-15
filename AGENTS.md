@@ -1,97 +1,124 @@
-# Agent Operating Instructions & Collaboration Protocol
+# Universal Agent Operating Contract
 
-This repository is developed concurrently by founders paired with autonomous AI agents. This document defines how agents operate Git, GitHub, testing, code review, and Slack notifications.
+Antigravity, Codex, and both founders share this contract for private repository
+`MobaileyProject/sudan-phones`. This file is canonical. `.codex/instructions.md`
+is a relative symlink here; `.agents/rules/workspace.md` directs Antigravity here.
+Follow explicit user instructions and platform permissions when they override a
+repository convention. Never put credentials or private chat transcripts in memory.
 
----
+## Session startup — every fresh session
 
-## 1. Autonomous Agent Collaboration Protocol
+1. Run `git status --short --branch` and `git worktree list`. Identify the current
+   task branch and any work owned by another founder/agent before changing files.
+2. Preserve uncommitted work. Never discard it or switch branches over it. In an
+   exclusively owned checkout, stash tracked changes with
+   `git stash push -m "wip: <task-description>"`; record its reference in STATE.md.
+   Leave unrelated untracked files intact. In a concurrently used checkout, use a
+   separate worktree instead of stashing another agent's live edits.
+3. Run `git fetch origin --prune`. In a clean main checkout run
+   `git pull --ff-only origin main`. Never pull main into an unfinished task branch
+   implicitly. If main is occupied by another worktree, fetch origin/main and use
+   that as the base for a new task worktree; document the reason for skipping pull.
+4. Read `docs/STATE.md` (also when the user says “Continue from STATE.md”). Confirm
+   its branch/PR claims using `git log -5 --oneline`, `gh pr list`, and
+   `gh issue list`; state is a handoff snapshot, Git/GitHub are live evidence.
+5. Read `docs/PRODUCT.md` and `docs/ARCHITECTURE.md` when relevant. Claim a narrow
+   task with owner, branch, target files, and status in STATE.md; inspect open PRs
+   before starting to avoid duplicate work. If access fails, record the failure
+   rather than claiming remote state is current.
+6. Search before reading large files:
+   `python3 scripts/search_codebase.py "search query" --limit 5`.
+   Use returned paths/lines and `rg` to inspect only relevant sections.
 
-Agents must perform Git and GitHub operations autonomously using Git and the GitHub CLI (`gh`).
+## Branches, concurrent work, and reviews
 
-### A. Starting Work
-Whenever assigned a development task or issue:
-1. **Inspect Working Tree:** Run `git status` to verify current branch and workspace cleanliness.
-2. **Preserve Uncommitted Work:** Never discard uncommitted work. If unstaged/staged work exists, stash it with a descriptive message (`git stash push -m "wip: <task-description>"`).
-3. **Fetch Remote State:** Run `git fetch origin --prune` to get the latest branches and pull requests.
-4. **Inspect Open PRs & Issues:** Check `gh pr list` and `gh issue list` to prevent duplicate or conflicting work.
-5. **Branch off `main`:**
-   ```bash
-   git checkout main
-   git pull --ff-only origin main
-   git checkout -b <prefix>/<short-description>
-   ```
-   Branch taxonomy:
-   - `feature/*`: New features and functionality
-   - `fix/*`: Bug fixes and defect corrections
-   - `refactor/*`: Non-functional code improvements
-   - `docs/*`: Documentation and workflow guides
+- Never commit directly to `main` or force-push shared branches. Start from updated
+  main/origin/main with `feature/*`, `fix/*`, `refactor/*`, or `docs/*`.
+- Each founder/agent uses its own checkout/worktree and task branch. To avoid
+  changing another session's branch, prefer
+  `git worktree add ../sudan-phones-<owner>-<task> -b feature/<task> origin/main`.
+- Coordinate overlapping domains, shared contracts, migrations, and STATE.md
+  updates. Update only your task's state; preserve other owners' entries. Resolve
+  state merge conflicts by retaining all still-active work and checking GitHub.
+- Review peer PRs in an isolated worktree:
+  ```bash
+  gh pr view <id>
+  gh pr diff <id>
+  git fetch origin <branch>
+  git worktree add ../review-pr-<id> --detach origin/<branch>
+  # Run validation in ../review-pr-<id>, then return to your original checkout.
+  git worktree remove ../review-pr-<id>
+  gh pr review <id> --comment -b "Findings and verification evidence"
+  # Use --approve only after verification passes and no blocking findings remain.
+  ```
+  If sandbox permissions prevent a sibling worktree, use an allowed temporary
+  directory. Never force-remove a dirty review worktree.
+- Merge only with passing automated checks, a non-draft PR, and recorded peer
+  human/agent approval: `gh pr merge <id> --squash --delete-branch`. Do not approve
+  your own PR or bypass the review gate.
 
-### B. Completing Work
-After implementing changes:
-1. **Run Local Validation Suite:**
-   - Secret scan: `python3 scripts/check_secrets.py`
-   - Run project-specific tests and linters.
-2. **Commit with Conventional Commit:**
-   ```bash
-   git add <modified-files>
-   git commit -m "<type>(<scope>): <summary>"
-   ```
-3. **Push Feature Branch:**
-   ```bash
-   git push -u origin <branch-name>
-   ```
-4. **Create Pull Request Autonomously:**
-   ```bash
-   gh pr create --base main --fill
-   ```
-5. **Monitor CI & Trigger Slack Update:**
-   Post a link to the PR in Slack `#project-updates` (see Slack Trigger Protocol below).
+## Architecture invariants
 
-### C. Reviewing Another Developer's PR
-1. **Fetch PR State:** Run `gh pr view <pr-number>` and `gh pr diff <pr-number>`.
-2. **Test in Isolated Git Worktree:** Never pollute the primary workspace:
-   ```bash
-   git worktree add ../review-pr-<number> <pr-branch>
-   cd ../review-pr-<number>
-   # Run validation suite
-   cd - && git worktree remove ../review-pr-<number>
-   ```
-3. **Submit GitHub Review:**
-   ```bash
-   gh pr review <pr-number> --comment -b "Review findings..."
-   # Or approve:
-   gh pr review <pr-number> --approve -b "Verification passed. Changes approved."
-   ```
+Target: modular FastAPI monolith, Python 3.13, PostgreSQL 16, SQLAlchemy 2,
+Pydantic, Alembic single-head migrations, native Android Kotlin/Jetpack Compose,
+and Web Preview. The application has not been scaffolded yet; see STATE.md.
 
-### D. Merging Pull Requests
-An agent may merge a PR only when:
-1. All automated CI checks pass.
-2. The PR is not marked as a draft.
-3. Peer human/agent review approval is recorded.
-4. Merge using squash: `gh pr merge <pr-number> --squash --delete-branch`.
+| Layer | Path | Responsibility |
+| --- | --- | --- |
+| HTTP | `backend/app/routers/<domain>.py` | Endpoints, parameters, dependency injection, status codes. Zero database queries or business rules. |
+| Contract | `backend/app/schemas/<domain>.py` | Strict Pydantic request validation and response serialization. |
+| Domain | `backend/app/services/<domain>.py` | Business logic, authorization, transaction boundaries. |
+| Data access | `backend/app/repositories/<domain>.py` | Pure SQLAlchemy 2 queries and pagination; never HTTP exceptions or transaction commits. |
+| Persistence | `backend/app/models/<domain>.py` | Declarative entities, relationships, foreign keys, indexes. |
 
----
+Routers call services; services call repositories; repositories use models.
+Services own transactions and raise domain errors; routers translate domain errors
+to HTTP. Split by domain; avoid monolithic catch-all modules. Never introduce a
+second Alembic head without reconciling it before merge. See docs/ARCHITECTURE.md.
 
-## 2. Slack Integration & Trigger Protocol
+Whenever endpoints or schemas change, run `make openapi`, review and commit
+`docs/openapi.json`, and update the domain's `docs/api/<domain>.md` catalog.
+`make openapi-check` runs in CI and must reject contract drift. Until the backend
+exists it reports an explicit scaffold-pending skip; no fabricated API is exported.
 
-The agent is connected to the team's Slack workspace (**Elrasheed Workplace**) via the Slack MCP server and `@antigravity_bot`.
+## Validation, completion, and handoff — every task
 
-### A. Channels & Ownership
-- **`#project-updates` (`C0CHSASMZMK`):** Automated CI feeds, PR creations, milestone completions, and deployment status.
-- **`#dev-chat` (`C0CHSASJDQV`):** Architecture questions, trade-off decisions, and questions requiring human input.
-- **`#tasks-and-bugs` (`C0CJ1AM1BHA`):** Bug reports, defect alerts, and backlog tracking.
-- **`#resources` (`C0CHZGW3GL9`):** Architecture documentation, repo links, and environment setup notes.
+1. For a bug fix, add a regression test and a structured
+   `docs/bugs/BUG-YYYY-NNN.json` entry conforming to `docs/bugs/SCHEMA.json`.
+   Copy `docs/bugs/BUG-TEMPLATE.md` for investigation notes; templates are examples,
+   not evidence of an actual defect. Search existing records before diagnosing.
+2. Update all six sections of `docs/STATE.md` as needed, preserving its headings.
+   Include current focus, recent commit references, owner/branch/PR and exact next
+   commands/target files, test results, decisions, blockers, and pending Slack
+   deliveries. Include partial progress on interruption; never mark planned work
+   complete. Do not invent approvals, implemented architecture, or successful CI.
+3. Stage only intended files (never `git add .` with unrelated untracked work).
+   Run `python3 scripts/check_secrets.py` **after staging** so new files are scanned.
+   Run `make check` and all applicable application linters/tests. Record commands
+   and outcomes. Missing tooling or skipped checks must be stated explicitly.
+4. Commit with a conventional message, then push the task branch:
+   `git push -u origin <branch>`. Open a PR autonomously using
+   `gh pr create --base main --fill`; include validation and remaining limitations.
+5. Monitor `gh pr checks <id>`. Update state with the PR URL and final CI results
+   (a follow-up state commit is acceptable). Trigger Slack below. End with a
+   concise handoff, PR link, limitations, and next action.
 
-### B. When the Agent MUST Trigger Slack
-The agent should automatically call `slack_post_message` in the following scenarios:
-1. **Milestone Completed:** When a major feature or setup phase is completed, post a brief summary to `#project-updates`.
-2. **Pull Request Opened:** When a new PR is pushed and opened, post the PR title and URL to `#project-updates`.
-3. **Blocking Decision or Question:** When the agent needs human guidance or design choice, post the question to `#dev-chat`.
-4. **Critical Build/Test Failure:** When a build breaks or CI fails unexpectedly, notify `#project-updates` or `#tasks-and-bugs`.
+## Slack triggers and existing integration
 
----
+Workspace: **Elrasheed Workplace** (`T0CJRU4RSUQ`), bot `@antigravity_bot`.
 
-## 3. GitHub & Slack Integration Linking
+| Event | Channel |
+| --- | --- |
+| Feature milestone completed; PR opened/review requested; CI status | `#project-updates` (`C0CHSASMZMK`) |
+| Blocking design decision or human question | `#dev-chat` (`C0CHSASJDQV`) |
+| Defect discovered, critical build/test failure | `#tasks-and-bugs` (`C0CJ1AM1BHA`) |
+| Shared reference material | `#resources` (`C0CHZGW3GL9`) |
 
-1. **GitHub Actions Slack Webhook:** Configured in `.github/workflows/ci.yml` using repository secrets `SLACK_BOT_TOKEN` and `SLACK_CHANNEL_UPDATES`.
-2. **Slack GitHub App:** Official GitHub integration (`@github`) installed in workspace. Subscriptions to `MobaileyProject/sudan-phones` in `#project-updates` stream commits, PRs, and issues in real time.
+Use `slack_post_message` when available for these task-related triggers. Include
+only concise facts and PR/issue links. The GitHub Slack app also streams repository
+activity; `.github/workflows/ci.yml` posts CI through `SLACK_BOT_TOKEN` and
+`SLACK_CHANNEL_UPDATES`. Preserve those secret names and existing remote tracking.
+Never read, print, commit, or copy raw Slack tokens into prompts or docs. If Slack
+MCP is unavailable, rely on existing CI/app delivery for supported events and
+record any undelivered message in STATE.md; never claim it was posted or expose
+secrets to work around missing access.

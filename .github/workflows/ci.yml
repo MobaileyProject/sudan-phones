@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review, review_requested]
 
 permissions:
   contents: read
@@ -20,6 +21,15 @@ jobs:
           python-version: '3.13'
       - name: Run Secret Scan
         run: python3 scripts/check_secrets.py
+      - name: Run Workspace Tool Tests
+        run: make test
+      - name: Check Python and JSON Syntax
+        run: make lint
+      - name: Install Backend Dependencies When Scaffolded
+        if: hashFiles('backend/requirements.txt') != ''
+        run: python3 -m pip install -r backend/requirements.txt
+      - name: Check OpenAPI Contract Drift
+        run: make openapi-check
 
   notify:
     name: Notify Slack
@@ -33,23 +43,32 @@ jobs:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
           SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL_UPDATES || 'C0CHSASMZMK' }}
           WORKFLOW_STATUS: ${{ needs.validate.result }}
+          EVENT_ACTION: ${{ github.event.action }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          EMOJI="✅"
-          STATUS_TEXT="passed"
-          if [ "$WORKFLOW_STATUS" != "success" ]; then
-            EMOJI="❌"
-            STATUS_TEXT="failed"
-          fi
-          
-          PAYLOAD=$(cat <<EOF
-          {
-            "channel": "$SLACK_CHANNEL",
-            "text": "$EMOJI *GitHub Actions CI ($GITHUB_REF_NAME)*: Validation $STATUS_TEXT on commit \`${GITHUB_SHA:0:7}\` by @$GITHUB_ACTOR.\n<https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|View Workflow Run>"
-          }
-          EOF
+          PAYLOAD=$(python3 - <<'PYTHON'
+          import json
+          import os
+          status = "passed" if os.environ["WORKFLOW_STATUS"] == "success" else "failed"
+          run_url = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          text = f"GitHub Actions CI: validation {status} on {os.environ['GITHUB_SHA'][:7]}. <{run_url}|View workflow>"
+          if os.environ.get("PR_URL"):
+              title = os.environ["PR_TITLE"].replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+              text += f"\nPR {os.environ.get('EVENT_ACTION', '')}: <{os.environ['PR_URL']}|{title}>"
+          print(json.dumps({"channel": os.environ["SLACK_CHANNEL"], "text": text}))
+          PYTHON
           )
-          
-          curl -s -X POST -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+
+          curl --fail-with-body --silent --show-error -X POST -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H "Content-type: application/json; charset=utf-8" \
             -d "$PAYLOAD" \
-            https://slack.com/api/chat.postMessage
+            https://slack.com/api/chat.postMessage > /tmp/slack-response.json
+          python3 - <<'PYTHON'
+          import json
+          with open("/tmp/slack-response.json") as response:
+              result = json.load(response)
+          if not result.get("ok"):
+              raise SystemExit("Slack delivery failed: " + result.get("error", "unknown_error"))
+          print("Slack notification delivered.")
+          PYTHON

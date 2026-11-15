@@ -1,6 +1,6 @@
 # GitHub & Slack Integration Architecture
 
-This document provides a comprehensive operational guide on how the repository is connected to GitHub and Slack, and how GitHub events automatically trigger Slack notifications.
+This document describes the inherited GitHub/Slack setup. Per-session tool access can differ: check available tools rather than assuming the Antigravity MCP connection also exists in Codex. Follow [AGENTS.md](../AGENTS.md) for the current contract and record unavailable deliveries in [STATE.md](STATE.md).
 
 ---
 
@@ -79,11 +79,11 @@ GitHub and Slack are linked using two complementary mechanisms:
 ```
 
 ### Method A: Automated GitHub Actions CI Alerts
-In [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), a post-validation job runs on every push and pull request. It uses repository secrets:
+In [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), a post-validation job runs on pushes to main and selected pull-request events targeting main (including opened and review_requested). It uses repository secrets:
 - `SLACK_BOT_TOKEN`: Authenticated Slack bot token.
 - `SLACK_CHANNEL_UPDATES`: Target channel (`C0CHSASMZMK` = `#project-updates`).
 
-Whenever CI runs, it posts a formatted message with commit hash, author, status (passed/failed), and a direct link to the GitHub Actions run.
+When the token is configured, CI posts validation status, commit hash, and a direct run link, plus PR title/URL/action when applicable. JSON encoding protects titles containing quotes/newlines; the job fails if Slack rejects delivery. Missing secrets skip posting. This does not prove the separate GitHub Slack app subscription is still active; inspect delivery evidence before marking messages sent.
 
 ### Method B: Native GitHub Slack App
 The official `@github` bot is installed in **Elrasheed Workplace**.
