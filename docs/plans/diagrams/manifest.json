@@ -1,0 +1,147 @@
+{
+  "captured_at": "2026-11-16T05:02:09.197Z",
+  "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+  "source_stack": "Django REST Framework / Flutter / React (unchanged original blueprint; not repository implementation)",
+  "browser": "Brave Chromium via Playwright; fresh ephemeral context",
+  "browser_errors": [],
+  "source_layout_limitations": [
+    "Original journey road cards overlap at milestone pairs 2/9, 4/7, 8/13, 10/11; retained faithfully. Some original map card text extends over arrows; retained faithfully."
+  ],
+  "not_captured": [
+    "Browser-local edits in user profile (not available to isolated session)",
+    "33 screen specification detail dialogs and 14 milestone detail dialogs (overview cards captured)",
+    "Empty scratchpad canvases"
+  ],
+  "assets": [
+    {
+      "filename": "01-project-journey.png",
+      "title": "🧭\nProject Overview & Journey",
+      "section": 1,
+      "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+      "width": 1780,
+      "height": 1865,
+      "bytes": 269808,
+      "capture_notes": "Original rendered source. Capture-only overflow expansion exposes full horizontal diagrams; empty browser-local scratchpad and step navigation omitted. Labels, cards, arrows, stack and statuses preserved."
+    },
+    {
+      "filename": "02-customer-app-map.png",
+      "title": "📱\nCustomer App Map",
+      "section": 2,
+      "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+      "width": 1776,
+      "height": 1284,
+      "bytes": 246073,
+      "capture_notes": "Original rendered source. Capture-only overflow expansion exposes full horizontal diagrams; empty browser-local scratchpad and step navigation omitted. Labels, cards, arrows, stack and statuses preserved."
+    },
+    {
+      "filename": "03-merchant-portal-map.png",
+      "title": "🏪\nMerchant Portal Map",
+      "section": 3,
+      "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+      "width": 1772,
+      "height": 1424,
+      "bytes": 272341,
+      "capture_notes": "Original rendered source. Capture-only overflow expansion exposes full horizontal diagrams; empty browser-local scratchpad and step navigation omitted. Labels, cards, arrows, stack and statuses preserved."
+    },
+    {
+      "filename": "04-founder-administration-map.png",
+      "title": "🛰️\nFounder Administration Map",
+      "section": 4,
+      "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+      "width": 1768,
+      "height": 1514,
+      "bytes": 296909,
+      "capture_notes": "Original rendered source. Capture-only overflow expansion exposes full horizontal diagrams; empty browser-local scratchpad and step navigation omitted. Labels, cards, arrows, stack and statuses preserved."
+    },
+    {
+      "filename": "05-screen-specifications.png",
+      "title": "📋\nScreen Specifications",
+      "section": 5,
+      "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+      "width": 1152,
+      "height": 2742,
+      "bytes": 488779,
+      "capture_notes": "Original rendered source. Capture-only overflow expansion exposes full horizontal diagrams; empty browser-local scratchpad and step navigation omitted. Labels, cards, arrows, stack and statuses preserved."
+    },
+    {
+      "filename": "05-customer-screen-specifications.png",
+      "title": "Customer Mobile App (Flutter)",
+      "section": 5,
+      "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+      "width": 1152,
+      "height": 784,
+      "bytes": 144478,
+      "capture_notes": "Original screen specification overview cards for this role. Detail dialogs not expanded."
+    },
+    {
+      "filename": "05-merchant-screen-specifications.png",
+      "title": "Merchant Portal (React)",
+      "section": 5,
+      "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+      "width": 1152,
+      "height": 973,
+      "bytes": 175400,
+      "capture_notes": "Original screen specification overview cards for this role. Detail dialogs not expanded."
+    },
+    {
+      "filename": "05-admin-screen-specifications.png",
+      "title": "Founder Administration",
+      "section": 5,
+      "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+      "width": 1152,
+      "height": 595,
+      "bytes": 118053,
+      "capture_notes": "Original screen specification overview cards for this role. Detail dialogs not expanded."
+    },
+    {
+      "filename": "06-frontend-backend-split.png",
+      "title": "🤝\nFrontend & Backend Split",
+      "section": 6,
+      "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+      "width": 1152,
+      "height": 1041,
+      "bytes": 241886,
+      "capture_notes": "Original rendered source. Capture-only overflow expansion exposes full horizontal diagrams; empty browser-local scratchpad and step navigation omitted. Labels, cards, arrows, stack and statuses preserved."
+    },
+    {
+      "filename": "07-system-data-architecture.png",
+      "title": "🏗️\nSystem & Data Architecture",
+      "section": 7,
+      "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+      "width": 1152,
+      "height": 1613,
+      "bytes": 284049,
+      "capture_notes": "Original rendered source. Capture-only overflow expansion exposes full horizontal diagrams; empty browser-local scratchpad and step navigation omitted. Labels, cards, arrows, stack and statuses preserved."
+    },
+    {
+      "filename": "07-system-components.png",
+      "title": "🖥️ System components\n— one modular system, no microservices",
+      "section": 7,
+      "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+      "width": 1152,
+      "height": 665,
+      "bytes": 131711,
+      "capture_notes": "Original rendered architecture diagram including all arrows and note, where present."
+    },
+    {
+      "filename": "07-domain-relationships.png",
+      "title": "🗃️ Domain relationships\n— who relates to what",
+      "section": 7,
+      "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+      "width": 1152,
+      "height": 729,
+      "bytes": 123282,
+      "capture_notes": "Original rendered architecture diagram including all arrows and note, where present."
+    },
+    {
+      "filename": "08-roadmap-release-gates.png",
+      "title": "🚀\nRoadmap & Release Gates",
+      "section": 8,
+      "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+      "width": 1780,
+      "height": 1865,
+      "bytes": 338954,
+      "capture_notes": "Original rendered source. Capture-only overflow expansion exposes full horizontal diagrams; empty browser-local scratchpad and step navigation omitted. Labels, cards, arrows, stack and statuses preserved."
+    }
+  ]
+}
