@@ -40,6 +40,10 @@ class Ledger:
         with self.db:
             self.db.execute("UPDATE jobs SET result=? WHERE key=?", (json.dumps(result), key))
 
+    def refresh(self, key, result):
+        with self.db:
+            self.db.execute("UPDATE jobs SET result=?, delivered=0 WHERE key=?", (json.dumps(result), key))
+
     def pending(self):
         return [self.get(row[0]) for row in self.db.execute(
             "SELECT key FROM jobs WHERE delivered=0 AND result IS NOT NULL")]

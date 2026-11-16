@@ -1,7 +1,7 @@
 # Project State & Session Handoff
 
 ## Current Active Focus
-- Deliver Slack Lists-to-agy automation on feature/slack-agent-automation; preserve personal PR review. Resolve recorded product/stack decisions before application scaffolding.
+- Slack automation PR #5 was merged by the user. Deliver the reported Slack formatting/status fix on a separate fix branch; preserve personal PR review. Resolve recorded product/stack decisions before application scaffolding.
 
 ## Architecture & Technology Stack
 - Backend: Modular FastAPI Monolith (Python 3.13)
@@ -12,6 +12,7 @@
 - These are target choices; no backend, database migrations, Android app or web client exists yet. Read docs/ARCHITECTURE.md and docs/PRODUCT.md before scaffolding.
 
 ## Completed Milestones
+- Slack automation implementation commit f43fadc was delivered in PR #5, merged at 2026-11-16 00:59:13 UTC. Validation and Notify Slack both passed on run 43783270016 before merge. The user timer is enabled, the first poll exited successfully (ExecMainStatus=0), and the next five-minute run was scheduled. All source notifications were delivered at that inspection.
 - [x] Created Sudan Phones Backlog F0CHWFG1BD4 and shared write access with #tasks-and-bugs. Verified Lists create/read/row-write and agy-written channel notifications. Local credential consumption stays out of prompts/output/tracked files.
 - Visibility follow-up: the user did not see the bot-created List in their Lists home. Its actual Slack permalink and non-trial status were verified; direct write sharing was granted to the active founder account. Do not claim the user's UI view is verified. Runtime worktree is `.worktrees/slack-agent-automation` under the original project; copied from /tmp and repaired because Git worktree move cannot cross filesystems. The old /tmp copy is preserved and must not run a second worker.
 - [x] Worker covers source-key deduplication, Ready/agy execution gates, fresh-main skill checks, isolated worktrees, structured agy results, independent PR identity checks and delivery-only recovery. Local worker tests passed; final full-suite/CI evidence follows in this task's handoff.
@@ -27,7 +28,7 @@
 - Recent baseline commits: `f84b457` remove setup blueprint PDF; `5b8fbe3` architecture blueprint; `ffe0016` initial protocol and integrations.
 
 ## In-Progress Tasks & Active Branches
-- Branch: `feature/slack-agent-automation` | Owner: Codex | Targets: scripts/slack_worker.py, scripts/slack_automation/, config/, tests/test_slack_automation.py, docs/SLACK_AUTOMATION.md and task handoff | Status: publication and timer setup in progress; do not claim autonomous bug-to-PR execution has been verified.
+- Branch: `fix/slack-message-format` | Owner: Codex | Targets: scripts/slack_automation/, scripts/slack_worker.py, tests/test_slack_automation.py and BUG-2026-004 | Status: formatting/evidence fix verified locally and against both existing PR messages; follow-up PR publication in progress. Original automation PR #5 is merged; no real queued bug-to-PR run is claimed.
 - Branch: `feature/shared-agent-skills` | Owner: Codex | PR #4 open and passing at inspection: https://github.com/MobaileyProject/sudan-phones/pull/4. All 14 shared skill entrypoints must reach origin/main before queued code execution. Preserve this separate PR and its state additions when merging.
 - Final handoff PR #3 is merged at 32fb346. The original checkout remains on feature/shared-agent-skills with its untracked PDF preserved. A separate temporary worktree was created from origin/main; main was not pulled into the unfinished skills branch.
 - Setup PR #1 and preference PR #2 are merged: https://github.com/MobaileyProject/sudan-phones/pull/1 and https://github.com/MobaileyProject/sudan-phones/pull/2. Older feature/preference branches were recreated by pushes racing with the user’s merges; they are superseded and are not active implementation tasks.
@@ -35,11 +36,12 @@
 - Local user input: `Marketplace_Complete_Product_and_Execution_Blueprint.pdf` is untracked and intentionally preserved. Its tracked product summary is docs/PRODUCT.md; do not stash/delete it or claim it is available in every clone.
 
 ## Immediate Next Tasks (Priority Queue)
-1. Review shared-skills PR #4 personally, then the Slack automation PR (`gh pr view feature/slack-agent-automation`). Inspect `python3 scripts/slack_worker.py doctor`, `status`, and the installed timer before queuing Ready work. Exact runtime path and final PR/CI evidence are recorded in the publication handoff below.
+1. Review shared-skills PR #4 personally and the formatting follow-up (`gh pr view fix/slack-message-format`). The original automation PR #5 is merged. Polling is enabled from `.worktrees/slack-agent-automation`; inspect `python3 scripts/slack_worker.py doctor`, `status`, and `systemctl --user list-timers sudan-phones-slack-worker.timer` before queuing Ready work. A Ready item assigned to agy waits unclaimed until all 14 shared skills reach origin/main.
 2. Confirm the stack discrepancy and product decisions with both founders; update docs/PRODUCT.md and docs/ARCHITECTURE.md with MVP, owner roles, pilot region, verification evidence, currency, and contact channels.
 3. Scaffold the first approved-store vertical slice in backend/app/{routers,schemas,services,repositories,models}/, add pinned backend dependencies, Alembic and PostgreSQL tests, initialize the Android/Web Preview clients, then `make openapi` and commit docs/openapi.json.
 
 ## Known Blockers & Design Decisions
+- User-reported BUG-2026-004: generated messages used GitHub bold syntax and generic Backlog next actions/evidence for PR-ready work. Reproduced and covered by formatting/PR-evidence/edit-refresh/merged-row tests. Both existing PR messages were edited and verified through Slack history by their stored timestamps: no double-asterisk labels or mark-Ready instruction remains. PR #5 correctly reflects MERGED and successful checks. Follow-up PR/check evidence will be recorded below.
 - The user delegated implementation choices and explicitly authorized List creation/read/write and local agy task execution through PR delivery. No merge/deploy or organization-reviewer request is authorized. Codex Slack plugin remains unconnected, but the configured agy Slack server environment now supplies the API connector privately.
 - The local Slack skill contains an embedded credential; rotation/removal remains a user-side credential-maintenance task. The worker never reads that skill. Lists access, row writes and agy messages were verified using the configured connection, with no token values printed or committed.
 - Autonomous implementation remains unverified end to end. The host lacks agy Auto terminal sandbox; accept-edits plus session-only command grants are used. Unsupported/denied application-specific commands block and preserve work. No fabricated backend checks.

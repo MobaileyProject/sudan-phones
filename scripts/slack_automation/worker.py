@@ -99,12 +99,14 @@ def _publish_one(config, ledger, lists, writer, job):
             fields["pr"] = result["pr_url"]
         lists.update(config, task["id"], fields)
         ledger.list_updated(job["key"])
-    if not job["message_ts"]:
-        message = writer(message_prompt(result), ["message"])["message"]
-        if not message.strip() or len(message) > 3000 or "<!" in message:
-            raise ValueError("agy returned an empty, overlong or broadcast message")
-        category = ("bugs" if task.get("kind") == "bug" else "updates") if reported else (
-            "updates" if status == "PR ready" else "questions")
+    message = writer(message_prompt(result), ["message"])["message"]
+    if not message.strip() or len(message) > 3000 or "<!" in message:
+        raise ValueError("agy returned an empty, overlong or broadcast message")
+    category = ("bugs" if task.get("kind") == "bug" else "updates") if reported else (
+        "updates" if status == "PR ready" else "questions")
+    if job["message_ts"]:
+        lists.edit(config["channels"][category], job["message_ts"], message)
+    else:
         ts = lists.post(config["channels"][category], message, job["key"])
         ledger.delivery(job["key"], ts)
     ledger.delivery(job["key"])
@@ -120,11 +122,28 @@ def sync_sources(lists, config, reports, ledger=None):
             count += 1
         if ledger:
             key = "report:" + config["list_id"] + ":" + report["source"]
+            result = source_result(report)
             if ledger.claim(key, ""):
-                ledger.finish(key, {"outcome": "reported", "summary": "Report recorded in the Slack backlog",
-                                    "task": report, "tests": "Not investigated", "pr_url": "",
-                                    "next_action": "Add acceptance criteria, assign executor agy, and mark Ready"})
+                ledger.finish(key, result)
+            elif ledger.get(key)["result"] != result:
+                ledger.refresh(key, result)
     return count
+
+
+def source_result(report):
+    status = report.get("status", "Backlog")
+    action = "Add acceptance criteria, assign executor agy, and mark Ready"
+    if status == "PR ready":
+        action = "Review the existing PR personally; merge only after approval and passing checks"
+    elif status == "Done":
+        action = "PR is merged; no review or requeue needed. Track follow-up work separately"
+    elif status == "Blocked":
+        action = "Resolve the recorded blocker with the founders before authorizing implementation"
+    summary = {"PR ready": "PR awaiting personal review", "Done": "PR merged"}.get(status, "Report recorded in the Slack backlog")
+    return {"outcome": "reported", "summary": summary,
+            "task": report, "tests": report.get("tests", "No investigation recorded"),
+            "limitations": "Only the recorded evidence is verified; additional runtime behavior is not independently checked",
+            "pr_url": report.get("pr", ""), "next_action": action}
 
 
 def collect_sources(root, config):
@@ -155,25 +174,42 @@ def collect_sources(root, config):
                             "kind": "bug", "details": run["url"],
                             "acceptance": "Reproduce the failing check and make it pass with a regression test"})
     prs = json.loads(command(root, "gh", "pr", "list", "--repo", config["repo"], "--state", "open",
-                            "--limit", "100", "--json", "number,title,url,headRefName,isDraft"))
+                            "--limit", "100", "--json", "number,title,url,headRefName,isDraft,statusCheckRollup"))
     for pr in prs:
         if pr["isDraft"]:
             continue
+        checks = pr.get("statusCheckRollup") or []
+        evidence = "; ".join((check.get("name") or check.get("context") or "Check") + ": " +
+                             (check.get("conclusion") or check.get("state") or check.get("status") or "UNKNOWN")
+                             for check in checks) or "No GitHub checks reported yet"
         reports.append({"source": "pr:" + str(pr["number"]), "title": pr["title"],
                         "kind": "bug" if pr["headRefName"].startswith("fix/") else "feature",
                         "status": "PR ready", "pr": pr["url"], "branch": pr["headRefName"],
+                        "tests": evidence,
                         "details": "Implementation is awaiting personal review: " + pr["url"],
                         "acceptance": "Review checks and implementation; merge only with recorded peer approval"})
     return reports
 
 
-def reconcile_merged(root, config, lists):
+def reconcile_merged(root, config, lists, ledger=None):
     for task in lists.tasks(config):
-        if task.get("status") != "PR ready":
+        if task.get("status") not in {"PR ready", "Done"}:
             continue
         url = task.get("pr", "")
         if not re.fullmatch(r"https://github\.com/" + re.escape(config["repo"]) + r"/pull/[1-9][0-9]*", url):
             continue
-        pr = json.loads(command(root, "gh", "pr", "view", url, "--repo", config["repo"], "--json", "state"))
+        key = "report:" + config["list_id"] + ":pr:" + url.rsplit("/", 1)[1]
+        job = ledger.get(key) if ledger else None
+        if task["status"] == "Done" and (not job or not job["result"] or job["result"]["task"].get("status") == "Done"):
+            continue
+        pr = json.loads(command(root, "gh", "pr", "view", url, "--repo", config["repo"], "--json", "state,statusCheckRollup"))
         if pr["state"] == "MERGED":
-            lists.update(config, task["id"], {"status": "Done"})
+            if ledger:
+                if job and job["result"]:
+                    report = dict(job["result"]["task"], status="Done", details="Merged PR: " + url)
+                    checks = pr.get("statusCheckRollup") or []
+                    report["tests"] = "; ".join((c.get("name") or c.get("context") or "Check") + ": " +
+                                                (c.get("conclusion") or c.get("state") or c.get("status") or "UNKNOWN") for c in checks) or "No GitHub checks reported"
+                    ledger.refresh(key, source_result(report))
+            if task["status"] != "Done":
+                lists.update(config, task["id"], {"status": "Done"})

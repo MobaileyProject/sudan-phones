@@ -74,7 +74,7 @@ def main():
                 return
             count = sync_sources(slack, config, collect_sources(ROOT, config), ledger)
             print("New backlog reports:", count)
-            reconcile_merged(ROOT, config, slack)
+            reconcile_merged(ROOT, config, slack, ledger)
             errors = publish(config, ledger, slack, writer)
             if args.action == "once":
                 for task in slack.tasks(config):
