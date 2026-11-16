@@ -74,7 +74,9 @@ def implementation_prompt(task, branch, context=None):
     if context is not None:
         return context_prompt(task, branch, context)
     return f"""Implement ONE user-authorized Slack List task in THIS isolated worktree.
-Read AGENTS.md, docs/STATE.md, docs/PRODUCT.md, docs/ARCHITECTURE.md and docs/SKILLS.md.
+Follow the accepted base AGENTS.md startup and handoff rules.
+If the base has a Context protocol, use its brief/search rules and do not append task logs to STATE.
+For a legacy base only, read docs/STATE.md, docs/PRODUCT.md, docs/ARCHITECTURE.md and docs/SKILLS.md.
 Load matching .agents/skills/<name>/SKILL.md: defect-to-regression for bugs, and
 domain skills for the actual files. User opted out of design questions for Ready
 items; execute clear acceptance criteria autonomously. Block on missing product
@@ -89,8 +91,9 @@ credentials. Never read local Slack skill/config/token files. Never modify worke
 configuration, permissions, agent operating contracts or CI security policy from
 a queued task. Do not spawn agents or start services.
 For a bug: reproduce, regression test, structured docs/bugs record. For a feature:
-implement acceptance criteria with appropriate tests. Update only this task's STATE
-entry. Run make check and applicable checks; explicitly state scaffold-pending skips.
+implement acceptance criteria with appropriate tests. Follow the base handoff rules;
+only legacy bases require this task's STATE entry. Run make check and applicable
+checks; explicitly state scaffold-pending skips.
 Stage exact intended paths, run scripts/check_secrets.py AFTER staging, commit on
 {branch}, push only that branch, create PR against main. Use --body-file for PR text.
 Do not merge, deploy, request organization reviewers, or approve your own PR.

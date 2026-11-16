@@ -191,7 +191,7 @@ execution, permission and PR checks unchanged.
 inside a private mode-0700 directory, and separate from the ledger. Allowlisted final
 JSON counters are appended to a mode-0600 file. Missing/contended metrics never change
 the task result. No prompts, responses, task details or error text enter this log.
-Do not enable v2 in the live service until the migration PR is merged. Then update
-the owned service checkout to the reviewed code while no worker process is running,
-preserve its private config/ledger, set version 2 locally, and run `doctor` before
-resuming polls. Do not start an additional worker from another checkout.
+After tooling PR #9 merges, update the single owned service checkout while idle,
+preserving private config/ledger, before merging the migration. Its compatible v1
+prompt obeys either accepted startup contract. After the migration merges, set
+version 2 locally and run `doctor` before resuming polls. Never start a second worker.
