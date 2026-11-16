@@ -1,0 +1,722 @@
+{
+  "lists": {
+    "roadmap": {
+      "id": "F0CHUDFCXKP",
+      "url": "https://elrasheedworkplace.slack.com/lists/T0CJRU4RSUQ/F0CHUDFCXKP"
+    },
+    "api": {
+      "id": "F0CHJB5C939",
+      "url": "https://elrasheedworkplace.slack.com/lists/T0CJRU4RSUQ/F0CHJB5C939"
+    },
+    "backlog": {
+      "id": "F0CHWFG1BD4",
+      "url": "https://elrasheedworkplace.slack.com/lists/T0CJRU4RSUQ/F0CHWFG1BD4"
+    }
+  },
+  "rows": {
+    "GATE-01": {
+      "id": "Rec0CHJB6225D",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:gate:1"
+    },
+    "GATE-02": {
+      "id": "Rec0CHZGTHJBU",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:gate:2"
+    },
+    "GATE-03": {
+      "id": "Rec0CHXP9N1GE",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:gate:3"
+    },
+    "GATE-04": {
+      "id": "Rec0CHUDPL2BF",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:gate:4"
+    },
+    "GATE-05": {
+      "id": "Rec0CHJB7JDSB",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:gate:5"
+    },
+    "GATE-06": {
+      "id": "Rec0CJU3WB8E4",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:gate:6"
+    },
+    "GATE-07": {
+      "id": "Rec0CHXPB4SLW",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:gate:7"
+    },
+    "GATE-08": {
+      "id": "Rec0CJ3DJUL4C",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:gate:8"
+    },
+    "MILE-01": {
+      "id": "Rec0CJU3XJACQ",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:milestone:1"
+    },
+    "MILE-02": {
+      "id": "Rec0CHTFK1LMR",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:milestone:2"
+    },
+    "MILE-03": {
+      "id": "Rec0CHZGVE4D8",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:milestone:3"
+    },
+    "MILE-04": {
+      "id": "Rec0CHTFL1V19",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:milestone:4"
+    },
+    "MILE-05": {
+      "id": "Rec0CHZGW3TPU",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:milestone:5"
+    },
+    "MILE-06": {
+      "id": "Rec0CHZGW4W3C",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:milestone:6"
+    },
+    "MILE-07": {
+      "id": "Rec0CHXPC7CMC",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:milestone:7"
+    },
+    "MILE-08": {
+      "id": "Rec0CHZGW865Q",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:milestone:8"
+    },
+    "MILE-09": {
+      "id": "Rec0CHZGX14Q2",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:milestone:9"
+    },
+    "MILE-10": {
+      "id": "Rec0CHJBA5NUX",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:milestone:10"
+    },
+    "MILE-11": {
+      "id": "Rec0CJU40ALEL",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:milestone:11"
+    },
+    "MILE-12": {
+      "id": "Rec0CHZGXDX0A",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:milestone:12"
+    },
+    "MILE-13": {
+      "id": "Rec0CJU3Z4YGY",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:milestone:13"
+    },
+    "MILE-14": {
+      "id": "Rec0CHZGX7WTC",
+      "list": "roadmap",
+      "source": "souq-blueprint:v1:milestone:14"
+    },
+    "API-001": {
+      "id": "Rec0CHZGYA9S6",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:dc3a1f325d2752fb"
+    },
+    "API-002": {
+      "id": "Rec0CHUDTLUBF",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:b930612ce77c083f"
+    },
+    "API-003": {
+      "id": "Rec0CJ3DN9XM2",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:7a9a1295bc42a385"
+    },
+    "API-004": {
+      "id": "Rec0CHJBB8UCF",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:bf782cda86a4e2f9"
+    },
+    "API-005": {
+      "id": "Rec0CJU4056D6",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:8f2dc48d0257bb21"
+    },
+    "API-006": {
+      "id": "Rec0CHUDU2WA1",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:3786c57708cbf934"
+    },
+    "API-007": {
+      "id": "Rec0CJ1K8HS73",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:ef5f2f2f295ade3d"
+    },
+    "API-008": {
+      "id": "Rec0CHUDUL57X",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:df1d945f71c138ed"
+    },
+    "API-009": {
+      "id": "Rec0CHUDUE0JH",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:f7c1997beb9df2b7"
+    },
+    "API-010": {
+      "id": "Rec0CJU42C8AU",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:b50a4e54252fd544"
+    },
+    "API-011": {
+      "id": "Rec0CHXPG6CRL",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:8e226db192648605"
+    },
+    "API-012": {
+      "id": "Rec0CHTFQQQG3",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:3d80653e9f60327c"
+    },
+    "API-013": {
+      "id": "Rec0CHXPFN1BQ",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:29b03006b2085009"
+    },
+    "API-014": {
+      "id": "Rec0CHZH01XM0",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:789db1697889041a"
+    },
+    "API-015": {
+      "id": "Rec0CHXPH0G3G",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:7b2ce968eedf89c7"
+    },
+    "API-016": {
+      "id": "Rec0CHTFQV5PD",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:7b14e314518e37ad"
+    },
+    "API-017": {
+      "id": "Rec0CJ1KADEGH",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:9682791368e38149"
+    },
+    "API-018": {
+      "id": "Rec0CHZH1UYP4",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:5d83cec5b59f0f6a"
+    },
+    "API-019": {
+      "id": "Rec0CJ3DQRH7E",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:438189941e90976a"
+    },
+    "API-020": {
+      "id": "Rec0CHJBEEJHM",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:10052fa0ea3e9e03"
+    },
+    "API-021": {
+      "id": "Rec0CJU43RH4Y",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:1054e739dce05b5d"
+    },
+    "API-022": {
+      "id": "Rec0CJ1KBRFK3",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:50ced8897dee515c"
+    },
+    "API-023": {
+      "id": "Rec0CJ3DRJ36Y",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:52975e36a3387d98"
+    },
+    "API-024": {
+      "id": "Rec0CJ3DSS9T6",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:ba5c9c5ec4cbf81e"
+    },
+    "API-025": {
+      "id": "Rec0CJU443SD6",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:72f8842a32e140b9"
+    },
+    "API-026": {
+      "id": "Rec0CHJBF7Z3R",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:a8acc898f2a50bea"
+    },
+    "API-027": {
+      "id": "Rec0CHUDY30HK",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:b68bf6eefb5293ed"
+    },
+    "API-028": {
+      "id": "Rec0CJ3DT30CC",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:c0650da243ed986f"
+    },
+    "API-029": {
+      "id": "Rec0CHXPJLE5U",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:9657b2fb16d33903"
+    },
+    "API-030": {
+      "id": "Rec0CHXPKCJ9L",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:f9e6014ba085bb1f"
+    },
+    "API-031": {
+      "id": "Rec0CHXPKGAR4",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:63030ad61084d8cb"
+    },
+    "API-032": {
+      "id": "Rec0CJU4536AC",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:233a39f158a35c83"
+    },
+    "API-033": {
+      "id": "Rec0CHTFTCP51",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:0603fae2f5cf145d"
+    },
+    "API-034": {
+      "id": "Rec0CHTFTQZQT",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:7d043b6affd8528b"
+    },
+    "API-035": {
+      "id": "Rec0CJ1KDE073",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:889bd3d2cb0a3ba8"
+    },
+    "API-036": {
+      "id": "Rec0CJ3DT5QLC",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:3d7c1a892bcda70a"
+    },
+    "API-037": {
+      "id": "Rec0CJ3DUHMKN",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:77e35afac56178fb"
+    },
+    "API-038": {
+      "id": "Rec0CHXPLNDQE",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:5d81fd44f78f3e6c"
+    },
+    "API-039": {
+      "id": "Rec0CHXPLGDB8",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:ab2fa15b9ff8c910"
+    },
+    "API-040": {
+      "id": "Rec0CHJBGQAUX",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:3c0f00ae694e6ea0"
+    },
+    "API-041": {
+      "id": "Rec0CHUE0FTAR",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:8206bb5881991e98"
+    },
+    "API-042": {
+      "id": "Rec0CHXPM4HD4",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:d7d2e7c10f9c4a0e"
+    },
+    "API-043": {
+      "id": "Rec0CHTFVMWR1",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:4634b20be848b44c"
+    },
+    "API-044": {
+      "id": "Rec0CHTFV5943",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:805882d719d9727d"
+    },
+    "API-045": {
+      "id": "Rec0CJU478SRW",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:737b4daadc09f3aa"
+    },
+    "API-046": {
+      "id": "Rec0CJU478JBA",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:1e234ab22629eaf2"
+    },
+    "API-047": {
+      "id": "Rec0CHXPMUWF8",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:a9fe6cce1db098e1"
+    },
+    "API-048": {
+      "id": "Rec0CHTFWSK43",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:01c06b53b69bca96"
+    },
+    "API-049": {
+      "id": "Rec0CJ1KFPKMX",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:d814a93629a4afd0"
+    },
+    "API-050": {
+      "id": "Rec0CHZH6FN90",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:56094f49f311f7e5"
+    },
+    "API-051": {
+      "id": "Rec0CHTFWNYKV",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:23a71ef9da9629c9"
+    },
+    "API-052": {
+      "id": "Rec0CHUE210Q5",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:dea139a60e6d99c3"
+    },
+    "API-053": {
+      "id": "Rec0CHTFX4SFM",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:c650203c11de629b"
+    },
+    "API-054": {
+      "id": "Rec0CHJBKSJB1",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:4c4f7ff97d90f972"
+    },
+    "API-055": {
+      "id": "Rec0CJU491CFJ",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:20388c84310915d7"
+    },
+    "API-056": {
+      "id": "Rec0CHZH5U802",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:f14461c2b6684c29"
+    },
+    "API-057": {
+      "id": "Rec0CHTFXK2EP",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:b220561242f65815"
+    },
+    "API-058": {
+      "id": "Rec0CJ3DX5MCL",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:0432bc266897d3e1"
+    },
+    "API-059": {
+      "id": "Rec0CJU49PCNL",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:c1bca91c6377382f"
+    },
+    "API-060": {
+      "id": "Rec0CHJBKPTL7",
+      "list": "api",
+      "source": "souq-blueprint:v1:api:00c98db5e0e26b30"
+    },
+    "BE-01": {
+      "id": "Rec0CHJBWSUKZ",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:BE-01"
+    },
+    "BE-02": {
+      "id": "Rec0CHJC127T9",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:BE-02"
+    },
+    "BE-03": {
+      "id": "Rec0CHTGCRV8B",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:BE-03"
+    },
+    "BE-04": {
+      "id": "Rec0CHTGD2TQB",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:BE-04"
+    },
+    "BE-05": {
+      "id": "Rec0CHUEJ54MT",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:BE-05"
+    },
+    "BE-06": {
+      "id": "Rec0CHJC1H12T",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:BE-06"
+    },
+    "BE-07": {
+      "id": "Rec0CJ3ECLVU4",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:BE-07"
+    },
+    "BE-08": {
+      "id": "Rec0CHZHNAZDG",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:BE-08"
+    },
+    "BE-09": {
+      "id": "Rec0CJ1KYV717",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:BE-09"
+    },
+    "BE-10": {
+      "id": "Rec0CJ1KZABJM",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:BE-10"
+    },
+    "BE-11": {
+      "id": "Rec0CJ3EDPXCL",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:BE-11"
+    },
+    "BE-12": {
+      "id": "Rec0CJ1KZ1J01",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:BE-12"
+    },
+    "FE-00": {
+      "id": "Rec0CJ1KZHRJM",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:FE-00"
+    },
+    "C-00": {
+      "id": "Rec0CHZHPMY82",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:C-00"
+    },
+    "C-01": {
+      "id": "Rec0CJU4S9WRE",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:C-01"
+    },
+    "C-02": {
+      "id": "Rec0CJ3EEGZNY",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:C-02"
+    },
+    "C-03": {
+      "id": "Rec0CJU4TB29E",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:C-03"
+    },
+    "C-04": {
+      "id": "Rec0CHJC1GUKH",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:C-04"
+    },
+    "C-05": {
+      "id": "Rec0CHJC3AK39",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:C-05"
+    },
+    "C-06": {
+      "id": "Rec0CJU4PKX32",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:C-06"
+    },
+    "C-07": {
+      "id": "Rec0CHTGFC2KV",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:C-07"
+    },
+    "C-08": {
+      "id": "Rec0CHTGFJ49Z",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:C-08"
+    },
+    "C-09": {
+      "id": "Rec0CJ1L10K89",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:C-09"
+    },
+    "C-10": {
+      "id": "Rec0CHUELH929",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:C-10"
+    },
+    "M-01": {
+      "id": "Rec0CHUEMMCTF",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:M-01"
+    },
+    "M-02": {
+      "id": "Rec0CHZHRE2G2",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:M-02"
+    },
+    "M-03": {
+      "id": "Rec0CHJC5HJ8P",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:M-03"
+    },
+    "M-04": {
+      "id": "Rec0CJU4UNYKS",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:M-04"
+    },
+    "M-05": {
+      "id": "Rec0CHXQ8QKSS",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:M-05"
+    },
+    "M-06": {
+      "id": "Rec0CHTGGMSFM",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:M-06"
+    },
+    "M-07": {
+      "id": "Rec0CJ1L29FB3",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:M-07"
+    },
+    "M-08": {
+      "id": "Rec0CHJC5F1HD",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:M-08"
+    },
+    "M-09": {
+      "id": "Rec0CJU4UAT24",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:M-09"
+    },
+    "M-10": {
+      "id": "Rec0CHZHS9YRY",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:M-10"
+    },
+    "M-11": {
+      "id": "Rec0CHJC62JDV",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:M-11"
+    },
+    "M-12": {
+      "id": "Rec0CHZHTBAJE",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:M-12"
+    },
+    "M-13": {
+      "id": "Rec0CHUEP577F",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:M-13"
+    },
+    "A-01": {
+      "id": "Rec0CJ3EJ5284",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:A-01"
+    },
+    "A-02": {
+      "id": "Rec0CJU4VMADN",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:A-02"
+    },
+    "A-03": {
+      "id": "Rec0CHJC6BYTZ",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:A-03"
+    },
+    "A-04": {
+      "id": "Rec0CJ3EHGRB6",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:A-04"
+    },
+    "A-05": {
+      "id": "Rec0CHUEP92J1",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:A-05"
+    },
+    "A-06": {
+      "id": "Rec0CHJC6QYLF",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:A-06"
+    },
+    "A-07": {
+      "id": "Rec0CHJC78C4F",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:A-07"
+    },
+    "A-08": {
+      "id": "Rec0CJU4WSG2U",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:A-08"
+    },
+    "A-09": {
+      "id": "Rec0CHTGKF3EF",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:A-09"
+    },
+    "INT-01": {
+      "id": "Rec0CJ1L4Q8EM",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:INT-01"
+    },
+    "INT-02": {
+      "id": "Rec0CJ1L4EWGZ",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:INT-02"
+    },
+    "INT-03": {
+      "id": "Rec0CHZHV8N58",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:INT-03"
+    },
+    "INT-04": {
+      "id": "Rec0CHJC7NSJK",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:INT-04"
+    },
+    "INT-05": {
+      "id": "Rec0CHXQBMST0",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:INT-05"
+    },
+    "INT-06": {
+      "id": "Rec0CHXQBLN6A",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:INT-06"
+    },
+    "INT-07": {
+      "id": "Rec0CHUERQLMB",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:INT-07"
+    },
+    "INT-08": {
+      "id": "Rec0CHJC8JPNK",
+      "list": "backlog",
+      "source": "souq-blueprint:v1:task:INT-08"
+    }
+  },
+  "verified": {
+    "roadmap": 22,
+    "api": 60,
+    "backlog": 54
+  },
+  "scope_item": "Rec0CHT7ACRJ9",
+  "owners": {
+    "backend": {
+      "name": "Rasheed",
+      "github": "marco47t",
+      "slack": "U0CHXBNE6F4"
+    },
+    "frontend": {
+      "name": "Moataz",
+      "github": "MoatazAbdElmutaal",
+      "slack": null
+    }
+  },
+  "notes": [
+    "Moataz is not visible in current Slack members; frontend ownership is explicit but native assignment is pending.",
+    "No task has been made Ready or assigned executor agy.",
+    "API rows are Proposed/Deferred; no endpoint implementation is claimed.",
+    "Roadmap and API readiness are explicit human-maintained gates; existing worker handles authorized execution and PR status, not cross-list dependency enforcement."
+  ]
+}

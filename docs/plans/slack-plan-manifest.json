@@ -1,0 +1,2863 @@
+{
+  "version": 1,
+  "source": "https://preview-chat-d59fa41d-a7de-46a1-b545-0898397f953f.space-z.ai/",
+  "source_sha256": "34011bc89ccb7203979ba2ebc13b03727668abfe4444df731d9b4738199b9f28",
+  "selected_stack": [
+    "Django REST Framework",
+    "Flutter",
+    "React",
+    "PostgreSQL"
+  ],
+  "owners": {
+    "backend": "Rasheed / @marco47t",
+    "frontend": "Moataz / @MoatazAbdElmutaal"
+  },
+  "roadmap": [
+    {
+      "seq": 1,
+      "name": "Planning",
+      "sticker": "🧭",
+      "summary": "Finalize business rules, screen inventory, user journeys and MVP scope.",
+      "backend": [
+        "Business rules for new vs used",
+        "Verification policy draft"
+      ],
+      "frontend": [
+        "Journey maps (Zones 2–4)",
+        "Screen inventory with IDs"
+      ],
+      "integration": "MVP scope + screen spec cards (Zone 5) agreed",
+      "dependencies": "None — start here",
+      "checklist": [
+        "MVP scope signed off",
+        "Screen IDs fixed",
+        "Priority labels set"
+      ],
+      "status": "Not started"
+    },
+    {
+      "seq": 2,
+      "name": "Foundation",
+      "sticker": "🧱",
+      "summary": "Initialize backend, mobile app, web portal, database, repository and CI.",
+      "backend": [
+        "Django + DRF project",
+        "PostgreSQL schema baseline",
+        "CI + tests",
+        "R2 bucket"
+      ],
+      "frontend": [
+        "Flutter app skeleton",
+        "React portal skeleton",
+        "Design tokens, AR/EN + RTL setup"
+      ],
+      "integration": "API contract format + OpenAPI skeleton",
+      "dependencies": "Stage 1",
+      "checklist": [
+        "Repos + CI green",
+        "Apps render hello world",
+        "DB migrations run"
+      ],
+      "status": "Not started"
+    },
+    {
+      "seq": 3,
+      "name": "Identity & Verification",
+      "sticker": "🔐",
+      "summary": "Backend builds auth and merchant approval rules while frontend builds the forms and screens.",
+      "backend": [
+        "Auth & sessions",
+        "Roles + object permissions",
+        "Verification workflow",
+        "Audit events"
+      ],
+      "frontend": [
+        "Login / register (C-07, M-01)",
+        "Business info & evidence upload (M-02, M-03)",
+        "Verification status (M-04)"
+      ],
+      "integration": "Auth + verification endpoints contract-tested",
+      "dependencies": "Stage 2",
+      "checklist": [
+        "Unverified store cannot publish",
+        "Audit trail records decisions",
+        "Both languages render"
+      ],
+      "status": "Not started"
+    },
+    {
+      "seq": 4,
+      "name": "Catalog & Listings",
+      "sticker": "📦",
+      "summary": "Backend builds product, listing, inventory and media functionality; frontend builds new/used listing forms.",
+      "backend": [
+        "Catalog product & variant models",
+        "Listing + inventory + price history",
+        "Media authorization & processing",
+        "Minimum audited publication moderation before public discovery"
+      ],
+      "frontend": [
+        "New phone form (M-07)",
+        "Used phone form (M-08)",
+        "Inventory table (M-09, M-10)",
+        "Publication status (M-13)",
+        "Listing moderation queue/actions (A-05)"
+      ],
+      "integration": "Listing CRUD + media upload contract",
+      "dependencies": "Stage 3",
+      "checklist": [
+        "New listing = quantity",
+        "Used listing = individual unit",
+        "Draft → pending → published flow"
+      ],
+      "status": "Not started"
+    },
+    {
+      "seq": 5,
+      "name": "Customer Discovery",
+      "sticker": "🔎",
+      "summary": "Backend builds search and public listing APIs; frontend builds the Flutter browsing experience.",
+      "backend": [
+        "Search + filters + pagination",
+        "Public listing visibility rules",
+        "Store profile API"
+      ],
+      "frontend": [
+        "Home (C-01)",
+        "Search & filters (C-02)",
+        "Details (C-03)",
+        "Store profile (C-04)",
+        "Compare (C-06)"
+      ],
+      "integration": "Public catalog endpoints contract-tested",
+      "dependencies": "Stage 4",
+      "checklist": [
+        "Guests can browse",
+        "Filters compose & paginate",
+        "Details handles all listing states",
+        "Suspended/moderated listings disappear from real public search (A-05 / INT-05)"
+      ],
+      "status": "Not started"
+    },
+    {
+      "seq": 6,
+      "name": "Merchant & Admin Operations",
+      "sticker": "🛠️",
+      "summary": "Complete inventory management, moderation, permissions and administrative workflows.",
+      "backend": [
+        "Moderation actions + audit",
+        "Roles & permissions admin (A-06, A-07)",
+        "Announcement delivery rules"
+      ],
+      "frontend": [
+        "Admin overview & queues (A-01…A-05)",
+        "Merchant dashboard polish (M-05, M-11)",
+        "Contact seller (C-05)"
+      ],
+      "integration": "Admin workflows contract-tested",
+      "dependencies": "Stage 5",
+      "checklist": [
+        "Dual approval on critical ops",
+        "Moderation actions auditable",
+        "Admin never enters merchant UI"
+      ],
+      "status": "Not started"
+    },
+    {
+      "seq": 7,
+      "name": "Integration & Testing",
+      "sticker": "🧪",
+      "summary": "Connect real APIs, test both interfaces, verify security and fix problems.",
+      "backend": [
+        "Integration test suite",
+        "Security review",
+        "Performance & backups"
+      ],
+      "frontend": [
+        "E2E flows on real APIs",
+        "Offline / error states",
+        "Accessibility pass"
+      ],
+      "integration": "Full journey tests: register → verify → list → discover → contact",
+      "dependencies": "Stages 5, 6",
+      "checklist": [
+        "No critical bugs",
+        "Security checklist green",
+        "Both languages complete"
+      ],
+      "status": "Not started"
+    },
+    {
+      "seq": 8,
+      "name": "Controlled Launch",
+      "sticker": "🚀",
+      "summary": "Deploy production, onboard initial verified stores, monitor and collect feedback.",
+      "backend": [
+        "Production deploy",
+        "Monitoring & alerts",
+        "Backup & restore drill"
+      ],
+      "frontend": [
+        "Store listing pre-launch checks",
+        "Pilot feedback channels"
+      ],
+      "integration": "Go / no-go review against release gates",
+      "dependencies": "Stage 7",
+      "checklist": [
+        "Runbook executed",
+        "First stores verified",
+        "Feedback loop running"
+      ],
+      "status": "Not started"
+    }
+  ],
+  "milestones": [
+    {
+      "seq": 1,
+      "name": "Product Definition & MVP Planning",
+      "sticker": "🧭",
+      "description": "Agree what the marketplace is: new & used phones, verified stores, MVP scope.",
+      "owner": "Both founders",
+      "deliverable": "MVP scope document + business rules",
+      "dependencies": "None — starting point",
+      "completion": "Both founders sign off on MVP scope and out-of-scope list."
+    },
+    {
+      "seq": 2,
+      "name": "User Journeys & Screen Mapping",
+      "sticker": "🗺️",
+      "description": "Map every customer, merchant and admin journey to concrete screens.",
+      "owner": "Founder B — Frontend",
+      "deliverable": "Screen inventory (C-00…C-10, M-01…M-13, A-01…A-09)",
+      "dependencies": "Milestone 1",
+      "completion": "Every user goal is covered by at least one screen; IDs agreed."
+    },
+    {
+      "seq": 3,
+      "name": "Technology Architecture",
+      "sticker": "🏗️",
+      "description": "Flutter app, React portal, Django REST API, PostgreSQL, R2 storage, Redis/Celery.",
+      "owner": "Founder A — Backend",
+      "deliverable": "System architecture diagram (Zone 7)",
+      "dependencies": "Milestone 1",
+      "completion": "Architecture reviewed and approved by both founders."
+    },
+    {
+      "seq": 4,
+      "name": "Database & API Design",
+      "sticker": "🗃️",
+      "description": "Domain model: users, stores, verifications, catalog, listings, inventory, audit.",
+      "owner": "Founder A — Backend",
+      "deliverable": "ERD + draft API contract (single source of truth)",
+      "dependencies": "Milestones 2, 3",
+      "completion": "API contract for MVP screens agreed with Founder B."
+    },
+    {
+      "seq": 5,
+      "name": "Authentication & Permissions",
+      "sticker": "🔐",
+      "description": "Sessions, roles, object-level permissions, merchant membership, admin access.",
+      "owner": "Founder A — Backend",
+      "deliverable": "Auth + RBAC implementation with tests",
+      "dependencies": "Milestone 4",
+      "completion": "Role matrix passes backend tests; no unauthorized action possible."
+    },
+    {
+      "seq": 6,
+      "name": "Store Verification & Administration",
+      "sticker": "🛡️",
+      "description": "Verification applications, evidence review, approve/reject/request-changes, audit events.",
+      "owner": "Both founders",
+      "deliverable": "Verification workflow end-to-end",
+      "dependencies": "Milestone 5",
+      "completion": "A test store passes the full verification lifecycle with audit trail."
+    },
+    {
+      "seq": 7,
+      "name": "Product Catalog & Inventory",
+      "sticker": "📦",
+      "description": "Catalog products/variants, new-stock quantity listings, individual used-device listings.",
+      "owner": "Founder A — Backend",
+      "deliverable": "Catalog, listing, inventory & media models + APIs",
+      "dependencies": "Milestones 4, 5",
+      "completion": "New and used listing flows both persist correctly with media."
+    },
+    {
+      "seq": 8,
+      "name": "Mobile Application Development",
+      "sticker": "📱",
+      "description": "Flutter customer app: browse, search, details, stores, compare, contact, account.",
+      "owner": "Founder B — Frontend",
+      "deliverable": "Flutter app wired to real APIs (AR/EN, RTL)",
+      "dependencies": "Milestones 2, 7",
+      "completion": "All C-series MVP screens work against the staging API."
+    },
+    {
+      "seq": 9,
+      "name": "Merchant Dashboard Development",
+      "sticker": "🏪",
+      "description": "React portal: registration, business info, verification, listings, inventory, settings.",
+      "owner": "Founder B — Frontend",
+      "deliverable": "Merchant portal wired to real APIs (AR/EN, RTL)",
+      "dependencies": "Milestones 2, 6, 7",
+      "completion": "A merchant can register, get verified, and publish a listing end-to-end."
+    },
+    {
+      "seq": 10,
+      "name": "Marketplace Integration",
+      "sticker": "🧩",
+      "description": "Public listing visibility, search across stores, moderation queue, admin operations.",
+      "owner": "Both founders",
+      "deliverable": "Integrated marketplace flows",
+      "dependencies": "Milestones 8, 9",
+      "completion": "Published listings appear in customer search within SLA; moderation works."
+    },
+    {
+      "seq": 11,
+      "name": "Testing & Stabilization",
+      "sticker": "🧪",
+      "description": "Integration tests, security checks, both interfaces regression-tested, bug fixing.",
+      "owner": "Both founders",
+      "deliverable": "Green test suites + security checklist",
+      "dependencies": "Milestone 10",
+      "completion": "No open critical bugs; security checklist fully green."
+    },
+    {
+      "seq": 12,
+      "name": "Production Deployment",
+      "sticker": "🚀",
+      "description": "Deploy API, portals and storage; configure monitoring, backups, alerts.",
+      "owner": "Founder A — Backend",
+      "deliverable": "Live production environment",
+      "dependencies": "Milestone 11",
+      "completion": "Deployment runbook executed; monitoring dashboards live."
+    },
+    {
+      "seq": 13,
+      "name": "Pilot Launch",
+      "sticker": "🧺",
+      "description": "Onboard first verified phone stores, support them closely, collect feedback.",
+      "owner": "Both founders",
+      "deliverable": "Pilot cohort of verified stores trading",
+      "dependencies": "Milestone 12",
+      "completion": "Pilot stores successfully publish listings and receive customer contact."
+    },
+    {
+      "seq": 14,
+      "name": "Monitoring & Future Expansion",
+      "sticker": "🌱",
+      "description": "Track metrics, stabilize, then: saved listings, advertising, announcements, AI features.",
+      "owner": "Both founders",
+      "deliverable": "Growth roadmap + prioritized backlog",
+      "dependencies": "Milestone 13",
+      "completion": "Expansion features scheduled; pilot lessons folded into backlog."
+    }
+  ],
+  "api_contract_requirements": [
+    "Endpoint & HTTP method",
+    "Input parameters",
+    "Request body",
+    "Response schema",
+    "Authentication requirements",
+    "Authorization scope",
+    "Error responses",
+    "Pagination & filtering",
+    "Side effects & business-state changes",
+    "Acceptance tests"
+  ],
+  "apis": [
+    {
+      "key": "API-001",
+      "operation": "DELETE /api/v1/admin/roles/{id}",
+      "backend_task": "BE-10",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-06"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "User (required)",
+        "Role (required)",
+        "Scope (store / platform)"
+      ],
+      "responses": [
+        "Role matrix",
+        "Membership changes",
+        "Audit events"
+      ],
+      "access": [
+        "Founder-level administrator only."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:dc3a1f325d2752fb"
+    },
+    {
+      "key": "API-002",
+      "operation": "DELETE /api/v1/auth/session",
+      "backend_task": "BE-03",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-07"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Phone or email (required)",
+        "Password (required, min 8)",
+        "Display name (optional)"
+      ],
+      "responses": [
+        "Session token",
+        "Profile payload",
+        "Error codes for each failure mode"
+      ],
+      "access": [
+        "Account owner only for profile actions."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:b930612ce77c083f"
+    },
+    {
+      "key": "API-003",
+      "operation": "DELETE /api/v1/me/saved-listings/{id}",
+      "backend_task": "BE-11",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-08"
+      ],
+      "priority": "Later",
+      "status": "Deferred",
+      "inputs": [],
+      "responses": [
+        "Saved listing summaries with availability flag"
+      ],
+      "access": [
+        "Authenticated customer, own saves only."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:7a9a1295bc42a385"
+    },
+    {
+      "key": "API-004",
+      "operation": "DELETE /api/v1/stores/me/staff/{id}",
+      "backend_task": "BE-04",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-11"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Description",
+        "Locations (multi)",
+        "Phone",
+        "Messaging handles",
+        "Profile image",
+        "Staff emails & roles"
+      ],
+      "responses": [
+        "Updated settings",
+        "Staff membership changes"
+      ],
+      "access": [
+        "Merchant owner + authorized staff (scoped)."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:bf782cda86a4e2f9"
+    },
+    {
+      "key": "API-005",
+      "operation": "GET /api/v1/admin/announcements/{id}/delivery",
+      "backend_task": "BE-11",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-09"
+      ],
+      "priority": "Later",
+      "status": "Deferred",
+      "inputs": [
+        "Title & body (required, AR & EN)",
+        "Audience (required)",
+        "Schedule (optional)"
+      ],
+      "responses": [
+        "Announcement record",
+        "Delivery stats"
+      ],
+      "access": [
+        "Administrator with announcements scope. FUTURE FEATURE."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:8f2dc48d0257bb21"
+    },
+    {
+      "key": "API-006",
+      "operation": "GET /api/v1/admin/audit-events",
+      "backend_task": "BE-10",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-07"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "Paginated audit events",
+        "Approval outcomes"
+      ],
+      "access": [
+        "Founder-level administrator; approver ≠ requester enforced."
+      ],
+      "query_suggestions": [
+        "GET /api/v1/admin/audit-events?actor&action&page"
+      ],
+      "source": "souq-blueprint:v1:api:3786c57708cbf934"
+    },
+    {
+      "key": "API-007",
+      "operation": "GET /api/v1/admin/campaigns/queue",
+      "backend_task": "BE-11",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-08"
+      ],
+      "priority": "Later",
+      "status": "Deferred",
+      "inputs": [
+        "Decision reason (required on reject)"
+      ],
+      "responses": [
+        "Campaign queue",
+        "Decision confirmations",
+        "Audit events"
+      ],
+      "access": [
+        "Administrator with advertising scope. FUTURE FEATURE."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:ef5f2f2f295ade3d"
+    },
+    {
+      "key": "API-008",
+      "operation": "GET /api/v1/admin/moderation/queue",
+      "backend_task": "BE-07",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-05"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Action (required)",
+        "Reason (required)"
+      ],
+      "responses": [
+        "Queue items",
+        "Action confirmation",
+        "Audit event ID"
+      ],
+      "access": [
+        "Administrator with moderation scope."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:df1d945f71c138ed"
+    },
+    {
+      "key": "API-009",
+      "operation": "GET /api/v1/admin/overview",
+      "backend_task": "BE-10",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-01"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "Aggregated metrics",
+        "Queue sizes",
+        "Alerts",
+        "Recent critical audit events"
+      ],
+      "access": [
+        "Administrator role required."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:f7c1997beb9df2b7"
+    },
+    {
+      "key": "API-010",
+      "operation": "GET /api/v1/admin/roles",
+      "backend_task": "BE-10",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-06"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "User (required)",
+        "Role (required)",
+        "Scope (store / platform)"
+      ],
+      "responses": [
+        "Role matrix",
+        "Membership changes",
+        "Audit events"
+      ],
+      "access": [
+        "Founder-level administrator only."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:b50a4e54252fd544"
+    },
+    {
+      "key": "API-011",
+      "operation": "GET /api/v1/admin/verifications",
+      "backend_task": "BE-05",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-02"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "Applications with store & document summaries",
+        "State metadata"
+      ],
+      "access": [
+        "Administrator with verification scope."
+      ],
+      "query_suggestions": [
+        "GET /api/v1/admin/verifications?state&page"
+      ],
+      "source": "souq-blueprint:v1:api:8e226db192648605"
+    },
+    {
+      "key": "API-012",
+      "operation": "GET /api/v1/admin/verifications/{id}",
+      "backend_task": "BE-05",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-03"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Reviewer notes (required before decision)"
+      ],
+      "responses": [
+        "Application details",
+        "Time-limited document access",
+        "Note storage confirmation"
+      ],
+      "access": [
+        "Administrator with verification scope; access logged; evidence never downloaded unlogged."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:3d80653e9f60327c"
+    },
+    {
+      "key": "API-013",
+      "operation": "GET /api/v1/admin/verifications/{id}/documents",
+      "backend_task": "BE-05",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-03"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Reviewer notes (required before decision)"
+      ],
+      "responses": [
+        "Application details",
+        "Time-limited document access",
+        "Note storage confirmation"
+      ],
+      "access": [
+        "Administrator with verification scope; access logged; evidence never downloaded unlogged."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:29b03006b2085009"
+    },
+    {
+      "key": "API-014",
+      "operation": "GET /api/v1/brands",
+      "backend_task": "BE-06",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-10"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "Brands with listing counts",
+        "Categories with counts"
+      ],
+      "access": [
+        "Public."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:789db1697889041a"
+    },
+    {
+      "key": "API-015",
+      "operation": "GET /api/v1/catalog/brands",
+      "backend_task": "BE-06",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-06"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Brand (required)",
+        "Model (required)",
+        "Variant (required when model has variants)",
+        "Condition type: new or used (required)"
+      ],
+      "responses": [
+        "Catalog trees for selection",
+        "Variant details"
+      ],
+      "access": [
+        "Verified merchant."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:7b2ce968eedf89c7"
+    },
+    {
+      "key": "API-016",
+      "operation": "GET /api/v1/catalog/models",
+      "backend_task": "BE-06",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-06"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Brand (required)",
+        "Model (required)",
+        "Variant (required when model has variants)",
+        "Condition type: new or used (required)"
+      ],
+      "responses": [
+        "Catalog trees for selection",
+        "Variant details"
+      ],
+      "access": [
+        "Verified merchant."
+      ],
+      "query_suggestions": [
+        "GET /api/v1/catalog/models?brand={id}"
+      ],
+      "source": "souq-blueprint:v1:api:7b14e314518e37ad"
+    },
+    {
+      "key": "API-017",
+      "operation": "GET /api/v1/catalog/variants",
+      "backend_task": "BE-06",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-06"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Brand (required)",
+        "Model (required)",
+        "Variant (required when model has variants)",
+        "Condition type: new or used (required)"
+      ],
+      "responses": [
+        "Catalog trees for selection",
+        "Variant details"
+      ],
+      "access": [
+        "Verified merchant."
+      ],
+      "query_suggestions": [
+        "GET /api/v1/catalog/variants?model={id}"
+      ],
+      "source": "souq-blueprint:v1:api:9682791368e38149"
+    },
+    {
+      "key": "API-018",
+      "operation": "GET /api/v1/categories",
+      "backend_task": "BE-06",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-10"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "Brands with listing counts",
+        "Categories with counts"
+      ],
+      "access": [
+        "Public."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:5d83cec5b59f0f6a"
+    },
+    {
+      "key": "API-019",
+      "operation": "GET /api/v1/config",
+      "backend_task": "BE-02",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-00"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "Feature flags",
+        "Default locale & currency",
+        "Minimum app version"
+      ],
+      "access": [
+        "Public — no authentication required."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:438189941e90976a"
+    },
+    {
+      "key": "API-020",
+      "operation": "GET /api/v1/home",
+      "backend_task": "BE-09",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-01"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Search text (quick)"
+      ],
+      "responses": [
+        "Featured listings",
+        "Top brands & categories",
+        "Verified store cards",
+        "Active promo placements"
+      ],
+      "access": [
+        "Public — guest accessible."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:10052fa0ea3e9e03"
+    },
+    {
+      "key": "API-021",
+      "operation": "GET /api/v1/i18n/bundle",
+      "backend_task": "BE-02",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-00"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "Feature flags",
+        "Default locale & currency",
+        "Minimum app version"
+      ],
+      "access": [
+        "Public — no authentication required."
+      ],
+      "query_suggestions": [
+        "GET /api/v1/i18n/bundle?locale={ar|en}"
+      ],
+      "source": "souq-blueprint:v1:api:1054e739dce05b5d"
+    },
+    {
+      "key": "API-022",
+      "operation": "GET /api/v1/listings",
+      "backend_task": "BE-09",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-02"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Query text (required to search)",
+        "Brand/model (optional)",
+        "Price min/max (optional, numeric)",
+        "Condition new/used (optional)",
+        "Storage & specs (optional)"
+      ],
+      "responses": [
+        "Paginated listing summaries",
+        "Total count & facets",
+        "Applied-filter echo"
+      ],
+      "access": [
+        "Public."
+      ],
+      "query_suggestions": [
+        "GET /api/v1/listings?query&brand&condition&price_min&price_max&storage&sort&page"
+      ],
+      "source": "souq-blueprint:v1:api:50ced8897dee515c"
+    },
+    {
+      "key": "API-023",
+      "operation": "GET /api/v1/listings/{id}",
+      "backend_task": "BE-09",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-03"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "Published listing + product info",
+        "Authorized seller info",
+        "Price & availability",
+        "Related offers for same variant"
+      ],
+      "access": [
+        "Public listing visibility enforced server-side."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:52975e36a3387d98"
+    },
+    {
+      "key": "API-024",
+      "operation": "GET /api/v1/listings/{id}/contact-methods",
+      "backend_task": "BE-09",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-05"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "Allowed contact methods",
+        "Masked/authorized contact values"
+      ],
+      "access": [
+        "Contact info only served for listings that allow it; never raw merchant PII dumps."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:ba5c9c5ec4cbf81e"
+    },
+    {
+      "key": "API-025",
+      "operation": "GET /api/v1/listings/{id}/related",
+      "backend_task": "BE-09",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-03"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "Published listing + product info",
+        "Authorized seller info",
+        "Price & availability",
+        "Related offers for same variant"
+      ],
+      "access": [
+        "Public listing visibility enforced server-side."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:72f8842a32e140b9"
+    },
+    {
+      "key": "API-026",
+      "operation": "GET /api/v1/me/saved-listings",
+      "backend_task": "BE-11",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-08"
+      ],
+      "priority": "Later",
+      "status": "Deferred",
+      "inputs": [],
+      "responses": [
+        "Saved listing summaries with availability flag"
+      ],
+      "access": [
+        "Authenticated customer, own saves only."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:a8acc898f2a50bea"
+    },
+    {
+      "key": "API-027",
+      "operation": "GET /api/v1/product-variants/{id}/listings",
+      "backend_task": "BE-09",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-06"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "All published listings for the variant with price, condition, availability, store summary"
+      ],
+      "access": [
+        "Public."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:b68bf6eefb5293ed"
+    },
+    {
+      "key": "API-028",
+      "operation": "GET /api/v1/promotions",
+      "backend_task": "BE-11",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-01"
+      ],
+      "priority": "Later",
+      "status": "Deferred",
+      "inputs": [
+        "Search text (quick)"
+      ],
+      "responses": [
+        "Featured listings",
+        "Top brands & categories",
+        "Verified store cards",
+        "Active promo placements"
+      ],
+      "access": [
+        "Public — guest accessible."
+      ],
+      "query_suggestions": [
+        "GET /api/v1/promotions?placement=home"
+      ],
+      "source": "souq-blueprint:v1:api:c0650da243ed986f"
+    },
+    {
+      "key": "API-029",
+      "operation": "GET /api/v1/stores/featured",
+      "backend_task": "BE-09",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-01"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Search text (quick)"
+      ],
+      "responses": [
+        "Featured listings",
+        "Top brands & categories",
+        "Verified store cards",
+        "Active promo placements"
+      ],
+      "access": [
+        "Public — guest accessible."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:9657b2fb16d33903"
+    },
+    {
+      "key": "API-030",
+      "operation": "GET /api/v1/stores/me",
+      "backend_task": "BE-04",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-02"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Store name (required)",
+        "Business location (required)",
+        "Business phone (required)",
+        "Owner full name (required)",
+        "Owner ID reference (required for verification)"
+      ],
+      "responses": [
+        "Saved profile",
+        "Name-conflict error",
+        "Completion status"
+      ],
+      "access": [
+        "Authenticated merchant, own store only."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:f9e6014ba085bb1f"
+    },
+    {
+      "key": "API-031",
+      "operation": "GET /api/v1/stores/me/campaigns/{id}/results",
+      "backend_task": "BE-11",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-12"
+      ],
+      "priority": "Later",
+      "status": "Deferred",
+      "inputs": [
+        "Campaign name",
+        "Creative images",
+        "Placements",
+        "Target audience",
+        "Start/end dates",
+        "Budget (if applicable)"
+      ],
+      "responses": [
+        "Campaign state (draft → pending → approved/rejected → running)",
+        "Impression/click stats"
+      ],
+      "access": [
+        "Verified merchant; campaigns require admin approval."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:63030ad61084d8cb"
+    },
+    {
+      "key": "API-032",
+      "operation": "GET /api/v1/stores/me/dashboard",
+      "backend_task": "BE-10",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-05"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "Listing counts by state",
+        "Low-stock alerts",
+        "Store status",
+        "Recent activity"
+      ],
+      "access": [
+        "Verified merchant or authorized staff member."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:233a39f158a35c83"
+    },
+    {
+      "key": "API-033",
+      "operation": "GET /api/v1/stores/me/listings",
+      "backend_task": "BE-07",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-09"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Search text (optional)",
+        "State filter (optional)"
+      ],
+      "responses": [
+        "Paginated own listings with states & stock",
+        "Update confirmations"
+      ],
+      "access": [
+        "Verified merchant / authorized staff, own store only."
+      ],
+      "query_suggestions": [
+        "GET /api/v1/stores/me/listings?query&state&page"
+      ],
+      "source": "souq-blueprint:v1:api:0603fae2f5cf145d"
+    },
+    {
+      "key": "API-034",
+      "operation": "GET /api/v1/stores/me/listings/{id}/status",
+      "backend_task": "BE-07",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-13"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "Current state",
+        "Reasons (rejection/suspension)",
+        "Available actions",
+        "Transition history"
+      ],
+      "access": [
+        "Verified merchant, own listings."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:7d043b6affd8528b"
+    },
+    {
+      "key": "API-035",
+      "operation": "GET /api/v1/stores/me/verification",
+      "backend_task": "BE-05",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-04"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "Current verification state",
+        "Reviewer feedback",
+        "History of decisions"
+      ],
+      "access": [
+        "Authenticated merchant, own store."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:889bd3d2cb0a3ba8"
+    },
+    {
+      "key": "API-036",
+      "operation": "GET /api/v1/stores/{id}",
+      "backend_task": "BE-09",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-04"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "In-store search text (optional)"
+      ],
+      "responses": [
+        "Store profile (verified status)",
+        "Published inventory (paginated)"
+      ],
+      "access": [
+        "Public — only verified/published data exposed."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:3d7c1a892bcda70a"
+    },
+    {
+      "key": "API-037",
+      "operation": "GET /api/v1/stores/{id}/listings",
+      "backend_task": "BE-09",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-04"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "In-store search text (optional)"
+      ],
+      "responses": [
+        "Store profile (verified status)",
+        "Published inventory (paginated)"
+      ],
+      "access": [
+        "Public — only verified/published data exposed."
+      ],
+      "query_suggestions": [
+        "GET /api/v1/stores/{id}/listings?query&page"
+      ],
+      "source": "souq-blueprint:v1:api:77e35afac56178fb"
+    },
+    {
+      "key": "API-038",
+      "operation": "PATCH /api/v1/stores/me/listings/{id}",
+      "backend_task": "BE-07",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-09"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Search text (optional)",
+        "State filter (optional)"
+      ],
+      "responses": [
+        "Paginated own listings with states & stock",
+        "Update confirmations"
+      ],
+      "access": [
+        "Verified merchant / authorized staff, own store only."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:5d81fd44f78f3e6c"
+    },
+    {
+      "key": "API-039",
+      "operation": "PATCH /api/v1/stores/me/listings/{id}/price",
+      "backend_task": "BE-07",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-10"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "New price (required)",
+        "New quantity (new-phone listings only)"
+      ],
+      "responses": [
+        "Updated values",
+        "Price history confirmation",
+        "Conflict error if stale"
+      ],
+      "access": [
+        "Verified merchant, own listings."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:ab2fa15b9ff8c910"
+    },
+    {
+      "key": "API-040",
+      "operation": "PATCH /api/v1/stores/me/listings/{id}/stock",
+      "backend_task": "BE-07",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-10"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "New price (required)",
+        "New quantity (new-phone listings only)"
+      ],
+      "responses": [
+        "Updated values",
+        "Price history confirmation",
+        "Conflict error if stale"
+      ],
+      "access": [
+        "Verified merchant, own listings."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:3c0f00ae694e6ea0"
+    },
+    {
+      "key": "API-041",
+      "operation": "POST /api/v1/admin/announcements",
+      "backend_task": "BE-11",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-09"
+      ],
+      "priority": "Later",
+      "status": "Deferred",
+      "inputs": [
+        "Title & body (required, AR & EN)",
+        "Audience (required)",
+        "Schedule (optional)"
+      ],
+      "responses": [
+        "Announcement record",
+        "Delivery stats"
+      ],
+      "access": [
+        "Administrator with announcements scope. FUTURE FEATURE."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:8206bb5881991e98"
+    },
+    {
+      "key": "API-042",
+      "operation": "POST /api/v1/admin/campaigns/{id}/decision",
+      "backend_task": "BE-11",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-08"
+      ],
+      "priority": "Later",
+      "status": "Deferred",
+      "inputs": [
+        "Decision reason (required on reject)"
+      ],
+      "responses": [
+        "Campaign queue",
+        "Decision confirmations",
+        "Audit events"
+      ],
+      "access": [
+        "Administrator with advertising scope. FUTURE FEATURE."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:d7d2e7c10f9c4a0e"
+    },
+    {
+      "key": "API-043",
+      "operation": "POST /api/v1/admin/dual-approvals/{id}/decision",
+      "backend_task": "BE-10",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-07"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [],
+      "responses": [
+        "Paginated audit events",
+        "Approval outcomes"
+      ],
+      "access": [
+        "Founder-level administrator; approver ≠ requester enforced."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:4634b20be848b44c"
+    },
+    {
+      "key": "API-044",
+      "operation": "POST /api/v1/admin/listings/{id}/moderate",
+      "backend_task": "BE-07",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-05"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Action (required)",
+        "Reason (required)"
+      ],
+      "responses": [
+        "Queue items",
+        "Action confirmation",
+        "Audit event ID"
+      ],
+      "access": [
+        "Administrator with moderation scope."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:805882d719d9727d"
+    },
+    {
+      "key": "API-045",
+      "operation": "POST /api/v1/admin/roles",
+      "backend_task": "BE-10",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-06"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "User (required)",
+        "Role (required)",
+        "Scope (store / platform)"
+      ],
+      "responses": [
+        "Role matrix",
+        "Membership changes",
+        "Audit events"
+      ],
+      "access": [
+        "Founder-level administrator only."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:737b4daadc09f3aa"
+    },
+    {
+      "key": "API-046",
+      "operation": "POST /api/v1/admin/verifications/{id}/decision",
+      "backend_task": "BE-05",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "A-04"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Decision (required)",
+        "Reason (required)",
+        "Internal note (optional)"
+      ],
+      "responses": [
+        "Decision recorded",
+        "Merchant state change",
+        "Audit event ID"
+      ],
+      "access": [
+        "Administrator with verification scope; critical reversals need dual approval (A-07)."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:1e234ab22629eaf2"
+    },
+    {
+      "key": "API-047",
+      "operation": "POST /api/v1/auth/login",
+      "backend_task": "BE-03",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-07"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Phone or email (required)",
+        "Password (required, min 8)",
+        "Display name (optional)"
+      ],
+      "responses": [
+        "Session token",
+        "Profile payload",
+        "Error codes for each failure mode"
+      ],
+      "access": [
+        "Account owner only for profile actions."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:a9fe6cce1db098e1"
+    },
+    {
+      "key": "API-048",
+      "operation": "POST /api/v1/auth/recover",
+      "backend_task": "BE-03",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-07"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Phone or email (required)",
+        "Password (required, min 8)",
+        "Display name (optional)"
+      ],
+      "responses": [
+        "Session token",
+        "Profile payload",
+        "Error codes for each failure mode"
+      ],
+      "access": [
+        "Account owner only for profile actions."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:01c06b53b69bca96"
+    },
+    {
+      "key": "API-049",
+      "operation": "POST /api/v1/auth/register",
+      "backend_task": "BE-03",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-07"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Phone or email (required)",
+        "Password (required, min 8)",
+        "Display name (optional)"
+      ],
+      "responses": [
+        "Session token",
+        "Profile payload",
+        "Error codes for each failure mode"
+      ],
+      "access": [
+        "Account owner only for profile actions."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:d814a93629a4afd0"
+    },
+    {
+      "key": "API-050",
+      "operation": "POST /api/v1/media/uploads",
+      "backend_task": "BE-08",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-07",
+        "M-08"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Quantity (required, ≥1)",
+        "Price (required, > 0)",
+        "Currency (from config)",
+        "Warranty months (optional)",
+        "Images (required, min 1)",
+        "Availability (default on)",
+        "Condition grade (required)",
+        "Battery health % (required where relevant)",
+        "Defects (free list)",
+        "Accessories included (checklist)",
+        "Actual photos (required, multiple)",
+        "Price (required)"
+      ],
+      "responses": [
+        "Created listing (draft state)",
+        "Publication state",
+        "Validation errors",
+        "Created used-device listing (quantity locked to 1)"
+      ],
+      "access": [
+        "Verified merchant, own store."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:56094f49f311f7e5"
+    },
+    {
+      "key": "API-051",
+      "operation": "POST /api/v1/merchant/auth/register",
+      "backend_task": "BE-03",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-01"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Full name (required)",
+        "Email or phone (required, unique)",
+        "Password (required, min 8)",
+        "Terms agreement (required)"
+      ],
+      "responses": [
+        "Account created",
+        "Verification token",
+        "Duplicate-account error"
+      ],
+      "access": [
+        "Public registration; merchant role assigned on creation."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:23a71ef9da9629c9"
+    },
+    {
+      "key": "API-052",
+      "operation": "POST /api/v1/merchant/auth/verify",
+      "backend_task": "BE-03",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-01"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Full name (required)",
+        "Email or phone (required, unique)",
+        "Password (required, min 8)",
+        "Terms agreement (required)"
+      ],
+      "responses": [
+        "Account created",
+        "Verification token",
+        "Duplicate-account error"
+      ],
+      "access": [
+        "Public registration; merchant role assigned on creation."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:dea139a60e6d99c3"
+    },
+    {
+      "key": "API-053",
+      "operation": "POST /api/v1/stores/me/campaigns",
+      "backend_task": "BE-11",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-12"
+      ],
+      "priority": "Later",
+      "status": "Deferred",
+      "inputs": [
+        "Campaign name",
+        "Creative images",
+        "Placements",
+        "Target audience",
+        "Start/end dates",
+        "Budget (if applicable)"
+      ],
+      "responses": [
+        "Campaign state (draft → pending → approved/rejected → running)",
+        "Impression/click stats"
+      ],
+      "access": [
+        "Verified merchant; campaigns require admin approval."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:c650203c11de629b"
+    },
+    {
+      "key": "API-054",
+      "operation": "POST /api/v1/stores/me/listings",
+      "backend_task": "BE-07",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-07",
+        "M-08"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Quantity (required, ≥1)",
+        "Price (required, > 0)",
+        "Currency (from config)",
+        "Warranty months (optional)",
+        "Images (required, min 1)",
+        "Availability (default on)",
+        "Condition grade (required)",
+        "Battery health % (required where relevant)",
+        "Defects (free list)",
+        "Accessories included (checklist)",
+        "Actual photos (required, multiple)",
+        "Price (required)"
+      ],
+      "responses": [
+        "Created listing (draft state)",
+        "Publication state",
+        "Validation errors",
+        "Created used-device listing (quantity locked to 1)"
+      ],
+      "access": [
+        "Verified merchant, own store."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:4c4f7ff97d90f972"
+    },
+    {
+      "key": "API-055",
+      "operation": "POST /api/v1/stores/me/staff",
+      "backend_task": "BE-04",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-11"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Description",
+        "Locations (multi)",
+        "Phone",
+        "Messaging handles",
+        "Profile image",
+        "Staff emails & roles"
+      ],
+      "responses": [
+        "Updated settings",
+        "Staff membership changes"
+      ],
+      "access": [
+        "Merchant owner + authorized staff (scoped)."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:20388c84310915d7"
+    },
+    {
+      "key": "API-056",
+      "operation": "POST /api/v1/stores/me/verification/documents",
+      "backend_task": "BE-05",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-03"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Business license (required, image/PDF)",
+        "Owner ID document (required)",
+        "Optional supporting evidence"
+      ],
+      "responses": [
+        "Upload receipts",
+        "Application state → pending",
+        "Rejection of invalid files"
+      ],
+      "access": [
+        "Authenticated merchant, own store. Documents are access-restricted after upload."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:f14461c2b6684c29"
+    },
+    {
+      "key": "API-057",
+      "operation": "POST /api/v1/stores/me/verification/submit",
+      "backend_task": "BE-05",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-03"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Business license (required, image/PDF)",
+        "Owner ID document (required)",
+        "Optional supporting evidence"
+      ],
+      "responses": [
+        "Upload receipts",
+        "Application state → pending",
+        "Rejection of invalid files"
+      ],
+      "access": [
+        "Authenticated merchant, own store. Documents are access-restricted after upload."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:b220561242f65815"
+    },
+    {
+      "key": "API-058",
+      "operation": "PUT /api/v1/me/saved-listings/{id}",
+      "backend_task": "BE-11",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "C-08"
+      ],
+      "priority": "Later",
+      "status": "Deferred",
+      "inputs": [],
+      "responses": [
+        "Saved listing summaries with availability flag"
+      ],
+      "access": [
+        "Authenticated customer, own saves only."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:0432bc266897d3e1"
+    },
+    {
+      "key": "API-059",
+      "operation": "PUT /api/v1/stores/me",
+      "backend_task": "BE-04",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-11"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Description",
+        "Locations (multi)",
+        "Phone",
+        "Messaging handles",
+        "Profile image",
+        "Staff emails & roles"
+      ],
+      "responses": [
+        "Updated settings",
+        "Staff membership changes"
+      ],
+      "access": [
+        "Merchant owner + authorized staff (scoped)."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:c1bca91c6377382f"
+    },
+    {
+      "key": "API-060",
+      "operation": "PUT /api/v1/stores/me/profile",
+      "backend_task": "BE-04",
+      "owner": "Rasheed",
+      "frontend": "Moataz",
+      "screens": [
+        "M-02"
+      ],
+      "priority": "MVP — scope review",
+      "status": "Proposed",
+      "inputs": [
+        "Store name (required)",
+        "Business location (required)",
+        "Business phone (required)",
+        "Owner full name (required)",
+        "Owner ID reference (required for verification)"
+      ],
+      "responses": [
+        "Saved profile",
+        "Name-conflict error",
+        "Completion status"
+      ],
+      "access": [
+        "Authenticated merchant, own store only."
+      ],
+      "query_suggestions": [],
+      "source": "souq-blueprint:v1:api:00c98db5e0e26b30"
+    }
+  ],
+  "backlog": [
+    {
+      "key": "BE-01",
+      "title": "[P2][BE] BE-01: Django/DRF foundation and real API contract tooling",
+      "owner": "Rasheed",
+      "phase": "P2",
+      "depends": "SCOPE-01 + GATE-01",
+      "details": "Initialize the selected Django/DRF/PostgreSQL foundation with pinned dependencies and actual checks. Adapt make openapi/openapi-check and shared adapters in a reviewed stack-transition PR before implementation tasks are released. Do not create a placeholder API.",
+      "acceptance": "Django checks and actual registered schema export work without production secrets; migrations and PostgreSQL tests run; clean CI reports real prerequisites; operating contracts and task skills agree with the selected stack.",
+      "apis": [],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:BE-01"
+    },
+    {
+      "key": "BE-02",
+      "title": "[P2][BE] BE-02: Configuration, localization and shared API conventions",
+      "owner": "Rasheed",
+      "phase": "P2",
+      "depends": "BE-01 + GATE-01",
+      "details": "Implement public config/localization, consistent errors, locale/currency flags and contract conventions. Agree pagination/filter semantics, canonical paths/trailing slashes, request IDs and examples with Moataz.",
+      "acceptance": "Config and localization are public and contain no personal data; clients can map documented errors/offline states; shared contract examples are agreed and tested.",
+      "apis": [
+        "GET /api/v1/config",
+        "GET /api/v1/i18n/bundle"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:BE-02"
+    },
+    {
+      "key": "BE-03",
+      "title": "[P3][BE] BE-03: Identity, sessions and scoped authorization",
+      "owner": "Rasheed",
+      "phase": "P3",
+      "depends": "GATE-02",
+      "details": "Merchant authentication, sessions, password recovery and object permissions. Customer accounts C-07 remain a scope decision; do not gate public browsing on login.",
+      "acceptance": "Cross-store access is rejected; recovery/session cases and rate limits have tests; agreed auth contracts work with the frontend; optional customer accounts implemented only if scope is accepted.",
+      "apis": [
+        "DELETE /api/v1/auth/session",
+        "POST /api/v1/auth/login",
+        "POST /api/v1/auth/recover",
+        "POST /api/v1/auth/register",
+        "POST /api/v1/merchant/auth/register",
+        "POST /api/v1/merchant/auth/verify"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:BE-03"
+    },
+    {
+      "key": "BE-04",
+      "title": "[P3][BE] BE-04: Store profile, membership and merchant settings",
+      "owner": "Rasheed",
+      "phase": "P3",
+      "depends": "GATE-02 + BE-03",
+      "details": "Implement business profile, store membership/staff and merchant-safe responses. Settings contracts support later M-11 work; live inventory/dashboard metrics are delivered with BE-10/P6 after listings exist.",
+      "acceptance": "Ownership and membership rules are enforced at every mutation; invalid profiles rejected; public/private fields separated; role changes tested and auditable.",
+      "apis": [
+        "DELETE /api/v1/stores/me/staff/{id}",
+        "GET /api/v1/stores/me",
+        "POST /api/v1/stores/me/staff",
+        "PUT /api/v1/stores/me",
+        "PUT /api/v1/stores/me/profile"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:BE-04"
+    },
+    {
+      "key": "BE-05",
+      "title": "[P3][BE] BE-05: Verification evidence, founder review and decisions",
+      "owner": "Rasheed",
+      "phase": "P3",
+      "depends": "GATE-02 + BE-03 + BE-04",
+      "details": "Implement merchant submission/status plus founder queue, protected evidence access, decisions/reasons and audit events. Bring A-02/A-03/A-04 forward into P3 so store approval can be tested now.",
+      "acceptance": "Unverified/suspended stores cannot publish; private evidence is never public; review/document access and reasons are audited; approve/reject/request-changes are tested; P3 reversals remain rejected until BE-10/A-07 dual approval is implemented and integrated in P6.",
+      "apis": [
+        "GET /api/v1/admin/verifications",
+        "GET /api/v1/admin/verifications/{id}",
+        "GET /api/v1/admin/verifications/{id}/documents",
+        "GET /api/v1/stores/me/verification",
+        "POST /api/v1/admin/verifications/{id}/decision",
+        "POST /api/v1/stores/me/verification/documents",
+        "POST /api/v1/stores/me/verification/submit"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:BE-05"
+    },
+    {
+      "key": "BE-06",
+      "title": "[P4][BE] BE-06: Product catalog, models, brands and variants",
+      "owner": "Rasheed",
+      "phase": "P4",
+      "depends": "GATE-03",
+      "details": "Catalog/variant API consumed by listing forms and public brand/category browsing. Agree stable IDs and validation with Moataz.",
+      "acceptance": "Brand/model/variant selectors compose; unsupported variants fail predictably; fixtures cover new/used forms and comparable offers.",
+      "apis": [
+        "GET /api/v1/brands",
+        "GET /api/v1/catalog/brands",
+        "GET /api/v1/catalog/models",
+        "GET /api/v1/catalog/variants",
+        "GET /api/v1/categories"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:BE-06"
+    },
+    {
+      "key": "BE-07",
+      "title": "[P4][BE] BE-07: New/used listings, publication, stock and price",
+      "owner": "Rasheed",
+      "phase": "P4",
+      "depends": "GATE-03 + BE-06",
+      "details": "Separate quantity-based new stock from individual used devices; implement drafts/publication status and safe price/stock updates. Coordinate optimistic concurrency and retry behavior with the clients. Include the minimum audited founder moderation queue/action API and A-05 handoff in P4, before real pending-to-published acceptance.",
+      "acceptance": "Only approved eligible stores publish; new and used invariants hold; stale updates conflict safely; private identifiers never leak; required media readiness gates publication; the agreed publication trigger moves eligible/media-ready inventory from pending to published through the real API/job path; founders must decide automatic versus manual publication in SCOPE-01. Never use direct DB edits as acceptance evidence.",
+      "apis": [
+        "GET /api/v1/admin/moderation/queue",
+        "GET /api/v1/stores/me/listings",
+        "GET /api/v1/stores/me/listings/{id}/status",
+        "PATCH /api/v1/stores/me/listings/{id}",
+        "PATCH /api/v1/stores/me/listings/{id}/price",
+        "PATCH /api/v1/stores/me/listings/{id}/stock",
+        "POST /api/v1/admin/listings/{id}/moderate",
+        "POST /api/v1/stores/me/listings"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:BE-07"
+    },
+    {
+      "key": "BE-08",
+      "title": "[P4][BE] BE-08: Authorized media upload and processing",
+      "owner": "Rasheed",
+      "phase": "P4",
+      "depends": "GATE-03 + BE-03 + BE-04",
+      "details": "Authorized public listing media flow and processing/retry callbacks. Keep business-verification evidence on a separate private access path. Confirm storage/job services before adding dependencies.",
+      "acceptance": "Unauthorized uploads fail; files are validated and safely processed; retries are idempotent; drafts cannot become public before media readiness; private evidence is inaccessible publicly.",
+      "apis": [
+        "POST /api/v1/media/uploads"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:BE-08"
+    },
+    {
+      "key": "BE-09",
+      "title": "[P5][BE] BE-09: Public discovery, store profiles and seller contact",
+      "owner": "Rasheed",
+      "phase": "P5",
+      "depends": "GATE-04 + BE-02 + BE-06 + BE-07",
+      "details": "Implement home, search/filter/pagination, listing/store details, compare and contact methods. Guests may browse. Promotions remain a scope decision, separate from core discovery.",
+      "acceptance": "Eligibility hides unapproved/suspended inventory; filters compose and paginate stably; contact methods match policy; freshness/unavailable cases are explicit; public responses exclude private evidence/device data.",
+      "apis": [
+        "GET /api/v1/home",
+        "GET /api/v1/listings",
+        "GET /api/v1/listings/{id}",
+        "GET /api/v1/listings/{id}/contact-methods",
+        "GET /api/v1/listings/{id}/related",
+        "GET /api/v1/product-variants/{id}/listings",
+        "GET /api/v1/stores/featured",
+        "GET /api/v1/stores/{id}",
+        "GET /api/v1/stores/{id}/listings"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:BE-09"
+    },
+    {
+      "key": "BE-10",
+      "title": "[P6][BE] BE-10: Merchant/founder operations, roles and audit",
+      "owner": "Rasheed",
+      "phase": "P6",
+      "depends": "GATE-05 + BE-03 + BE-05",
+      "details": "Complete live merchant dashboard inventory metrics, founder overview, role administration and audit/dual-approval interfaces, and harden the minimum moderation workflow already delivered in P4. Keep founder routes separate from merchant authorization.",
+      "acceptance": "Critical actions are auditable; requester cannot self-approve; all founder/merchant negative authorization tests pass; moderation state changes affect public visibility correctly.",
+      "apis": [
+        "DELETE /api/v1/admin/roles/{id}",
+        "GET /api/v1/admin/audit-events",
+        "GET /api/v1/admin/overview",
+        "GET /api/v1/admin/roles",
+        "GET /api/v1/stores/me/dashboard",
+        "POST /api/v1/admin/dual-approvals/{id}/decision",
+        "POST /api/v1/admin/roles"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:BE-10"
+    },
+    {
+      "key": "BE-11",
+      "title": "[Later][BE] BE-11: Saved listings, advertising and announcements after MVP",
+      "owner": "Rasheed",
+      "phase": "Later",
+      "depends": "Accepted later-scope decision",
+      "details": "Later-only saved listings, campaigns/results/review/announcements. Home promotion placement is an explicit scope question, not assumed MVP work.",
+      "acceptance": "Later scope, moderation/delivery rules and business owner are accepted before implementation; contracts and real integration tests then pass.",
+      "apis": [
+        "DELETE /api/v1/me/saved-listings/{id}",
+        "GET /api/v1/admin/announcements/{id}/delivery",
+        "GET /api/v1/admin/campaigns/queue",
+        "GET /api/v1/me/saved-listings",
+        "GET /api/v1/promotions",
+        "GET /api/v1/stores/me/campaigns/{id}/results",
+        "POST /api/v1/admin/announcements",
+        "POST /api/v1/admin/campaigns/{id}/decision",
+        "POST /api/v1/stores/me/campaigns",
+        "PUT /api/v1/me/saved-listings/{id}"
+      ],
+      "priority": "Low",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:BE-11"
+    },
+    {
+      "key": "BE-12",
+      "title": "[P8][BE] BE-12: Deployment, monitoring and backup/restore readiness",
+      "owner": "Rasheed",
+      "phase": "P8",
+      "depends": "GATE-07",
+      "details": "Prepare reviewed production/staging runbooks, monitoring/alerts, storage/worker operations and tested backups. Deploy only with separate explicit authorization.",
+      "acceptance": "Restore drill succeeds; operational runbooks and monitoring evidence are reviewed; pilot go/no-go is jointly recorded; this task does not itself authorize deployment.",
+      "apis": [],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:BE-12"
+    },
+    {
+      "key": "FE-00",
+      "title": "[P2][FE] FE-00: Flutter customer and React merchant/admin foundations",
+      "owner": "Moataz",
+      "phase": "P2",
+      "depends": "SCOPE-01 + GATE-01",
+      "details": "Initialize Flutter and React shells with routing, environment handling, AR/EN + RTL, shared loading/error/offline states and agreed API fixtures. No Kotlin-only skills or implementation.",
+      "acceptance": "Flutter and React build/test checks pass; guest/merchant/founder shells render; agreed fixtures work; no claims of live API integration until the matching integration gate.",
+      "apis": [],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:FE-00"
+    },
+    {
+      "key": "C-00",
+      "title": "[P2][FE] C-00: Application Entry",
+      "owner": "Moataz",
+      "phase": "P2",
+      "depends": "GATE-01 + FE-00; API contracts API-019, API-021 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Splash/loading state, localization initialization, guest access and app configuration.\nScreen: C-00; source priority: MVP.\nFrontend work: Render splash with animated logo; Request config, apply locale and theme (AR/EN, RTL/LTR); Cache last good config for offline starts; Route to C-01 or C-07 based on session\nBackend handoff: Serve lightweight config endpoint (feature flags, versions); Serve localization bundles; No personal data returned without auth\nSource navigation/data dependencies (not automatic build edges): Precedes every customer screen; feeds locale to the whole app.\nScreen inputs (request schema still needs contract review): \nValidation: None — passive screen\nAccess: Public — no authentication required.\nUI states: Loading; Config failed → retry screen; Offline → continue with cached config",
+      "acceptance": "- App opens to splash in under 2s on mid-range devices\n- Guest access lands on C-01 homepage\n- Locale (AR/EN + RTL) applied before first content screen\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/config",
+        "GET /api/v1/i18n/bundle?locale={ar|en}"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:C-00"
+    },
+    {
+      "key": "C-01",
+      "title": "[P5][FE] C-01: Homepage",
+      "owner": "Moataz",
+      "phase": "P5",
+      "depends": "GATE-04 + FE-00; required core API contracts API-020, API-029 agreed. Promotions API is Deferred/optional pending SCOPE-01 and must not block the ad-free core home.",
+      "details": "Marketplace storefront: featured phones, new/used sections, brands, verified-store highlights.\nScreen: C-01; source priority: MVP.\nFrontend work: Compose sections from home API response; Skeleton loaders per section; Handle failed sections independently (partial failure); Log tapped promo placement\nBackend handoff: Aggregate home payload efficiently (single call preferred); Only return published listings & verified stores; Respect promo placement enablement flags\nSource navigation/data dependencies (not automatic build edges): C-00 config; published listings (M-07/M-08) and verified stores (M-04).\nScreen inputs (request schema still needs contract review): Search text (quick)\nValidation: Empty search → no-op or focus C-02\nAccess: Public — guest accessible.\nUI states: Loading skeletons; Content; Partially failed sections; Offline → cached last home\nScope decision: promotions occur on this source MVP screen while advertising management is Later. Core home must work without ads.",
+      "acceptance": "- Guest sees populated home with real published data\n- Every card navigates to the right screen\n- Pull-to-refresh works\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/home",
+        "GET /api/v1/stores/featured",
+        "GET /api/v1/promotions?placement=home"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:C-01"
+    },
+    {
+      "key": "C-02",
+      "title": "[P5][FE] C-02: Search & Filters",
+      "owner": "Moataz",
+      "phase": "P5",
+      "depends": "GATE-04 + FE-00; API contracts API-022 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Find phones by keyword, brand/model, price range, condition, storage and specs; sort & paginate results.\nScreen: C-02; source priority: MVP.\nFrontend work: Debounced search input; Filter sheet with chips summary; Infinite scroll with page caching; Clear visual empty & error states\nBackend handoff: Search adapter with filters, sorting, pagination; Facet counts for filter UI; Only published listings visible\nSource navigation/data dependencies (not automatic build edges): C-03 for details; published listings from M-07/M-08.\nScreen inputs (request schema still needs contract review): Query text (required to search); Brand/model (optional); Price min/max (optional, numeric); Condition new/used (optional); Storage & specs (optional)\nValidation: Price min ≤ max; Numeric price inputs; Query trimmed before submit\nAccess: Public.\nUI states: Loading; Results; Empty results (with suggestions); Search error (retry); Offline",
+      "acceptance": "- Filters compose together correctly (AND semantics)\n- Pagination stable under filter changes\n- Empty state suggests removing filters\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/listings?query&brand&condition&price_min&price_max&storage&sort&page"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:C-02"
+    },
+    {
+      "key": "C-03",
+      "title": "[P5][FE] C-03: Product Details",
+      "owner": "Moataz",
+      "phase": "P5",
+      "depends": "GATE-04 + FE-00; API contracts API-023, API-025 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Show a single listing: gallery, price, specs, condition, seller info, and paths to contact or compare.\nScreen: C-03; source priority: MVP.\nFrontend work: Render product gallery with lazy images and failure fallback; Display pricing, specs, condition, availability; Show verified seller badge; Navigate to store / contact / compare\nBackend handoff: Return published listing and related product information; Enforce public listing visibility; Return only authorized seller information; Handle deleted, suspended or unavailable listings with proper status codes\nSource navigation/data dependencies (not automatic build edges): C-04, C-05, C-06 navigation; M-13 publication states.\nScreen inputs (request schema still needs contract review): \nValidation: \nAccess: Public listing visibility enforced server-side.\nUI states: Loading; Listing available; Listing removed (seller deleted); Listing unavailable (suspended); Offline/network error",
+      "acceptance": "- All listing states handled with clear messages\n- Failed gallery images show placeholder, never break layout\n- Used listing shows condition, battery health, defects & real photos\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/listings/{id}",
+        "GET /api/v1/listings/{id}/related"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:C-03"
+    },
+    {
+      "key": "C-04",
+      "title": "[P5][FE] C-04: Store Profile",
+      "owner": "Moataz",
+      "phase": "P5",
+      "depends": "GATE-04 + FE-00; API contracts API-036, API-037 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Public face of a verified phone store: identity, location, contacts and current inventory.\nScreen: C-04; source priority: MVP.\nFrontend work: Store header with badge & description; Inventory grid with in-store search; Handle suspended/unavailable store states\nBackend handoff: Expose only public store fields; Scope inventory query to the store; Reflect suspension status\nSource navigation/data dependencies (not automatic build edges): C-03, C-05; M-04 verification status; M-11 store settings.\nScreen inputs (request schema still needs contract review): In-store search text (optional)\nValidation: \nAccess: Public — only verified/published data exposed.\nUI states: Loading; Store found; Store suspended/unavailable; Empty inventory; Offline",
+      "acceptance": "- Verification badge reflects real backend status\n- Suspended store shows friendly notice, not broken page\n- In-store search filters only that store\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/stores/{id}",
+        "GET /api/v1/stores/{id}/listings?query&page"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:C-04"
+    },
+    {
+      "key": "C-05",
+      "title": "[P6][FE] C-05: Contact Seller",
+      "owner": "Moataz",
+      "phase": "P6",
+      "depends": "GATE-05 + FE-00; API contracts API-024 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Reach the store through available contact methods (phone or supported external messaging).\nScreen: C-05; source priority: MVP.\nFrontend work: Render method cards with deep links (tel:, messaging apps); Handle missing apps gracefully; Optional contact confirmation step\nBackend handoff: Serve permitted contact methods per listing/store; Rate-limit contact endpoint\nSource navigation/data dependencies (not automatic build edges): C-03/C-04 entry; M-11 store contact settings.\nScreen inputs (request schema still needs contract review): \nValidation: \nAccess: Contact info only served for listings that allow it; never raw merchant PII dumps.\nUI states: Loading; Methods available; No methods available (message); Offline",
+      "acceptance": "- Only methods the store enabled are shown\n- Unavailable methods show helpful message\n- Works for guests where store allows it\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/listings/{id}/contact-methods"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:C-05"
+    },
+    {
+      "key": "C-06",
+      "title": "[P5][FE] C-06: Compare Offers",
+      "owner": "Moataz",
+      "phase": "P5",
+      "depends": "GATE-04 + FE-00; API contracts API-027 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Compare multiple listings of the same product variant across stores: price, condition, availability.\nScreen: C-06; source priority: MVP.\nFrontend work: Side-by-side offer cards; Highlight best price; Deep link each offer to C-03\nBackend handoff: Correct variant matching across stores; Only published & in-stock offers\nSource navigation/data dependencies (not automatic build edges): C-03 entry point; consistent product variant matching (M-06).\nScreen inputs (request schema still needs contract review): \nValidation: \nAccess: Public.\nUI states: Loading; Offers found; Single offer (no comparison needed); No offers; Offline",
+      "acceptance": "- Same-variant listings only — no cross-model mixing\n- Cheapest & best-condition highlighted\n- Empty compare shows gentle empty state\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/product-variants/{id}/listings"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:C-06"
+    },
+    {
+      "key": "C-07",
+      "title": "[P3][FE] C-07: Customer Account",
+      "owner": "Moataz",
+      "phase": "P3",
+      "depends": "GATE-02 + FE-00; API contracts API-049, API-047, API-048, API-002 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Registration/login where needed, profile, account recovery and session management.\nScreen: C-07; source priority: MVP.\nFrontend work: Forms with inline validation feedback; Session storage & auto-refresh; Auth-gated actions redirect here\nBackend handoff: Authentication & session management; Password hashing & throttling; Account recovery tokens\nSource navigation/data dependencies (not automatic build edges): C-00 config; guest browsing works without an account where allowed.\nScreen inputs (request schema still needs contract review): Phone or email (required); Password (required, min 8); Display name (optional)\nValidation: Contact format validated; Password strength feedback; Duplicate account error; Rate-limit messages\nAccess: Account owner only for profile actions.\nUI states: Idle; Submitting; Success; Validation errors; Wrong credentials; Offline\nScope decision: diagram says MVP, repository product reference leaves customer accounts optional. Do not require sign-in for guest discovery.",
+      "acceptance": "- Register → login → recovery all work in both languages\n- Sessions expire safely and re-authenticate cleanly\n- Guests are never blocked from browsing\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "POST /api/v1/auth/register",
+        "POST /api/v1/auth/login",
+        "POST /api/v1/auth/recover",
+        "DELETE /api/v1/auth/session"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:C-07"
+    },
+    {
+      "key": "C-08",
+      "title": "[Later][FE] C-08: Saved Listings",
+      "owner": "Moataz",
+      "phase": "Later",
+      "depends": "Later scope approval",
+      "details": "Let signed-in customers bookmark products and manage them later.\nScreen: C-08; source priority: Later.\nFrontend work: Save toggle on C-03; Saved grid with unavailable styling\nBackend handoff: Saved-listing CRUD scoped to user; Availability flag computed at read time\nSource navigation/data dependencies (not automatic build edges): C-07 auth; C-03 save action. Future feature — not MVP.\nScreen inputs (request schema still needs contract review): \nValidation: \nAccess: Authenticated customer, own saves only.\nUI states: Loading; Saved items; Empty state; Item unavailable (soft state); Offline",
+      "acceptance": "- Saves persist across devices after login\n- Removed listings show \"no longer available\", never error\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/me/saved-listings",
+        "PUT /api/v1/me/saved-listings/{id}",
+        "DELETE /api/v1/me/saved-listings/{id}"
+      ],
+      "priority": "Low",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:C-08"
+    },
+    {
+      "key": "C-09",
+      "title": "[P2][FE] C-09: Loading, Empty & Offline States",
+      "owner": "Moataz",
+      "phase": "P2",
+      "depends": "GATE-01 + FE-00; API contracts shared error/state conventions agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Reusable interface states applied across all customer screens — not an independent screen.\nScreen: C-09; source priority: MVP.\nFrontend work: Shared state components (skeleton, empty, error, offline); Connectivity listener; Consistent friendly copy in AR & EN\nBackend handoff: Predictable error schema so the app can map codes to states\nSource navigation/data dependencies (not automatic build edges): Used by C-01…C-08, C-10.\nScreen inputs (request schema still needs contract review): \nValidation: \nAccess: Applies to every screen per its own rules.\nUI states: Loading; Empty; Error; Offline — this screen IS the states",
+      "acceptance": "- Every screen has all four states designed & implemented\n- Retry actually re-fetches\n- Offline cache never shows stale prices as current\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:C-09"
+    },
+    {
+      "key": "C-10",
+      "title": "[P5][FE] C-10: Categories & Brands",
+      "owner": "Moataz",
+      "phase": "P5",
+      "depends": "GATE-04 + FE-00; API contracts API-014, API-018 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Browse the catalog by brand or category and jump to relevant listings.\nScreen: C-10; source priority: MVP.\nFrontend work: Grid layouts; Smooth transition into filtered results\nBackend handoff: Brand/category endpoints with counts; Hide empty brands when appropriate\nSource navigation/data dependencies (not automatic build edges): C-02 for results.\nScreen inputs (request schema still needs contract review): \nValidation: \nAccess: Public.\nUI states: Loading; Content; Empty catalog (early days); Offline",
+      "acceptance": "- Counts match reality\n- Brands with zero listings hidden or marked\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/brands",
+        "GET /api/v1/categories"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:C-10"
+    },
+    {
+      "key": "M-01",
+      "title": "[P3][FE] M-01: Merchant Registration",
+      "owner": "Moataz",
+      "phase": "P3",
+      "depends": "GATE-02 + FE-00; API contracts API-051, API-052 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Create the merchant account: required fields, validation and confirmation.\nScreen: M-01; source priority: MVP.\nFrontend work: Multi-step-friendly form with live validation; Clear duplicate-account handling; Confirmation screen guiding to M-02\nBackend handoff: Merchant account creation with unique constraints; Contact verification tokens; No store privileges until verified\nSource navigation/data dependencies (not automatic build edges): Starts the M-01→M-04 verification path toward M-05.\nScreen inputs (request schema still needs contract review): Full name (required); Email or phone (required, unique); Password (required, min 8); Terms agreement (required)\nValidation: Unique account; Contact format; Password strength; All required fields present\nAccess: Public registration; merchant role assigned on creation.\nUI states: Idle; Submitting; Created (confirm); Validation errors; Duplicate account; Offline",
+      "acceptance": "- Registration works in AR & EN with RTL\n- Duplicate accounts get a clear message\n- Account exists but is unverified — cannot publish\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "POST /api/v1/merchant/auth/register",
+        "POST /api/v1/merchant/auth/verify"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:M-01"
+    },
+    {
+      "key": "M-02",
+      "title": "[P3][FE] M-02: Business Information",
+      "owner": "Moataz",
+      "phase": "P3",
+      "depends": "GATE-02 + FE-00; API contracts API-060, API-030 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Capture the store identity: name, business location, contact details and owner information.\nScreen: M-02; source priority: MVP.\nFrontend work: Autosave drafts; Inline validation; Progress indicator of registration steps\nBackend handoff: Store profile CRUD; Name uniqueness check; Owner info stored securely\nSource navigation/data dependencies (not automatic build edges): M-01; feeds M-03 evidence submission.\nScreen inputs (request schema still needs contract review): Store name (required); Business location (required); Business phone (required); Owner full name (required); Owner ID reference (required for verification)\nValidation: Store name not already taken; Phone format per region; Location selected from list\nAccess: Authenticated merchant, own store only.\nUI states: Loading saved data; Editing; Saved; Save error; Offline",
+      "acceptance": "- Draft saves without losing data on refresh\n- Name conflicts flagged immediately\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "PUT /api/v1/stores/me/profile",
+        "GET /api/v1/stores/me"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:M-02"
+    },
+    {
+      "key": "M-03",
+      "title": "[P3][FE] M-03: Business Verification",
+      "owner": "Moataz",
+      "phase": "P3",
+      "depends": "GATE-02 + FE-00; API contracts API-056, API-057 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Upload verification evidence, meet requirements, and submit the application for review.\nScreen: M-03; source priority: MVP.\nFrontend work: Upload widget with progress & retry; Requirements checklist with live completion; Confirm-before-submit summary\nBackend handoff: Secure document storage (private bucket, signed access); Document verification & virus scanning; Application state machine: draft → submitted → pending\nSource navigation/data dependencies (not automatic build edges): M-02 data; reviewed in A-02/A-03/A-04.\nScreen inputs (request schema still needs contract review): Business license (required, image/PDF); Owner ID document (required); Optional supporting evidence\nValidation: File type & size limits; All required documents present before submit; Readable-image advisory check\nAccess: Authenticated merchant, own store. Documents are access-restricted after upload.\nUI states: Uploading; Uploaded; Submitted; Upload failed (retry); Offline (queue uploads)",
+      "acceptance": "- Documents only accessible to authorized reviewers\n- Cannot submit with missing required evidence\n- Upload failures are retryable\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "POST /api/v1/stores/me/verification/documents",
+        "POST /api/v1/stores/me/verification/submit"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:M-03"
+    },
+    {
+      "key": "M-04",
+      "title": "[P3][FE] M-04: Verification Status",
+      "owner": "Moataz",
+      "phase": "P3",
+      "depends": "GATE-02 + FE-00; API contracts API-035 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Show where the store stands: pending, approved, rejected or changes-requested.\nScreen: M-04; source priority: MVP.\nFrontend work: State-specific illustrations & guidance; Deep-link to the exact form section to fix; Poll or refresh status\nBackend handoff: Verification state machine with history; Publishing permission checks verification state\nSource navigation/data dependencies (not automatic build edges): A-04 decisions drive this state; gating for M-05+.\nScreen inputs (request schema still needs contract review): \nValidation: \nAccess: Authenticated merchant, own store.\nUI states: Pending review; Approved → unlock M-05+; Rejected (final, with reason); Changes requested → back to M-03; Offline",
+      "acceptance": "- Every state clearly communicated with next action\n- Changes-requested shows exactly what to fix\n- Approved stores immediately gain publishing rights\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/stores/me/verification"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:M-04"
+    },
+    {
+      "key": "M-05",
+      "title": "[P6][FE] M-05: Merchant Dashboard",
+      "owner": "Moataz",
+      "phase": "P6",
+      "depends": "GATE-05 + FE-00; API contracts API-032 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Home for the verified store: listing summaries, store status, low-stock indicators and key actions.\nScreen: M-05; source priority: MVP.\nFrontend work: Stat cards with friendly illustrations; Conditional sections by store state\nBackend handoff: Dashboard aggregation query; Permission gate on verification\nSource navigation/data dependencies (not automatic build edges): M-04 approval gate; aggregates M-09/M-13 data.\nScreen inputs (request schema still needs contract review): \nValidation: \nAccess: Verified merchant or authorized staff member.\nUI states: Loading; Populated dashboard; Unverified (blocked with guidance to M-04); Offline",
+      "acceptance": "- Unverified store sees verification guidance instead of tools\n- Numbers match the inventory screens\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/stores/me/dashboard"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:M-05"
+    },
+    {
+      "key": "M-06",
+      "title": "[P4][FE] M-06: Create Listing — Select Type",
+      "owner": "Moataz",
+      "phase": "P4",
+      "depends": "GATE-03 + FE-00; API contracts API-015, API-016, API-017 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Choose brand & model from the catalog, match the product variant, and pick new vs used.\nScreen: M-06; source priority: MVP.\nFrontend work: Cascading selectors; Clear new/used visual branch\nBackend handoff: Catalog endpoints; Variant matching for compare (C-06); Model request intake\nSource navigation/data dependencies (not automatic build edges): Entry to M-07 (new) and M-08 (used); catalog managed by platform.\nScreen inputs (request schema still needs contract review): Brand (required); Model (required); Variant (required when model has variants); Condition type: new or used (required)\nValidation: Only catalog-listed brands/models accepted; Variant must exist (request addition if missing)\nAccess: Verified merchant.\nUI states: Loading catalog; Selection; Model not in catalog (request flow); Offline",
+      "acceptance": "- Branch to new vs used form is explicit\n- Missing model has a \"request addition\" path\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/catalog/brands",
+        "GET /api/v1/catalog/models?brand={id}",
+        "GET /api/v1/catalog/variants?model={id}"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:M-06"
+    },
+    {
+      "key": "M-07",
+      "title": "[P4][FE] M-07: New Phone Listing Form",
+      "owner": "Moataz",
+      "phase": "P4",
+      "depends": "GATE-03 + FE-00; API contracts API-054, API-050 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Publish an offer for new stock: quantity-based with uniform specifications.\nScreen: M-07; source priority: MVP.\nFrontend work: Form with sections & live validation; Image upload with reorder; Draft autosave\nBackend handoff: New listing = single record + quantity inventory; Price history entry on change; Publication workflow trigger\nSource navigation/data dependencies (not automatic build edges): Source does not specify; confirm handoff in contract review\nScreen inputs (request schema still needs contract review): Quantity (required, ≥1); Price (required, > 0); Currency (from config); Warranty months (optional); Images (required, min 1); Availability (default on)\nValidation: Quantity integer ≥ 1; Price positive decimal; Minimum one image; Warranty 0–36 months\nAccess: Verified merchant, own store.\nUI states: Draft; Submitting; Processing → pending review (M-13); Validation errors; Offline (draft preserved)",
+      "acceptance": "- Quantity decrements as stock sells (no per-unit condition)\n- Draft never lost on refresh\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "POST /api/v1/stores/me/listings",
+        "POST /api/v1/media/uploads"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:M-07"
+    },
+    {
+      "key": "M-08",
+      "title": "[P4][FE] M-08: Used Phone Listing Form",
+      "owner": "Moataz",
+      "phase": "P4",
+      "depends": "GATE-03 + FE-00; API contracts API-054, API-050 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Publish an individual used device: unique condition, battery health, accessories, defects and real photos.\nScreen: M-08; source priority: MVP.\nFrontend work: Condition stepper; Defect tag input; Guided photo checklist\nBackend handoff: Used listing = individual inventory unit with condition data; Listing removed automatically when unit sold\nSource navigation/data dependencies (not automatic build edges): M-06 branch; different business rules than M-07.\nScreen inputs (request schema still needs contract review): Condition grade (required); Battery health % (required where relevant); Defects (free list); Accessories included (checklist); Actual photos (required, multiple); Price (required)\nValidation: Battery 1–100%; At least 3 actual photos; Condition grade required; Price > 0\nAccess: Verified merchant, own store.\nUI states: Draft; Submitting; Pending review; Validation errors; Offline",
+      "acceptance": "- Used listing is quantity 1 — one unit, one record\n- Buyer sees condition, battery health & defects on C-03\n- Stock photos forbidden — actual photos enforced by policy\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "POST /api/v1/stores/me/listings",
+        "POST /api/v1/media/uploads"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:M-08"
+    },
+    {
+      "key": "M-09",
+      "title": "[P4][FE] M-09: Inventory Management",
+      "owner": "Moataz",
+      "phase": "P4",
+      "depends": "GATE-03 + FE-00; API contracts API-033, API-038 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "View, search, edit, deactivate and manage all store listings in one place.\nScreen: M-09; source priority: MVP.\nFrontend work: Sortable table with sticky actions; State badge colors; Prefill edit forms\nBackend handoff: Own-store scoping enforced; State transitions validated server-side\nSource navigation/data dependencies (not automatic build edges): M-07/M-08 for editing; M-13 states.\nScreen inputs (request schema still needs contract review): Search text (optional); State filter (optional)\nValidation: \nAccess: Verified merchant / authorized staff, own store only.\nUI states: Loading; Table; Empty inventory; Update failed; Offline",
+      "acceptance": "- Every M-13 state visible & correct\n- Edits preserve publication rules\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/stores/me/listings?query&state&page",
+        "PATCH /api/v1/stores/me/listings/{id}"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:M-09"
+    },
+    {
+      "key": "M-10",
+      "title": "[P4][FE] M-10: Price & Stock Updates",
+      "owner": "Moataz",
+      "phase": "P4",
+      "depends": "GATE-03 + FE-00; API contracts API-039, API-040 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Fast adjustments: quick price edits, quantity changes, validation and update feedback.\nScreen: M-10; source priority: MVP.\nFrontend work: Inline editors with optimistic UI + rollback; Instant feedback\nBackend handoff: Transactional price & stock updates; Price history logging; Optimistic concurrency\nSource navigation/data dependencies (not automatic build edges): M-09 table; backend price history.\nScreen inputs (request schema still needs contract review): New price (required); New quantity (new-phone listings only)\nValidation: Price > 0; Quantity ≥ 0; Optimistic-lock conflict detection\nAccess: Verified merchant, own listings.\nUI states: Editing; Saving; Saved (feedback); Conflict (refresh values); Offline",
+      "acceptance": "- Price change recorded in history\n- Concurrent edits detected, never silently overwritten\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "PATCH /api/v1/stores/me/listings/{id}/price",
+        "PATCH /api/v1/stores/me/listings/{id}/stock"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:M-10"
+    },
+    {
+      "key": "M-11",
+      "title": "[P6][FE] M-11: Store Settings",
+      "owner": "Moataz",
+      "phase": "P6",
+      "depends": "GATE-05 + FE-00; API contracts API-059, API-055, API-004 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Manage store description, locations, contacts, profile images and staff access.\nScreen: M-11; source priority: MVP.\nFrontend work: Settings sections with save states; Staff role matrix UI\nBackend handoff: Store settings CRUD; Staff membership & scoped roles\nSource navigation/data dependencies (not automatic build edges): Feeds public C-04/C-05 data.\nScreen inputs (request schema still needs contract review): Description; Locations (multi); Phone; Messaging handles; Profile image; Staff emails & roles\nValidation: Contact formats; Staff must have existing accounts; Image limits\nAccess: Merchant owner + authorized staff (scoped).\nUI states: Loading; Saved; Validation errors; Offline",
+      "acceptance": "- Contact toggles instantly reflected on customer side\n- Staff can be limited to inventory-only access\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "PUT /api/v1/stores/me",
+        "POST /api/v1/stores/me/staff",
+        "DELETE /api/v1/stores/me/staff/{id}"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:M-11"
+    },
+    {
+      "key": "M-12",
+      "title": "[Later][FE] M-12: Advertisement Management",
+      "owner": "Moataz",
+      "phase": "Later",
+      "depends": "Later scope approval",
+      "details": "Create promotional campaigns: placements, audiences, schedule, approval and results.\nScreen: M-12; source priority: Later.\nFrontend work: Campaign wizard; Results charts\nBackend handoff: Campaign rules & approval workflow; Placement serving with enablement flags; Result aggregation\nSource navigation/data dependencies (not automatic build edges): A-08 review; C-01 placements. FUTURE FEATURE — not MVP.\nScreen inputs (request schema still needs contract review): Campaign name; Creative images; Placements; Target audience; Start/end dates; Budget (if applicable)\nValidation: Creative specs per placement; Date range valid; Required approval before run\nAccess: Verified merchant; campaigns require admin approval.\nUI states: Draft; Pending approval; Approved/running; Rejected (reasons); Completed; Offline",
+      "acceptance": "- No campaign runs without approval\n- Results reflect real placements\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "POST /api/v1/stores/me/campaigns",
+        "GET /api/v1/stores/me/campaigns/{id}/results"
+      ],
+      "priority": "Low",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:M-12"
+    },
+    {
+      "key": "M-13",
+      "title": "[P4][FE] M-13: Listing Publication Status",
+      "owner": "Moataz",
+      "phase": "P4",
+      "depends": "GATE-03 + FE-00; API contracts API-034 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Communicate every listing lifecycle state and what the merchant can do in each.\nScreen: M-13; source priority: MVP.\nFrontend work: Unified status badge component; Reason display + fix-it deep links\nBackend handoff: Publication state machine with audited transitions; Moderation hooks\nSource navigation/data dependencies (not automatic build edges): Used across M-07…M-12; driven by backend workflow & A-05 moderation.\nScreen inputs (request schema still needs contract review): \nValidation: \nAccess: Verified merchant, own listings.\nUI states: Draft; Processing; Pending review; Published; Rejected (with reasons); Suspended (admin action); Archived",
+      "acceptance": "- Merchant always knows why a listing is not public\n- Rejected listings can be corrected without starting over\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/stores/me/listings/{id}/status"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:M-13"
+    },
+    {
+      "key": "A-01",
+      "title": "[P6][FE] A-01: Administrative Overview",
+      "owner": "Moataz",
+      "phase": "P6",
+      "depends": "GATE-05 + FE-00; API contracts API-009 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Operational pulse: metrics, verification queues, moderation queues and alerts.\nScreen: A-01; source priority: MVP.\nFrontend work: Dashboard widgets; Queue deep links\nBackend handoff: Efficient aggregation; Role-gated endpoint\nSource navigation/data dependencies (not automatic build edges): Aggregates A-02/A-05/A-07 activity.\nScreen inputs (request schema still needs contract review): \nValidation: \nAccess: Administrator role required.\nUI states: Loading; Populated; Partial failure (per-widget); Offline",
+      "acceptance": "- Metrics match queue screens\n- Alerts actionable\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/admin/overview"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:A-01"
+    },
+    {
+      "key": "A-02",
+      "title": "[P3][FE] A-02: Store Verification Queue",
+      "owner": "Moataz",
+      "phase": "P3",
+      "depends": "GATE-02 + FE-00; API contracts API-011 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Work through new applications, pending decisions and re-verification cases.\nScreen: A-02; source priority: MVP.\nFrontend work: Queue table with aging highlights; Case assignment UI\nBackend handoff: Queue queries; Assignment & state transitions with audit events\nSource navigation/data dependencies (not automatic build edges): M-03 submissions arrive here; A-03/A-04 decisions.\nScreen inputs (request schema still needs contract review): \nValidation: \nAccess: Administrator with verification scope.\nUI states: Loading; Queue; Empty queue; Offline",
+      "acceptance": "- No application can be lost or stuck invisibly\n- Assignment recorded in audit\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/admin/verifications?state&page"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:A-02"
+    },
+    {
+      "key": "A-03",
+      "title": "[P3][FE] A-03: Review Store Evidence",
+      "owner": "Moataz",
+      "phase": "P3",
+      "depends": "GATE-02 + FE-00; API contracts API-012, API-013 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Inspect submitted evidence in a restricted-access view and record reviewer notes.\nScreen: A-03; source priority: MVP.\nFrontend work: In-app secure viewer (no unlogged download); Notes with autosave\nBackend handoff: Signed short-lived document URLs; Access audit events; Notes storage\nSource navigation/data dependencies (not automatic build edges): A-02 queue; feeds A-04.\nScreen inputs (request schema still needs contract review): Reviewer notes (required before decision)\nValidation: Notes required to proceed; Evidence viewed before decision enabled (policy)\nAccess: Administrator with verification scope; access logged; evidence never downloaded unlogged.\nUI states: Loading; Reviewing; Notes saved; Access error; Offline",
+      "acceptance": "- Every document access is audited\n- Notes persist per case\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/admin/verifications/{id}",
+        "GET /api/v1/admin/verifications/{id}/documents"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:A-03"
+    },
+    {
+      "key": "A-04",
+      "title": "[P3][FE] A-04: Verification Decision",
+      "owner": "Moataz",
+      "phase": "P3",
+      "depends": "GATE-02 + FE-00; API contracts API-046 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Approve, reject or request corrections with recorded reasons and audit events.\nScreen: A-04; source priority: MVP.\nFrontend work: Decision UI with consequence preview; Reason templates\nBackend handoff: Decision state machine; Merchant notification; Audit event emission; Dual-approval enforcement for reversals\nSource navigation/data dependencies (not automatic build edges): A-03 notes; triggers M-04 state change via backend workflow (NOT by admin logging into merchant UI).\nScreen inputs (request schema still needs contract review): Decision (required); Reason (required); Internal note (optional)\nValidation: Reason mandatory for reject & changes-requested; Dual approval needed for reversal cases\nAccess: Administrator with verification scope; critical reversals need dual approval (A-07).\nUI states: Confirming; Applied; Conflict (case already decided); Offline\nP3 delivers ordinary decisions only. Critical reversals remain unavailable/rejected until BE-10/A-07 dual approval is delivered and integrated in P6; test this denial.",
+      "acceptance": "- Merchant sees decision & reason in M-04\n- Decision & actor recorded in audit log\n- Backend state change — no admin session in merchant portal\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "POST /api/v1/admin/verifications/{id}/decision"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:A-04"
+    },
+    {
+      "key": "A-05",
+      "title": "[P4][FE] A-05: Listing Moderation",
+      "owner": "Moataz",
+      "phase": "P4",
+      "depends": "GATE-03 + FE-00; API contracts API-008, API-044 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Inspect reports, remove listings, suspend or restore content and record decisions.\nScreen: A-05; source priority: MVP.\nFrontend work: Queue with preview pane; One-click actions with confirm\nBackend handoff: Moderation actions with state transitions; Public visibility enforcement; Audit events\nSource navigation/data dependencies (not automatic build edges): Affects M-13 merchant states & public visibility on C-01/C-02.\nScreen inputs (request schema still needs contract review): Action (required); Reason (required)\nValidation: Reason mandatory; Restore requires review note\nAccess: Administrator with moderation scope.\nUI states: Loading; Queue; Acted (confirmation); Conflict (listing changed); Offline",
+      "acceptance": "P4: Merchant sees suspension reason in M-13; every action is audited; authorized moderation actions change publication eligibility through real APIs. P4 does not claim a completed public-search check.\nP5/INT-05: Verify the original source criterion that a suspended listing disappears from actual public search immediately. No source criterion is dropped; this cross-surface assertion is scheduled when public search exists.",
+      "apis": [
+        "GET /api/v1/admin/moderation/queue",
+        "POST /api/v1/admin/listings/{id}/moderate"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:A-05"
+    },
+    {
+      "key": "A-06",
+      "title": "[P6][FE] A-06: Roles & Permissions",
+      "owner": "Moataz",
+      "phase": "P6",
+      "depends": "GATE-05 + FE-00; API contracts API-010, API-045, API-001 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Manage authorized staff, store memberships and administrative access.\nScreen: A-06; source priority: MVP.\nFrontend work: Role matrix UI with dual-approval badges\nBackend handoff: RBAC model; Object-level permissions; Dual-approval workflow for critical changes\nSource navigation/data dependencies (not automatic build edges): Dual approval via A-07.\nScreen inputs (request schema still needs contract review): User (required); Role (required); Scope (store / platform)\nValidation: Cannot remove own admin access; Critical roles need dual approval\nAccess: Founder-level administrator only.\nUI states: Loading; Matrix; Change pending dual approval; Applied; Offline",
+      "acceptance": "- No single founder can silently grant critical access\n- Role changes take effect immediately\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/admin/roles",
+        "POST /api/v1/admin/roles",
+        "DELETE /api/v1/admin/roles/{id}"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:A-06"
+    },
+    {
+      "key": "A-07",
+      "title": "[P6][FE] A-07: Audit Logs & Dual Approval",
+      "owner": "Moataz",
+      "phase": "P6",
+      "depends": "GATE-05 + FE-00; API contracts API-006, API-043 agreed before client implementation. Backend can be built in parallel against those contracts.",
+      "details": "Review sensitive changes and independently approve especially critical founder operations.\nScreen: A-07; source priority: MVP.\nFrontend work: Audit timeline UI; Pending approvals inbox\nBackend handoff: Immutable audit log; Dual-approval state machine; Actor separation enforcement\nSource navigation/data dependencies (not automatic build edges): Consumes audit events from A-04/A-05/A-06 and backend actions.\nScreen inputs (request schema still needs contract review): \nValidation: Approver must differ from requester\nAccess: Founder-level administrator; approver ≠ requester enforced.\nUI states: Loading; Event list; Event detail; Pending approvals; Offline",
+      "acceptance": "- Every sensitive action traceable to an actor & timestamp\n- Critical operations blocked until second founder approves\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/admin/audit-events?actor&action&page",
+        "POST /api/v1/admin/dual-approvals/{id}/decision"
+      ],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:A-07"
+    },
+    {
+      "key": "A-08",
+      "title": "[Later][FE] A-08: Advertisement Review",
+      "owner": "Moataz",
+      "phase": "Later",
+      "depends": "Later scope approval",
+      "details": "Review merchant campaigns, validate placements and approve or reject them.\nScreen: A-08; source priority: Later.\nFrontend work: Review UI with creative preview\nBackend handoff: Campaign approval workflow; Placement rules engine\nSource navigation/data dependencies (not automatic build edges): M-12 submissions; C-01 placements. Not MVP.\nScreen inputs (request schema still needs contract review): Decision reason (required on reject)\nValidation: Creative meets placement specs; No disallowed content\nAccess: Administrator with advertising scope. FUTURE FEATURE.\nUI states: Loading; Queue; Decided; Offline",
+      "acceptance": "- Approved campaigns only appear on enabled placements\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "GET /api/v1/admin/campaigns/queue",
+        "POST /api/v1/admin/campaigns/{id}/decision"
+      ],
+      "priority": "Low",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:A-08"
+    },
+    {
+      "key": "A-09",
+      "title": "[Later][FE] A-09: Platform Announcements",
+      "owner": "Moataz",
+      "phase": "Later",
+      "depends": "Later scope approval",
+      "details": "Create announcements targeted at merchants, customers or other authorized audiences.\nScreen: A-09; source priority: Later.\nFrontend work: Composer with bilingual fields\nBackend handoff: Audience-scoped delivery\nSource navigation/data dependencies (not automatic build edges): Shown in M-05 (merchant) area. Not MVP.\nScreen inputs (request schema still needs contract review): Title & body (required, AR & EN); Audience (required); Schedule (optional)\nValidation: Both languages present; Audience valid\nAccess: Administrator with announcements scope. FUTURE FEATURE.\nUI states: Draft; Scheduled; Sent; Offline",
+      "acceptance": "- Only selected audience sees the announcement\nMerged frontend implementation must state fixture/live-API limits. Phase completion additionally requires its joint integration gate.",
+      "apis": [
+        "POST /api/v1/admin/announcements",
+        "GET /api/v1/admin/announcements/{id}/delivery"
+      ],
+      "priority": "Low",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:A-09"
+    },
+    {
+      "key": "INT-01",
+      "title": "[P1][JOINT] INT-01: Planning joint acceptance gate",
+      "owner": "Both",
+      "phase": "P1",
+      "depends": "SCOPE-01 accepted; screen IDs/priorities and ten-field contract format agreed.",
+      "details": "MVP scope + screen spec cards (Zone 5) agreed\nBackend handoff: Business rules for new vs used; Verification policy draft\nFrontend handoff: Journey maps (Zones 2–4); Screen inventory with IDs\nDo not mark phase complete from a single PR or mock-only UI.",
+      "acceptance": "- MVP scope signed off\n- Screen IDs fixed\n- Priority labels set\nBoth founders confirm linked implementation PRs and appropriate real integration evidence. Record any excluded Later/optional scope.",
+      "apis": [],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:INT-01"
+    },
+    {
+      "key": "INT-02",
+      "title": "[P2][JOINT] INT-02: Foundation joint acceptance gate",
+      "owner": "Both",
+      "phase": "P2",
+      "depends": "BE-01, BE-02, FE-00; actual foundation builds/schema tooling and fixtures.",
+      "details": "API contract format + OpenAPI skeleton\nBackend handoff: Django + DRF project; PostgreSQL schema baseline; CI + tests; R2 bucket\nFrontend handoff: Flutter app skeleton; React portal skeleton; Design tokens, AR/EN + RTL setup\nDo not mark phase complete from a single PR or mock-only UI.",
+      "acceptance": "- Repos + CI green\n- Apps render hello world\n- DB migrations run\nBoth founders confirm linked implementation PRs and appropriate real integration evidence. Record any excluded Later/optional scope.",
+      "apis": [],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:INT-02"
+    },
+    {
+      "key": "INT-03",
+      "title": "[P3][JOINT] INT-03: Identity & Verification joint acceptance gate",
+      "owner": "Both",
+      "phase": "P3",
+      "depends": "BE-03, BE-04, BE-05; M-01 through M-04 plus A-02/A-03/A-04. Include C-07 only if explicitly scoped.",
+      "details": "Auth + verification endpoints contract-tested\nBackend handoff: Auth & sessions; Roles + object permissions; Verification workflow; Audit events\nFrontend handoff: Login / register (C-07, M-01); Business info & evidence upload (M-02, M-03); Verification status (M-04)\nDo not mark phase complete from a single PR or mock-only UI.",
+      "acceptance": "- Unverified store cannot publish\n- Audit trail records decisions\n- Both languages render\nBoth founders confirm linked implementation PRs and appropriate real integration evidence. Record any excluded Later/optional scope.",
+      "apis": [],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:INT-03"
+    },
+    {
+      "key": "INT-04",
+      "title": "[P4][JOINT] INT-04: Catalog & Listings joint acceptance gate",
+      "owner": "Both",
+      "phase": "P4",
+      "depends": "BE-06, BE-07, BE-08; M-06 through M-10, M-13 and A-05 minimum publication moderation.",
+      "details": "Listing CRUD + media upload contract\nBackend handoff: Catalog product & variant models; Listing + inventory + price history; Media authorization & processing\nFrontend handoff: New phone form (M-07); Used phone form (M-08); Inventory table (M-09, M-10); Publication status (M-13)\nDo not mark phase complete from a single PR or mock-only UI.",
+      "acceptance": "- New listing = quantity\n- Used listing = individual unit\n- Draft → pending → published flow\nBoth founders confirm linked implementation PRs and appropriate real integration evidence. Record any excluded Later/optional scope.",
+      "apis": [],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:INT-04"
+    },
+    {
+      "key": "INT-05",
+      "title": "[P5][JOINT] INT-05: Customer Discovery joint acceptance gate",
+      "owner": "Both",
+      "phase": "P5",
+      "depends": "BE-09; C-00/C-01/C-02/C-03/C-04/C-06/C-09/C-10 and existing publication data.",
+      "details": "Public catalog endpoints contract-tested\nBackend handoff: Search + filters + pagination; Public listing visibility rules; Store profile API\nFrontend handoff: Home (C-01); Search & filters (C-02); Details (C-03); Store profile (C-04); Compare (C-06)\nDo not mark phase complete from a single PR or mock-only UI.",
+      "acceptance": "- Guests can browse\n- Filters compose & paginate\n- Details handles all listing states\nBoth founders confirm linked implementation PRs and appropriate real integration evidence. Record any excluded Later/optional scope.\nVerify A-05 source acceptance against actual public search: suspend/remove an eligible listing and confirm it disappears immediately; M-13 retains the reason and all actions are audited.",
+      "apis": [],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:INT-05"
+    },
+    {
+      "key": "INT-06",
+      "title": "[P6][JOINT] INT-06: Merchant & Admin Operations joint acceptance gate",
+      "owner": "Both",
+      "phase": "P6",
+      "depends": "BE-10; M-05/M-11, A-01/A-05/A-06/A-07, C-05.",
+      "details": "Admin workflows contract-tested\nBackend handoff: Moderation actions + audit; Roles & permissions admin (A-06, A-07); Announcement delivery rules\nFrontend handoff: Admin overview & queues (A-01…A-05); Merchant dashboard polish (M-05, M-11); Contact seller (C-05)\nDo not mark phase complete from a single PR or mock-only UI.",
+      "acceptance": "- Dual approval on critical ops\n- Moderation actions auditable\n- Admin never enters merchant UI\nBoth founders confirm linked implementation PRs and appropriate real integration evidence. Record any excluded Later/optional scope.",
+      "apis": [],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:INT-06"
+    },
+    {
+      "key": "INT-07",
+      "title": "[P7][JOINT] INT-07: Integration & Testing joint acceptance gate",
+      "owner": "Both",
+      "phase": "P7",
+      "depends": "All required MVP implementation tasks and gates 1–6. Full register → verify → list → discover → contact test with real APIs.",
+      "details": "Full journey tests: register → verify → list → discover → contact\nBackend handoff: Integration test suite; Security review; Performance & backups\nFrontend handoff: E2E flows on real APIs; Offline / error states; Accessibility pass\nDo not mark phase complete from a single PR or mock-only UI.",
+      "acceptance": "- No critical bugs\n- Security checklist green\n- Both languages complete\nBoth founders confirm linked implementation PRs and appropriate real integration evidence. Record any excluded Later/optional scope.",
+      "apis": [],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:INT-07"
+    },
+    {
+      "key": "INT-08",
+      "title": "[P8][JOINT] INT-08: Controlled Launch joint acceptance gate",
+      "owner": "Both",
+      "phase": "P8",
+      "depends": "BE-12 and GATE-07; jointly reviewed release evidence and pilot go/no-go. Deployment still requires explicit authorization.",
+      "details": "Go / no-go review against release gates\nBackend handoff: Production deploy; Monitoring & alerts; Backup & restore drill\nFrontend handoff: Store listing pre-launch checks; Pilot feedback channels\nDo not mark phase complete from a single PR or mock-only UI.",
+      "acceptance": "- Runbook executed\n- First stores verified\n- Feedback loop running\nBoth founders confirm linked implementation PRs and appropriate real integration evidence. Record any excluded Later/optional scope.",
+      "apis": [],
+      "priority": "High",
+      "status": "Backlog",
+      "executor": "",
+      "source": "souq-blueprint:v1:task:INT-08"
+    }
+  ],
+  "scope_item": "Rec0CHT7ACRJ9"
+}
