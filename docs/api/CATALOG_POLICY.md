@@ -21,9 +21,9 @@ preserve meaningful API IDs when an existing operation remains implemented.
 
 Future requirements remain in the delivery plan and blueprint planning sources.
 Removing an unimplemented proposal from the current catalog does not cancel its
-phase task. The imported `BLUEPRINT_PROPOSED.md` currently contains planning data;
-move that material into the planning area when publishing the first implemented
-catalog so `docs/api/` does not imply those proposals are available APIs.
+phase task. Imported proposals are preserved in
+`docs/plans/BLUEPRINT_API_PROPOSALS.md`; `docs/api/CATALOG.md` and
+`docs/api/operations.json` are generated from actual registered operations.
 
 ## Delivery workflow
 

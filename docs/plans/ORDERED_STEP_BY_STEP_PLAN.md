@@ -302,6 +302,10 @@ stateDiagram-v2
 > **Prerequisites:** Step 1 (`GATE-01`) completed.
 
 #### Step 2 Work Checklist:
+
+Backend status: BE-01 was delivered in merged PR #17. BE-02 and backend INT-02
+checks are implemented for review; see [P2 acceptance](P2_ACCEPTANCE.md). Full
+INT-02/GATE-02 remains pending frontend and external-service evidence.
 - [ ] `[BE]` **BE-01: Django 5 + DRF Project Baseline & CI** (Slack: `Rec0CHJBWSUKZ`)
   - Initialize clean Django REST Framework project structure.
   - Configure PostgreSQL 16 database connection and initial migration baseline.

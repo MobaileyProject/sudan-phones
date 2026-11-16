@@ -1,0 +1,26 @@
+[
+  {
+    "api_id": "API-019",
+    "method": "GET",
+    "path": "/api/v1/config",
+    "phase": "P2",
+    "operation_id": "public_config",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-061",
+    "method": "GET",
+    "path": "/api/v1/health",
+    "phase": "P2",
+    "operation_id": "liveness",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-021",
+    "method": "GET",
+    "path": "/api/v1/i18n/bundle",
+    "phase": "P2",
+    "operation_id": "localization_bundle",
+    "authentication": "public"
+  }
+]

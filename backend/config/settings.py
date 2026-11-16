@@ -36,6 +36,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'core.middleware.ApiResponseMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -124,6 +125,8 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
+    'URL_FORMAT_OVERRIDE': None,
+    'EXCEPTION_HANDLER': 'core.errors.api_exception_handler',
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
@@ -133,7 +136,12 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Canonical versioned API paths never redirect a mutation to a trailing slash.
+APPEND_SLASH = False
+MINIMUM_APP_VERSION = os.environ.get('MINIMUM_APP_VERSION', '1.0.0')
+
 SPECTACULAR_SETTINGS = {
+    'ENUM_NAME_OVERRIDES': {'LocaleEnum': ['ar', 'en']},
     'TITLE': 'Sudan Phones Marketplace API',
     'DESCRIPTION': 'Bilingual marketplace for verified phone stores in Sudan.',
     'VERSION': '1.0.0',

@@ -1,6 +1,9 @@
-# Proposed blueprint API catalog
+# Blueprint API proposals — historical planning input
 
-This is a planning catalog for Django REST, not an exported OpenAPI document or evidence of implemented endpoints. Rasheed owns backend; Moataz owns consuming Flutter/React clients. Request bodies, response schemas, errors, access and versioning are finalized through joint contract review before implementation.
+This is the original planning import, not the current API catalog. See
+[implemented operations](../api/CATALOG.md) for the exact current backend API.
+These proposals preserve future requirements and IDs; their presence does not
+imply implementation, finalized schemas, or live availability.
 
 [Live Slack contract catalog](https://elrasheedworkplace.slack.com/lists/T0CJRU4RSUQ/F0CHJB5C939) · [Delivery plan](../plans/SOUQ_DELIVERY_PLAN.md)
 
