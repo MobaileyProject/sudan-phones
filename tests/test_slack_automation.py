@@ -129,6 +129,30 @@ class AutomationTest(unittest.TestCase):
             result = run_agent(self.root, dict(self.config, agy=str(fake)), "Draft only", ["message"])
         self.assertEqual(result["message"], "draft ready")
 
+    def test_permission_skip_requires_opt_in_and_is_implementation_only(self):
+        fake = self.root / "permission-agy"
+        fake.write_text("#!/usr/bin/env python3\nimport json,sys\n"
+                        "mode = 'skip' if '--dangerously-skip-permissions' in sys.argv else 'checked'\n"
+                        "print(json.dumps({'status':'SUCCESS','structured_output':{'message':mode}}))\n")
+        fake.chmod(0o700)
+        base = dict(self.config, agy=str(fake))
+        self.assertEqual(run_agent(self.root, dict(base, _branch="feature/slack-test"), "Test", ["message"])["message"], "checked")
+        opted = dict(base, agy_skip_permissions=True)
+        self.assertEqual(run_agent(self.root, opted, "Writer only", ["message"])["message"], "checked")
+        self.assertEqual(run_agent(self.root, dict(opted, _branch="feature/slack-test"), "Test", ["message"])["message"], "skip")
+
+    def test_task_git_trust_is_added_without_replacing_inherited_config(self):
+        fake = self.root / "git-env-agy"
+        fake.write_text("#!/usr/bin/env python3\nimport json,os\n"
+                        "count=int(os.environ.get('GIT_CONFIG_COUNT','0'))\n"
+                        "pairs=[(os.environ.get('GIT_CONFIG_KEY_'+str(i)),os.environ.get('GIT_CONFIG_VALUE_'+str(i))) for i in range(count)]\n"
+                        "ok=('safe.directory',os.getcwd()) in pairs and ('safe.directory','/service-checkout') in pairs\n"
+                        "print(json.dumps({'status':'SUCCESS','structured_output':{'message':'trusted' if ok else 'missing'}}))\n")
+        fake.chmod(0o700)
+        with patch.dict("os.environ", {"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "safe.directory", "GIT_CONFIG_VALUE_0": "/service-checkout"}):
+            result = run_agent(self.root, dict(self.config, agy=str(fake), _branch="feature/slack-test"), "Test", ["message"])
+        self.assertEqual(result["message"], "trusted")
+
     def test_real_agent_adapter_does_not_accept_soft_denied_success(self):
         fake = self.root / "denied-agy"
         fake.write_text("#!/usr/bin/env python3\nimport json, sys\n"

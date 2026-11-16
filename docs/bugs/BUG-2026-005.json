@@ -1,0 +1,11 @@
+{
+  "id": "BUG-2026-005",
+  "category": "logic",
+  "severity": "medium",
+  "status": "resolved",
+  "affected_files": ["scripts/slack_automation/agent.py"],
+  "affected_endpoints": [],
+  "root_cause": "The worker inherited Git trust for its service checkout but did not add the newly created task worktree. The first live agy run encountered dubious ownership and tried a global safe.directory change, which the headless command policy denied.",
+  "fix_summary": "Append the task worktree's safe.directory setting only to the child process environment, preserving inherited Git configuration. Add an explicit agy_skip_permissions opt-in for implementation sessions following the user's authorization; writers retain normal permission checks.",
+  "regression_test": "tests/test_slack_automation.py::AutomationTest.test_task_git_trust_is_added_without_replacing_inherited_config; tests/test_slack_automation.py::AutomationTest.test_permission_skip_requires_opt_in_and_is_implementation_only"
+}
