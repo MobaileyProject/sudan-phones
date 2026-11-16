@@ -1,0 +1,10 @@
+{
+  "components": {},
+  "info": {
+    "description": "Bilingual marketplace for verified phone stores in Sudan.",
+    "title": "Sudan Phones Marketplace API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {}
+}

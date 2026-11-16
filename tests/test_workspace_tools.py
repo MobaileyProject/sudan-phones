@@ -117,14 +117,14 @@ class WorkspaceToolsTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("SKIP", result.stdout)
         self.assertFalse((self.root / "docs/openapi.json").exists())
-        self.write("backend/app/models/store.py", "class Store: pass\n")
+        self.write("backend/core/models.py", "class Store: pass\n")
         result = self.export("--check")
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("main.py", result.stderr)
+        self.assertIn("manage.py", result.stderr)
 
     def test_openapi_generation_drift_and_import_errors(self):
-        # A tiny app interface exercises the exporter without installing FastAPI.
-        self.write("backend/app/main.py", 'class App:\n'
+        # A tiny app interface exercises the exporter without installing full Django.
+        self.write("backend/manage.py", 'class App:\n'
                    '    def openapi(self):\n'
                    '        return {"openapi": "3.1.0", "info": {"title": "Test", "version": "1"}, "paths": {}}\n'
                    'app = App()\n')
@@ -136,7 +136,7 @@ class WorkspaceToolsTest(unittest.TestCase):
         self.assertEqual(self.export("--check").returncode, 0)
         contract.write_text("{}\n")
         self.assertNotEqual(self.export("--check").returncode, 0)
-        self.write("backend/app/main.py", "import nonexistent_workspace_dependency\n")
+        self.write("backend/manage.py", "import nonexistent_workspace_dependency\n")
         self.assertNotEqual(self.export("--check").returncode, 0)
 
 

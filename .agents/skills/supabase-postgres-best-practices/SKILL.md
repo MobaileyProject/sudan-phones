@@ -7,8 +7,8 @@ description: "Use when designing PostgreSQL schemas, indexes, queries, connectio
 
 Use the [pinned guide](upstream/GUIDE.md) and load only the relevant references
 under upstream/references/. This is general PostgreSQL guidance, not a decision to
-adopt Supabase hosting, Auth or RLS. Retain PostgreSQL 16, SQLAlchemy 2 repositories,
-service-owned transactions and Alembic single-head migrations from AGENTS.md.
+adopt Supabase hosting, Auth or RLS. Retain PostgreSQL 16, Django ORM
+models/migrations, and service-owned atomic transactions.
 
 Read actual schemas, queries and query plans before optimizing; distinguish measured
 bottlenecks from hypotheses. A sequential scan can be the cheapest correct plan;
