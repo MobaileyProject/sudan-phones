@@ -74,6 +74,10 @@ def execute(root, config, ledger, task, launch=None, lists=None):
                                     "--json", "url,headRefName,baseRefName,state"))
             if not verify_pr(pr, config["repo"], branch):
                 raise ValueError("GitHub did not verify the PR branch/base/state")
+            if pr["state"] == "MERGED":
+                # The user can merge while the agent is returning its result.
+                result.update(outcome="done", merged_verified=True,
+                              next_action="Task is Done; continue dependent work when its prerequisites are satisfied")
     except Exception as error:
         result = {"outcome": "blocked", "summary": str(error), "pr_url": "",
                   "tests": "Not verified by worker", "next_action": "Inspect branch and agy session before retrying"}
@@ -98,7 +102,7 @@ def _publish_one(config, ledger, lists, writer, job):
     result = job["result"]
     task = result["task"]
     config = task_context(config, task)
-    status = "PR ready" if result["outcome"] == "pr_ready" else "Blocked"
+    status = {"pr_ready": "PR ready", "done": "Done"}.get(result["outcome"], "Blocked")
     reported = result["outcome"] == "reported"
     if not reported and not job["list_updated"]:
         fields = {"status": status, "branch": job["branch"], "result": result["summary"][:2500]}
@@ -122,7 +126,7 @@ def notification_channel(config, result):
     if result["outcome"] == "reported":
         category = "bugs" if result["task"].get("kind") == "bug" else "updates"
     else:
-        category = "updates" if result["outcome"] == "pr_ready" else "questions"
+        category = "updates" if result["outcome"] in {"pr_ready", "done"} else "questions"
     return config["channels"][category]
 
 
