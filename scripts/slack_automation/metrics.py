@@ -78,6 +78,27 @@ def _protected(root, config):
     return paths
 
 
+def _checkout_roots(root):
+    roots = [Path(root).resolve()]
+    result = subprocess.run(["git", "-c", "safe.directory=" + str(roots[0]),
+                             "-C", str(root), "worktree", "list", "--porcelain", "-z"],
+                            capture_output=True, timeout=5)
+    if result.returncode:
+        if (Path(root) / ".git").exists():
+            raise ValueError("checkout destinations unavailable")
+        return roots
+    entries = [field[len(b"worktree "):] for field in result.stdout.split(b"\0")
+               if field.startswith(b"worktree ")]
+    if not entries:
+        raise ValueError("checkout destinations unavailable")
+    for entry in entries:
+        checkout = Path(os.fsdecode(entry))
+        if not checkout.is_absolute():
+            raise ValueError("invalid checkout destination")
+        roots.append(checkout.resolve())
+    return roots
+
+
 def append_metrics(root, config, output, elapsed, base):
     """Best effort: even an unusable destination must not change agent execution."""
     if config.get("metrics_path") is None:
@@ -88,7 +109,7 @@ def append_metrics(root, config, output, elapsed, base):
             path = Path(root) / path
         protected = _protected(root, config)
         resolved = path.resolve()
-        if resolved.is_relative_to(Path(root).resolve()):
+        if any(resolved.is_relative_to(checkout) for checkout in _checkout_roots(root)):
             raise ValueError("repository destination")
         for other in protected:
             if resolved == other.resolve() or (path.exists() and other.exists() and path.samefile(other)):

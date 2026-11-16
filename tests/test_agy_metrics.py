@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 from contextlib import redirect_stderr
 import io
 import fcntl
@@ -90,6 +91,40 @@ class MetricsTest(unittest.TestCase):
         destination = self.root / "untracked.jsonl"
         self.run_child(self.payload(), metrics_path=str(destination))
         self.assertFalse(destination.exists())
+
+    def test_all_linked_checkouts_are_excluded_but_external_path_works(self):
+        def git(*args):
+            subprocess.run(["git", "-C", str(self.root), "-c", "user.name=Test",
+                            "-c", "user.email=test@example.invalid", *args], check=True, capture_output=True)
+        git("init", "-q")
+        git("commit", "-q", "--allow-empty", "-m", "initial")
+        linked = self.root.parent / "linked checkout"
+        git("worktree", "add", "--detach", str(linked), "HEAD")
+        self.run_child(self.payload())
+        private = self.root / ".state"
+        private.mkdir(mode=0o700)
+        destination = private / "metrics.jsonl"
+        config = {"agy": str(self.root / "fake-agy"), "metrics_path": str(destination)}
+        self.assertEqual(run_agent(linked, config, "Test", ["message"]), {"message": "fake-secret response"})
+        self.assertFalse(destination.exists())
+        config["metrics_path"] = str(self.path)
+        self.assertEqual(run_agent(linked, config, "Test", ["message"]), {"message": "fake-secret response"})
+        self.assertEqual(json.loads(self.path.read_text())["status"], "SUCCESS")
+
+    def test_failed_checkout_lookup_skips_metrics_and_sanitizes_notice(self):
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        real_run = subprocess.run
+        def unavailable(args, **kwargs):
+            if "worktree" in args:
+                return subprocess.CompletedProcess(args, 128, b"", b"fake-secret diagnostics")
+            return real_run(args, **kwargs)
+        notices = io.StringIO()
+        with patch("slack_automation.metrics.subprocess.run", side_effect=unavailable), redirect_stderr(notices):
+            self.assertEqual(self.run_child(self.payload(), metrics_path=str(self.path)),
+                             {"message": "fake-secret response"})
+        self.assertFalse(self.path.exists())
+        self.assertIn("metrics unavailable", notices.getvalue())
+        self.assertNotIn("fake-secret", notices.getvalue())
 
     def test_busy_metrics_lock_has_a_bounded_wait(self):
         self.path.parent.mkdir(mode=0o700)
