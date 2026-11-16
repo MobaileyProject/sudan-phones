@@ -94,8 +94,13 @@ Verify local agy and gh login. The implementation session grants specific common
 Git/read/test commands, pushing its exact task branch and creating a PR against
 main; other commands retain permission checks. No grants are saved globally. Optional
 `agy_settings` in local worker JSON points to a separate settings file. Permission
-checks remain enabled; no `--dangerously-skip-permissions` is used. A denied headless
-tool blocks the task rather than silently succeeding. The discovered host does not
+checks remain enabled by default. The user explicitly authorized
+`--dangerously-skip-permissions` for queued implementation runs during the first
+live executor test. Set local `agy_skip_permissions` to true to use that flag for
+implementation sessions; message-writing sessions retain their normal policy.
+This does not change global agy settings. Task-specific Git trust is passed in
+the child environment so agy need not modify global Git configuration.
+A denied headless tool blocks the task rather than silently succeeding. The discovered host does not
 support agy's Auto terminal sandbox, so the worker uses accept-edits mode.
 
 Set `execution_enabled` to true, supply Details and Acceptance, set Executor to
