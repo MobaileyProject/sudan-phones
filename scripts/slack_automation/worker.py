@@ -5,9 +5,9 @@ from pathlib import Path
 import re
 import subprocess
 
+from .routing import contexts, task_context
 from .agent import implementation_prompt, message_prompt, run_agent
 from .core import eligible, verify_pr
-from .routing import contexts, task_context
 
 
 def command(root, *args):
