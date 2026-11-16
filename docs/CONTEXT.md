@@ -11,7 +11,9 @@ The tooling release preserves the existing startup contract and worker prompt v1
 A separate migration PR archives STATE byte-for-byte, accounts for its nonblank
 lines, preserves outstanding work, and changes the startup instructions. Only after
 that PR is reviewed and merged can `context_prompt_version: 2` be enabled in the
-private worker config. The worker rejects v2 unless migration coverage and the new
+private worker config. Deploy the reviewed tooling to the single idle worker before
+merging the migration: its compatible v1 prompt then follows either base contract.
+The worker rejects v2 unless migration coverage and the new
 contract exist in its trusted base. Never activate it using proposed local notes.
 
 Metrics are opt-in: set `metrics_path` to an absolute file in a private directory

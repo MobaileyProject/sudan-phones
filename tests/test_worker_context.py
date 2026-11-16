@@ -133,6 +133,13 @@ class WorkerContextTest(unittest.TestCase):
 
 
 class PromptIntegrationTest(unittest.TestCase):
+    def test_v1_defers_startup_and_handoff_to_accepted_contract(self):
+        from slack_automation.agent import implementation_prompt
+        prompt=implementation_prompt({'kind':'feature'},'feature/test')
+        self.assertIn('If the base has a Context protocol',prompt)
+        self.assertIn('do not append task logs to STATE',prompt)
+        self.assertNotIn("Update only this task's STATE",prompt)
+
     def test_v2_uses_brief_whole_skills_and_does_not_require_legacy_reads(self):
         from slack_automation.agent import implementation_prompt
         context={'base':'a'*40,'brief':'BASE a\nEND brief'}
