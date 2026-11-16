@@ -49,3 +49,7 @@ scratch/
 # Local search cache (one per checkout) and isolated task worktrees
 .search_index.db*
 .worktrees/
+
+# Local automation configuration and durable task claims
+.slack-worker.json
+.slack-worker/

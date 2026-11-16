@@ -1,16 +1,25 @@
 # Project State & Session Handoff
 
 ## Current Active Focus
-- Deliver all 14 approved shared agent skills on feature/shared-agent-skills; then resolve the recorded product/stack decisions before application scaffolding.
+- Resolve shared-skills PR #4 against current main so the user can merge all 14 skills and run the first Ready/agy task. Slack automation PRs #5 and #6 are already merged. Preserve personal PR review and resolve product/stack decisions before application scaffolding.
 
 ## Architecture & Technology Stack
 - Backend: Modular FastAPI Monolith (Python 3.13)
 - Database: PostgreSQL 16 (Alembic single-head migrations)
 - Clients: Native Android (Kotlin Jetpack Compose) & Web Preview
 - CI / Integration: GitHub Actions + Slack Alerts
+- Local operations: Python standard-library Slack Lists connector, durable SQLite claims, isolated agy worktrees and optional user systemd timer; see docs/SLACK_AUTOMATION.md. This is operational tooling, not application scaffolding.
 - These are target choices; no backend, database migrations, Android app or web client exists yet. Read docs/ARCHITECTURE.md and docs/PRODUCT.md before scaffolding.
 
 ## Completed Milestones
+- PR #4 conflict resolution: merged origin/main 43e98e5 into feature/shared-agent-skills, preserving the shared-skills milestones and the Slack automation handoff. Only docs/STATE.md required manual resolution. Combined `make check` passed all 42 tests, all 14 skill-package integrity checks, staged secret scan and Python/JSON syntax; OpenAPI explicitly skipped because the backend remains unscaffolded. Resolution-commit CI must be checked with `gh pr checks 4` before merge.
+- Slack automation implementation commit f43fadc was delivered in PR #5, merged at 2026-11-16 00:59:13 UTC. Validation and Notify Slack both passed on run 43783270016 before merge. The user timer is enabled, the first poll exited successfully (ExecMainStatus=0), and the next five-minute run was scheduled. All source notifications were delivered at that inspection.
+- Formatting follow-up: commits ab8e39a and ee13add were delivered in PR #6, merged by the user at 2026-11-16 01:22:26 UTC as 43e98e5. Independent review findings about the original message channel and live List status were reproduced and fixed. `make check` passed all 37 tests (28 worker + 9 foundation), staged secret scan and syntax checks; OpenAPI explicitly skipped. Both Validation & Secret Scan and Notify Slack passed for the final handoff on run https://github.com/MobaileyProject/sudan-phones/actions/runs/43785425114.
+- [x] Created Sudan Phones Backlog F0CHWFG1BD4 and shared write access with #tasks-and-bugs. Verified Lists create/read/row-write and agy-written channel notifications. Local credential consumption stays out of prompts/output/tracked files.
+- Visibility follow-up: the user did not see the bot-created List in their Lists home. Its actual Slack permalink and non-trial status were verified; direct write sharing was granted to the active founder account. Do not claim the user's UI view is verified. Runtime worktree is `.worktrees/slack-agent-automation` under the original project; copied from /tmp and repaired because Git worktree move cannot cross filesystems. The old /tmp copy is preserved and must not run a second worker.
+- [x] Worker covers source-key deduplication, Ready/agy execution gates, fresh-main skill checks, isolated worktrees, structured agy results, independent PR identity checks and delivery-only recovery. Local worker tests passed; final full-suite/CI evidence follows in this task's handoff.
+- Validation: after staging, `scripts/check_secrets.py` passed as part of `make check`; all 31 tests passed (22 worker and 9 foundation), Python/JSON syntax passed, OpenAPI explicitly skipped because the backend is absent. `systemd-analyze verify` passed outside the sandbox. Independent code review was completed; recovery fixes passed reproducing tests. No real queued bug-to-PR run or runtime permission-matching proof is claimed.
+- Independent review found recovery defects; reproducing tests and fixes recorded as BUG-2026-002. First live intake exposed historical-CI noise; BUG-2026-003 fixes newest-completed-workflow selection. Both historical rows were corrected to Done with successful main run 43773944527 as evidence; correction delivered through agy.
 - [x] Initial workspace reset & clean root commit
 - [x] GitHub repository linkage & collaborator permissions (@marco47t, @MoatazAbdElmutaal)
 - [x] Slack MCP integration & GitHub Actions CI alert pipeline
@@ -24,17 +33,23 @@
 - Recent baseline commits: `f84b457` remove setup blueprint PDF; `5b8fbe3` architecture blueprint; `ffe0016` initial protocol and integrations.
 
 ## In-Progress Tasks & Active Branches
-- Branch: `feature/shared-agent-skills` | Owner: Codex | Status: All 14 skills, catalog, manifest/checker, tests and CI integration ready for publication. Use `gh pr view feature/shared-agent-skills` for the live PR/CI state; the user reviews personally and no organization reviewers should be requested.
+- Branch: `feature/shared-agent-skills` | Owner: Codex | PR: https://github.com/MobaileyProject/sudan-phones/pull/4 | Targets: docs/STATE.md conflict resolution and combined validation | Status: conflict resolved against origin/main 43e98e5 at the user's request; all 42 local tests and 14 package checks passed. Preserve all skills, catalog, manifest/checker, tests and CI integration plus the current Slack handoff. The user reviews/merges personally; no organization reviewers should be requested. All 14 entrypoints must reach origin/main before queued code execution.
+- Runtime checkout: `.worktrees/slack-agent-automation` remains on local `fix/slack-message-format`, whose PR #6 is merged. Keep its private config/ledger and enabled timer in place; do not run the old /tmp copy. No real queued bug-to-PR run is claimed.
+- Final handoff PR #3 is merged at 32fb346. The original checkout remains on feature/shared-agent-skills with its untracked PDF preserved. Main was not implicitly pulled into this branch; the current merge is the explicitly requested PR #4 conflict resolution.
 - Setup PR #1 and preference PR #2 are merged: https://github.com/MobaileyProject/sudan-phones/pull/1 and https://github.com/MobaileyProject/sudan-phones/pull/2. Older feature/preference branches were recreated by pushes racing with the user’s merges; they are superseded and are not active implementation tasks.
 - Remote inspection at setup start: no open PRs or issues. Recheck `gh pr list` / `gh issue list` each session.
 - Local user input: `Marketplace_Complete_Product_and_Execution_Blueprint.pdf` is untracked and intentionally preserved. Its tracked product summary is docs/PRODUCT.md; do not stash/delete it or claim it is available in every clone.
 
 ## Immediate Next Tasks (Priority Queue)
-1. Check the shared-skills PR using `gh pr view feature/shared-agent-skills` and its CI checks; leave review/merge to the user. Pull the merged changes in each agent checkout, refresh skill discovery and consult docs/SKILLS.md. Do not duplicate the skill installation or request organization reviewers.
+1. Check refreshed PR #4 CI with `gh pr checks 4`, then leave review/merge to the user. Local combined checks passed. After merge, consult docs/SKILLS.md and set a small test List item to Ready with Executor agy, Details and Acceptance criteria. Polling is enabled from `.worktrees/slack-agent-automation`; inspect `python3 scripts/slack_worker.py doctor`, `status`, and `systemctl --user list-timers sudan-phones-slack-worker.timer`. A Ready item waits unclaimed until the skills reach origin/main. Do not duplicate the skills or request organization reviewers.
 2. Confirm the stack discrepancy and product decisions with both founders; update docs/PRODUCT.md and docs/ARCHITECTURE.md with MVP, owner roles, pilot region, verification evidence, currency, and contact channels.
 3. Scaffold the first approved-store vertical slice in backend/app/{routers,schemas,services,repositories,models}/, add pinned backend dependencies, Alembic and PostgreSQL tests, initialize the Android/Web Preview clients, then `make openapi` and commit docs/openapi.json.
 
 ## Known Blockers & Design Decisions
+- User-reported BUG-2026-004 was fixed in merged PR #6. Formatting/PR-evidence/edit-refresh/merged-row tests cover the defect. Both original PR messages were edited and verified through Slack history by their stored timestamps: no double-asterisk labels or mark-Ready instruction remained at verification. PR #5 correctly reflected MERGED and successful checks.
+- The user delegated implementation choices and explicitly authorized List creation/read/write and local agy task execution through PR delivery. No merge/deploy or organization-reviewer request is authorized. Codex Slack plugin remains unconnected, but the configured agy Slack server environment now supplies the API connector privately.
+- The local Slack skill contains an embedded credential; rotation/removal remains a user-side credential-maintenance task. The worker never reads that skill. Lists access, row writes and agy messages were verified using the configured connection, with no token values printed or committed.
+- Autonomous implementation remains unverified end to end. The host lacks agy Auto terminal sandbox; accept-edits plus session-only command grants are used. Unsupported/denied application-specific commands block and preserve work. No fabricated backend checks.
 - Explicit setup request selects FastAPI/Kotlin; product PDF specifies Django/Flutter/React. Follow requested stack for this setup; confirm before application implementation.
 - User selected feature branch and PR delivery, resolving the conflicting `git push origin main` line. User subsequently directed that they will review PRs personally: never automatically request the other founder/organization members. The earlier request to @MoatazAbdElmutaal was removed. The user merged PRs #1 and #2; the preference is persisted in AGENTS.md. No review requests remain on those PRs.
 - No backend exists: OpenAPI export/check must report a scaffold-pending skip until backend Python code is introduced. No placeholder API contract should be committed.

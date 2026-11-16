@@ -1,0 +1,11 @@
+{
+  "id": "BUG-2026-003",
+  "category": "logic",
+  "severity": "medium",
+  "status": "resolved",
+  "affected_files": ["scripts/slack_automation/worker.py"],
+  "affected_endpoints": [],
+  "root_cause": "The initial CI intake imported every failed run in its history window, including historical failures superseded by newer successful runs of the same workflow.",
+  "fix_summary": "Consider only the newest completed run per workflow on main. The first live sync's two historical rows were identified against successful main run 43773944527 and scheduled for correction; live correction evidence is recorded in STATE.md.",
+  "regression_test": "tests/test_slack_automation.py::AutomationTest.test_old_ci_failures_are_not_imported_after_newer_success"
+}

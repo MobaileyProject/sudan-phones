@@ -1,0 +1,16 @@
+[Unit]
+Description=Sudan Phones Slack Lists to agy worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Replace checkout path if installing from a different clone.
+WorkingDirectory=/mnt/3AFCC56CFCC522CD/phones project
+ExecStart=/usr/bin/python3 "/mnt/3AFCC56CFCC522CD/phones project/scripts/slack_worker.py" once
+Environment=PATH=/home/rasheed/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Store a newly rotated credential here, outside Git; chmod 600 this file.
+EnvironmentFile=-%h/.config/sudan-phones/slack-worker.env
+UMask=0077
+TimeoutStartSec=40min
+KillMode=control-group

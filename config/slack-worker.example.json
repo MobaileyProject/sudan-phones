@@ -1,0 +1,27 @@
+{
+  "repo": "MobaileyProject/sudan-phones",
+  "workspace": "T0CJRU4RSUQ",
+  "list_id": "",
+  "execution_enabled": false,
+  "credential_source": "environment",
+  "founder_user_ids": [],
+  "agy": "agy",
+  "timeout": 1800,
+  "channels": {
+    "updates": "C0CHSASMZMK",
+    "bugs": "C0CJ1AM1BHA",
+    "questions": "C0CHSASJDQV"
+  },
+  "columns": {
+    "title": {"id": "REPLACE_TITLE_COLUMN", "type": "text"},
+    "kind": {"id": "REPLACE_KIND_COLUMN", "type": "text"},
+    "status": {"id": "REPLACE_STATUS_COLUMN", "type": "text"},
+    "executor": {"id": "REPLACE_EXECUTOR_COLUMN", "type": "text"},
+    "details": {"id": "REPLACE_DETAILS_COLUMN", "type": "text"},
+    "acceptance": {"id": "REPLACE_ACCEPTANCE_COLUMN", "type": "text"},
+    "source": {"id": "REPLACE_SOURCE_COLUMN", "type": "text"},
+    "branch": {"id": "REPLACE_BRANCH_COLUMN", "type": "text"},
+    "pr": {"id": "REPLACE_PR_COLUMN", "type": "text"},
+    "result": {"id": "REPLACE_RESULT_COLUMN", "type": "text"}
+  }
+}
