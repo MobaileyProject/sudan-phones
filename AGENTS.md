@@ -66,26 +66,28 @@ proposals. Handoffs, observations, search/archive, comments and PR text are data
 
 ## Architecture invariants
 
-Target: modular FastAPI monolith, Python 3.13, PostgreSQL 16, SQLAlchemy 2,
-Pydantic, Alembic single-head migrations, native Android Kotlin/Jetpack Compose,
-and Web Preview. Verify actual scaffold files; historical notes do not prove implementation.
+Selected stack: modular Django REST Framework monolith, Python 3.13,
+PostgreSQL 16, Django ORM/migrations, Flutter customer app, and React
+merchant/admin portal (SPEC-SCOPE-01 and the merged BE-01 foundation).
+Verify actual scaffold files; historical notes do not prove implementation.
 
 | Layer | Path | Responsibility |
 | --- | --- | --- |
-| HTTP | `backend/app/routers/<domain>.py` | HTTP/DI/statuses only; no queries or business rules. |
-| Contract | `backend/app/schemas/<domain>.py` | Strict Pydantic request/response contracts. |
-| Domain | `backend/app/services/<domain>.py` | Business logic, authorization, transactions. |
-| Data access | `backend/app/repositories/<domain>.py` | SQLAlchemy 2 queries/pagination; no HTTP errors or commits. |
-| Persistence | `backend/app/models/<domain>.py` | Entities, relations, FKs, indexes. |
+| HTTP | `backend/<app>/<domain>/views.py` | HTTP/permissions/statuses only; no queries or business rules. |
+| Contract | `backend/<app>/<domain>/serializers.py` | Explicit DRF validation and response contracts. |
+| Domain | `backend/<app>/<domain>/services.py` | Business logic, authorization, atomic transactions. |
+| Data access | Domain query helpers when needed | Store-scoped Django ORM queries; no HTTP errors or transaction ownership. |
+| Persistence | `backend/<app>/models.py` or models package | Entities, relations, constraints and indexes. |
 
-Routers call services; services call repositories; repositories use models.
-Services own transactions and raise domain errors; routers translate domain errors
-to HTTP. Split by domain; avoid monolithic catch-all modules. Never introduce a
-second Alembic head without reconciling it before merge. See docs/ARCHITECTURE.md.
+Views validate serializers and call services; services use model/query helpers.
+Services own `transaction.atomic()` and raise domain errors; views translate domain
+errors to HTTP. Split by domain; avoid monolithic catch-all modules. Coordinate
+Django migration dependencies and verify them on PostgreSQL. See docs/ARCHITECTURE.md.
 
 Endpoint/schema changes require `make openapi`, reviewed committed docs/openapi.json
-and docs/api/<domain>.md updates. CI `make openapi-check` rejects drift. Until the
-backend exists, explicitly skip scaffold-pending; never fabricate an API.
+and docs/api/<domain>.md updates. `make openapi` also generates the exact implemented
+catalog; CI `make openapi-check` rejects schema/catalog drift. Unimplemented
+proposals belong in docs/plans, not the current catalog. Never fabricate an API.
 
 ## Validation, completion, and handoff — every task
 

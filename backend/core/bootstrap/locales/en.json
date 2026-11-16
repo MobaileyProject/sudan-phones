@@ -1,0 +1,18 @@
+{
+  "common.loading": "Loading",
+  "common.retry": "Try again",
+  "empty.title": "No results",
+  "offline.title": "You are offline",
+  "offline.message": "Check your connection and try again",
+  "errors.validation": "Check the supplied information",
+  "errors.invalid_value": "Invalid value",
+  "errors.not_found": "Resource not found",
+  "errors.method_not_allowed": "Request method is not allowed",
+  "errors.not_acceptable": "Requested response format is not supported",
+  "errors.unauthorized": "Sign in to continue",
+  "errors.forbidden": "You do not have permission for this action",
+  "errors.throttled": "Too many requests, try again later",
+  "errors.parse": "Could not read the request",
+  "errors.unsupported_media_type": "Request content type is not supported",
+  "errors.internal": "Something went wrong, try again"
+}

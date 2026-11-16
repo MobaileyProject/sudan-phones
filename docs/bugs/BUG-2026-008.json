@@ -1,0 +1,11 @@
+{
+  "id": "BUG-2026-008",
+  "category": "logic",
+  "severity": "medium",
+  "status": "resolved",
+  "affected_files": ["backend/core/middleware.py", "backend/config/settings.py"],
+  "affected_endpoints": ["GET /api/v1/config", "GET /api/v1/i18n/bundle", "GET /api/v1/health"],
+  "root_cause": "During P2 review, oversized query strings raised TooManyFieldsSent before API middleware finalized the response, producing HTML without trace/cache headers or a debug-rendering error. DRF's default format query override also intercepted unknown format parameters before strict query validation and returned 404 instead of 400.",
+  "fix_summary": "Catch query field-limit exceptions after establishing a safe header-based locale and return a sanitized JSON 400 with request ID, language and no-store headers in both debug modes. Disable DRF URL format override so bootstrap query fields all pass through the strict serializer.",
+  "regression_test": "backend/core/tests/test_bootstrap.py::BootstrapContractTest.test_excessive_query_fields_keep_the_json_error_and_trace_headers; backend/core/tests/test_bootstrap.py::BootstrapContractTest.test_invalid_unknown_and_duplicate_query_fields_are_errors"
+}

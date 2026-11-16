@@ -1,10 +1,625 @@
 {
-  "components": {},
+  "components": {
+    "schemas": {
+      "BundleData": {
+        "properties": {
+          "direction": {
+            "$ref": "#/components/schemas/DirectionEnum"
+          },
+          "locale": {
+            "$ref": "#/components/schemas/LocaleEnum"
+          },
+          "strings": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "direction",
+          "locale",
+          "strings",
+          "version"
+        ],
+        "type": "object"
+      },
+      "BundleResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/BundleData"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "City": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "CodeEnum": {
+        "description": "* `SDG` - SDG",
+        "enum": [
+          "SDG"
+        ],
+        "type": "string"
+      },
+      "ConfigData": {
+        "properties": {
+          "api_version": {
+            "type": "string"
+          },
+          "cities": {
+            "items": {
+              "$ref": "#/components/schemas/City"
+            },
+            "type": "array"
+          },
+          "currency": {
+            "$ref": "#/components/schemas/Currency"
+          },
+          "default_locale": {
+            "$ref": "#/components/schemas/DefaultLocaleEnum"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/DirectionEnum"
+          },
+          "features": {
+            "$ref": "#/components/schemas/Features"
+          },
+          "locale": {
+            "$ref": "#/components/schemas/LocaleEnum"
+          },
+          "minimum_app_version": {
+            "type": "string"
+          },
+          "supported_locales": {
+            "items": {
+              "$ref": "#/components/schemas/LocaleEnum"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "api_version",
+          "cities",
+          "currency",
+          "default_locale",
+          "direction",
+          "features",
+          "locale",
+          "minimum_app_version",
+          "supported_locales"
+        ],
+        "type": "object"
+      },
+      "ConfigResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConfigData"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "Currency": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/CodeEnum"
+          },
+          "decimal_places": {
+            "maximum": 2,
+            "minimum": 2,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "decimal_places"
+        ],
+        "type": "object"
+      },
+      "DefaultLocaleEnum": {
+        "description": "* `ar` - ar",
+        "enum": [
+          "ar"
+        ],
+        "type": "string"
+      },
+      "DirectionEnum": {
+        "description": "* `rtl` - rtl\n* `ltr` - ltr",
+        "enum": [
+          "rtl",
+          "ltr"
+        ],
+        "type": "string"
+      },
+      "ErrorData": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "details",
+          "message"
+        ],
+        "type": "object"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "field",
+          "message"
+        ],
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorData"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
+      "Features": {
+        "properties": {
+          "customer_accounts": {
+            "type": "boolean"
+          },
+          "paid_ads": {
+            "type": "boolean"
+          },
+          "payments": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "customer_accounts",
+          "paid_ads",
+          "payments"
+        ],
+        "type": "object"
+      },
+      "HealthData": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/StatusEnum"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HealthData"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "LocaleEnum": {
+        "description": "* `ar` - ar\n* `en` - en",
+        "enum": [
+          "ar",
+          "en"
+        ],
+        "type": "string"
+      },
+      "StatusEnum": {
+        "description": "* `ok` - ok",
+        "enum": [
+          "ok"
+        ],
+        "type": "string"
+      }
+    }
+  },
   "info": {
     "description": "Bilingual marketplace for verified phone stores in Sudan.",
     "title": "Sudan Phones Marketplace API",
     "version": "1.0.0"
   },
   "openapi": "3.0.3",
-  "paths": {}
+  "paths": {
+    "/api/v1/config": {
+      "get": {
+        "operationId": "public_config",
+        "parameters": [
+          {
+            "description": "Arabic default; supports ar/en and regional variants.",
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "* `ar` - ar\n* `en` - en",
+            "in": "query",
+            "name": "locale",
+            "schema": {
+              "enum": [
+                "ar",
+                "en"
+              ],
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "406": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "bootstrap"
+        ],
+        "x-api-id": "API-019",
+        "x-phase": "P2"
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "liveness",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "406": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "bootstrap"
+        ],
+        "x-api-id": "API-061",
+        "x-phase": "P2"
+      }
+    },
+    "/api/v1/i18n/bundle": {
+      "get": {
+        "operationId": "localization_bundle",
+        "parameters": [
+          {
+            "description": "Arabic default; supports ar/en and regional variants.",
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "* `ar` - ar\n* `en` - en",
+            "in": "query",
+            "name": "locale",
+            "schema": {
+              "enum": [
+                "ar",
+                "en"
+              ],
+              "minLength": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BundleResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "405": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "406": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "X-Request-ID": {
+                "description": "Server-generated UUID for this request.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "bootstrap"
+        ],
+        "x-api-id": "API-021",
+        "x-phase": "P2"
+      }
+    }
+  }
 }

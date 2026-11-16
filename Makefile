@@ -19,9 +19,11 @@ skills-check:
 
 openapi:
 	$(PYTHON) scripts/export_openapi.py
+	$(PYTHON) scripts/export_api_catalog.py
 
 openapi-check:
 	$(PYTHON) scripts/export_openapi.py --check
+	$(PYTHON) scripts/export_api_catalog.py --check
 
 context-check:
 	$(PYTHON) scripts/ctx.py lint

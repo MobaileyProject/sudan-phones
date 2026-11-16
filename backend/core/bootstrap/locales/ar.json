@@ -1,0 +1,18 @@
+{
+  "common.loading": "جارٍ التحميل",
+  "common.retry": "حاول مرة أخرى",
+  "empty.title": "لا توجد نتائج",
+  "offline.title": "أنت غير متصل بالإنترنت",
+  "offline.message": "تحقق من الاتصال ثم حاول مرة أخرى",
+  "errors.validation": "تحقق من البيانات المدخلة",
+  "errors.invalid_value": "قيمة غير صالحة",
+  "errors.not_found": "لم يتم العثور على المورد",
+  "errors.method_not_allowed": "طريقة الطلب غير مسموح بها",
+  "errors.not_acceptable": "تنسيق الاستجابة المطلوب غير مدعوم",
+  "errors.unauthorized": "يلزم تسجيل الدخول",
+  "errors.forbidden": "ليس لديك إذن لتنفيذ هذا الإجراء",
+  "errors.throttled": "طلبات كثيرة، حاول لاحقاً",
+  "errors.parse": "تعذر قراءة الطلب",
+  "errors.unsupported_media_type": "نوع محتوى الطلب غير مدعوم",
+  "errors.internal": "حدث خطأ، حاول مرة أخرى"
+}

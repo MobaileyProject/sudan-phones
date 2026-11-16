@@ -264,7 +264,7 @@ Every endpoint task must agree concrete request/response JSON, validation/error 
 
 ## Provenance
 
-Source SHA-256: `34011bc89ccb7203979ba2ebc13b03727668abfe4444df731d9b4738199b9f28`. [Full source data](blueprint-source.json), [publication manifest](slack-plan-manifest.json), [proposed API catalog](../api/BLUEPRINT_PROPOSED.md), and final verified IDs in slack-plan-links.json preserve traceability. Source milestones and all screens are retained; implementation tasks use stable keys to prevent duplicate imports.
+Source SHA-256: `34011bc89ccb7203979ba2ebc13b03727668abfe4444df731d9b4738199b9f28`. [Full source data](blueprint-source.json), [publication manifest](slack-plan-manifest.json), [proposed API catalog](BLUEPRINT_API_PROPOSALS.md), and final verified IDs in slack-plan-links.json preserve traceability. Source milestones and all screens are retained; implementation tasks use stable keys to prevent duplicate imports.
 
 ## Publication evidence
 

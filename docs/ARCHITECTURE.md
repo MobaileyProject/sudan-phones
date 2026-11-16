@@ -20,7 +20,7 @@ Maintain strict dependency direction: `HTTP View -> Serializer -> Domain Service
 
 Views call domain services; services orchestrate business invariants and transactions; models define declarative persistence and constraints. Services enforce store-scoped permissions even when invoked outside HTTP handlers.
 
-Use Python 3.13 / 3.14 and PostgreSQL 16. Django migrations manage database schema evolution. Review migration operations against PostgreSQL 16; do not substitute SQLite for PostgreSQL concurrency, locking or constraint behavior.
+Use Python 3.13 (the CI/runtime target) and PostgreSQL 16. Django migrations manage database schema evolution. Review migration operations against PostgreSQL 16; do not substitute SQLite for PostgreSQL concurrency, locking or constraint behavior.
 
 ## OpenAPI contract lifecycle
 
