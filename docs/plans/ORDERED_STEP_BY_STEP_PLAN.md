@@ -271,7 +271,7 @@ stateDiagram-v2
 > **Dependencies:** None — Starting Point
 
 #### Step 1 Work Checklist:
-- [ ] `[JOINT]` **SCOPE-01 — Resolve Core Business Invariants & Decisions** (Slack: `Rec0CHT7ACRJ9`)
+- [x] `[JOINT]` **SCOPE-01 — Resolve Core Business Invariants & Decisions** (Slack: `Rec0CHT7ACRJ9` | Ref: `docs/plans/MVP_SCOPE_AND_INVARIANTS.md`)
   - Confirm single currency: **Sudanese Pound (SDG)** across all pricing and offers.
   - Settle pilot launch region: **Port Sudan / Khartoum / Omdurman**.
   - Agree on inventory distinction:
@@ -279,18 +279,18 @@ stateDiagram-v2
     - **Used phones:** Tracked as distinct individual units with battery health %, physical condition grade, and explicit defects notes.
   - Settle Customer Account scope: Public guest browsing and search requires **no login**; account creation is optional.
   - Settle Home Promotions: Core homepage works without paid advertisements; ad campaigns deferred post-MVP.
-- [ ] `[BE]` **Rasheed: Business Rules & Verification Policy Spec**
+- [x] `[BE]` **Rasheed: Business Rules & Verification Policy Spec**
   - Document required merchant verification evidence (National ID, Commercial Register / Store signboard photo).
-  - Draft state machine for store statuses: `draft` ➔ `pending_verification` ➔ `verified` / `rejected` / `suspended`.
-- [ ] `[FE]` **Moataz: Screen Inventory & Journey Mapping Sign-Off**
+  - Draft state machine for store statuses: `draft` ➔ `pending_verification` ➔ `verified` / `changes_requested` / `rejected` / `suspended`.
+- [x] `[FE]` **Moataz: Screen Inventory & Journey Mapping Sign-Off**
   - Validate customer journey (C-00..C-10), merchant portal (M-01..M-13), founder admin (A-01..A-09).
   - Confirm bilingual Arabic RTL first, English secondary.
 
 > #### 🏁 Step 1 Exit Gate Criteria (`GATE-01` / `INT-01`):
-> - [ ] Both founders sign off on `SCOPE-01`.
-> - [ ] Screen IDs (33 screens) locked and mapped.
-> - [ ] Invariants for New vs Used inventory committed.
-> - [ ] **Action:** Check off `INT-01` in Slack Backlog and `GATE-01` in Slack Roadmap to unlock Step 2!
+> - [x] Both founders sign off on `SCOPE-01` (`docs/plans/MVP_SCOPE_AND_INVARIANTS.md`).
+> - [x] Screen IDs (33 screens) locked and mapped.
+> - [x] Invariants for New vs Used inventory committed.
+> - [x] **Status:** `GATE-01` and `INT-01` **ACCEPTED** on 2026-11-16 by both founders. Step 2 unlocked!
 
 ---
 

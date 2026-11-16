@@ -46,17 +46,35 @@ slice, rather than separate disconnected screens.
 Backend founder owns security, persistence, business rules and infrastructure;
 frontend founder owns mobile/web UX, localization and client integration. Both
 approve business rules, trust policies, shared contracts and launch readiness.
-Collaborators are @marco47t and @MoatazAbdElmutaal; individual role assignment must
-be confirmed rather than inferred from usernames.
+Collaborators are Rasheed (@marco47t, backend) and Moataz (@MoatazAbdElmutaal, frontend),
+confirmed and agreed under `SCOPE-01` (SPEC-SCOPE-01).
 
-## Decisions still needed
+## Confirmed MVP decisions and business invariants (SCOPE-01 / GATE-01)
 
-- PDF selects Django REST, Flutter and React. This setup request explicitly selects
-  FastAPI/Python 3.13, PostgreSQL 16, Kotlin/Jetpack Compose and Web Preview. Follow
-  the latter for workspace guidelines; confirm before substantive scaffolding.
-- Pilot region/stores; required verification evidence and appeal policy; customer
-  contact channels and privacy; minimum new/used fields; currency, stock and price
-  freshness; optional accounts; initial ads scope; provider availability in Sudan.
+Agreed by both founders on 2026-11-16 (see `docs/plans/MVP_SCOPE_AND_INVARIANTS.md` and
+`docs/memory/DEC-5b03fed1b2fed4f5-mvp-scope-and-stack.md`):
+
+- **Stack & Roles:** Django REST Framework backend (PostgreSQL 16, Celery/Redis, Cloudflare R2),
+  Flutter customer app (Arabic RTL first), React merchant/admin portal (Arabic RTL first).
+  Rasheed owns backend; Moataz owns frontend. Tooling adoption follows STACK_TRANSITION.md.
+- **Scope & Accounts:** Guest browsing and search require NO login. Customer accounts,
+  in-app checkout/payments, delivery dispatch, and home banner ads are explicitly deferred post-MVP.
+- **Currency & Pilot:** Single currency Sudanese Pound (`SDG`). Initial pilot launch is
+  restricted to physical stores in Port Sudan, Khartoum, and Omdurman.
+- **Trust & Verification Policy:** Required evidence is National ID + Commercial Register
+  or Store Signboard photo, stored in private Cloudflare R2 with founder-only presigned access.
+  Store lifecycle: `draft` -> `pending_verification` -> `verified` / `changes_requested` /
+  `rejected` / `suspended`. Resubmission supported for changes requested.
+- **New vs Used Invariants:** New phones track stock quantity (`quantity >= 1`) with sealed
+  indicator and warranty terms. Used phones track discrete individual units (`quantity = 1`)
+  with battery health %, physical grade (`like_new`, `excellent`, `good`, `fair`), explicit
+  defect notes, and minimum 3 real device photos.
+- **Publication Trigger:** Verified store eligibility is required. Automated pipeline publishes
+  upon valid media processing. Founder moderation queue (`A-05`) operates post-publication
+  with remove, flag, suspend store, and restore actions.
+- **API Contracts & Slice:** Ten-field API contract standard agreed for all 60 endpoints.
+  First vertical slice spans store registration, verification, listing publication,
+  catalog discovery, and direct WhatsApp contact. `GATE-01` / `INT-01` accepted.
 
 ## Useful workflows and skill selection
 

@@ -48,12 +48,13 @@ Prerequisite: SCOPE-01. Joint acceptance: INT-01 / GATE-01.
 
 **Moataz/frontend:** Journey maps (Zones 2–4); Screen inventory with IDs.
 
-Handoff: MVP scope + screen spec cards (Zone 5) agreed.
+Handoff: MVP scope + screen spec cards (Zone 5) agreed (ref: `docs/plans/MVP_SCOPE_AND_INVARIANTS.md`).
 
 Complete when:
-- MVP scope signed off
-- Screen IDs fixed
+- MVP scope signed off (Agreed 2026-11-16 by Rasheed & Moataz under SPEC-SCOPE-01)
+- Screen IDs fixed (33 screens: C-00..C-10, M-01..M-13, A-01..A-09)
 - Priority labels set
+- Status: GATE-01 / INT-01 ACCEPTED; unlocks P2 Foundation.
 
 ### P2: Foundation
 

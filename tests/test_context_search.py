@@ -1,5 +1,6 @@
 """Search safety, retrieval fallbacks, and accepted context isolation."""
 from pathlib import Path
+import os
 import sqlite3
 import io
 import json
@@ -21,6 +22,12 @@ class ContextSearchTest(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         subprocess.run(['git', 'init', '-q', str(self.root)], check=True)
+        self._ctx_base = os.environ.pop('CTX_BASE', None)
+        self.addCleanup(self._restore_env)
+
+    def _restore_env(self):
+        if self._ctx_base is not None:
+            os.environ['CTX_BASE'] = self._ctx_base
 
     def write(self, path, content):
         target = self.root / path

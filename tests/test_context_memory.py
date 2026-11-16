@@ -1,5 +1,6 @@
 """Trusted-base context and relation regression tests."""
 import importlib.util
+import os
 import subprocess
 import sys
 import tempfile
@@ -27,10 +28,16 @@ class MemoryFixture(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(); self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
+        self._ctx_base = os.environ.pop('CTX_BASE', None)
+        self.addCleanup(self._restore_env)
         self.git('init', '-q'); self.git('config','user.name','Test'); self.git('config','user.email','test@example.invalid')
         (self.root/'docs/memory').mkdir(parents=True)
         (self.root/'docs/STATE.md').write_text('# State\n\n## Current Active Focus\nTest focus.\n')
         self.commit()
+
+    def _restore_env(self):
+        if self._ctx_base is not None:
+            os.environ['CTX_BASE'] = self._ctx_base
 
     def git(self, *args):
         return subprocess.check_output(['git', '-C', str(self.root), *args], text=True).strip()
