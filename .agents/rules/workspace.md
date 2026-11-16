@@ -2,4 +2,4 @@
 trigger: always_on
 description: Shared Antigravity and Codex startup, handoff, Git, architecture and validation contract.
 ---
-Read and follow the repository root AGENTS.md before any task. Read docs/STATE.md at session startup and update it before each handoff. AGENTS.md is the canonical contract for both agents; do not maintain separate operating policies here.
+Follow the repository root AGENTS.md and its context protocol before any task. Use the worker CONTEXT BRIEF or run python3 scripts/ctx.py brief; search before broad document reads. Read matching skills completely. AGENTS.md is canonical; do not duplicate operating policies here.

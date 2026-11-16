@@ -114,8 +114,9 @@ python3 scripts/slack_worker.py retry-delivery
 
 Each poll executes at most one new item, serially. It uses an ignored `.worktrees/`
 checkout under this repository and a deterministic fix/feature branch from fresh
-`origin/main`. agy loads the canonical contract, product/state/architecture, skills
-catalog and matching skills, fixes or implements, runs checks and opens a PR for
+`origin/main`. v1 loads the legacy startup documents; v2 uses the accepted pinned brief, retrieves
+relevant sections and reads matching skills whole. agy fixes or implements, runs
+checks and opens a PR for
 the user's personal review. It cannot merge or deploy under the worker contract.
 The worker independently checks the returned PR URL, repository, branch, base and
 open state. Tests and CI remain evidence reported by agy and GitHub, respectively;
