@@ -264,3 +264,15 @@ Every endpoint task must agree concrete request/response JSON, validation/error 
 ## Provenance
 
 Source SHA-256: `34011bc89ccb7203979ba2ebc13b03727668abfe4444df731d9b4738199b9f28`. [Full source data](blueprint-source.json), [publication manifest](slack-plan-manifest.json), [proposed API catalog](../api/BLUEPRINT_PROPOSED.md), and final verified IDs in slack-plan-links.json preserve traceability. Source milestones and all screens are retained; implementation tasks use stable keys to prevent duplicate imports.
+
+## Publication evidence
+
+The import read back every desired field and native owner, verified 136 unique
+records/source keys and preserved all original backlog rows. Two summaries were
+posted and their exact text read back:
+
+- [Project update](https://elrasheedworkplace.slack.com/archives/C0CHSASMZMK/p1794804376569969)
+- [Shared references](https://elrasheedworkplace.slack.com/archives/C0CHZGW3GL9/p1794804406291319)
+- [Planning/stack proposal PR #11](https://github.com/MobaileyProject/sudan-phones/pull/11)
+
+Native API/gate statuses remain planning fields, not inferred implementation proof.

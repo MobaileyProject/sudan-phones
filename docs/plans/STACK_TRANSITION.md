@@ -43,6 +43,13 @@ moderation screen specifies remove/suspend/restore; this proposal does not inven
 an approve action for that endpoint. P4 tests the agreed publication pipeline and
 moderation/merchant status; P5 tests actual public-search visibility after moderation.
 
+## Context migration dependency
+
+If context PR #10 merges first, the reviewed stack-adoption task must explicitly
+resolve its application-stack confirmation blocker BLK-3c3a68c6caa2ce27 through the
+record protocol. This planning import does not deactivate an accepted blocker or
+rewrite an unmerged peer PR. Keep its other product/verification follow-ups intact.
+
 ## Completion gate
 
 The transition is complete only when its concrete contract/tooling PR is merged,

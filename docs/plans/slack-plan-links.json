@@ -718,5 +718,21 @@
     "No task has been made Ready or assigned executor agy.",
     "API rows are Proposed/Deferred; no endpoint implementation is claimed.",
     "Roadmap and API readiness are explicit human-maintained gates; existing worker handles authorized execution and PR status, not cross-list dependency enforcement."
-  ]
+  ],
+  "messages": {
+    "updates": {
+      "channel": "C0CHSASMZMK",
+      "ts": "1794804376.569969",
+      "url": "https://elrasheedworkplace.slack.com/archives/C0CHSASMZMK/p1794804376569969",
+      "verified": true
+    },
+    "resources": {
+      "channel": "C0CHZGW3GL9",
+      "ts": "1794804406.291319",
+      "url": "https://elrasheedworkplace.slack.com/archives/C0CHZGW3GL9/p1794804406291319",
+      "verified": true
+    }
+  },
+  "summary_writer": "Codex; agy summary attempt exited with code 3",
+  "proposal_pr": "https://github.com/MobaileyProject/sudan-phones/pull/11"
 }

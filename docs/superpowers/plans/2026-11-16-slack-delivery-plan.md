@@ -38,8 +38,9 @@ repository adoption is proposed in docs/plans/STACK_TRANSITION.md.
   backlog with contract/dependency links and exact completion criteria.
 - [x] Read back every imported row, compare fields and owner assignments, verify no
   Ready/agy import, check counts and preserve all pre-existing rows.
-- [ ] Let agy write concise verified channel messages; post and verify their IDs.
-- [ ] Commit proposed stack transition, source/plan/catalog and Slack links; stage
+- [x] Publish and verify concise channel messages. agy exited with code 3; Codex
+  wrote the updates from verified facts. Both were posted and read back exactly.
+- [x] Commit proposed stack transition, source/plan/catalog and Slack links; stage
   exact files, scan secrets, run make check, open a personal-review PR and monitor CI.
 
 ## Verification focus
