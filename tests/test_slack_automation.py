@@ -198,6 +198,41 @@ class AutomationTest(unittest.TestCase):
         self.assertEqual(lists.messages, {"123.1": "Checks passed; review PR"})
         self.assertTrue(self.ledger.get("report:F123:pr:5")["delivered"])
 
+    def test_refresh_reuses_original_channel_after_kind_change(self):
+        class Lists:
+            items = []
+            messages = {}
+            def tasks(self, config):
+                return list(self.items)
+            def create(self, config, fields):
+                self.items.append(fields)
+            def post(self, channel, text, key):
+                self.messages[(channel, "123.1")] = text
+                return "123.1"
+            def edit(self, channel, ts, text):
+                if (channel, ts) not in self.messages:
+                    raise RuntimeError("message_not_found")
+                self.messages[(channel, ts)] = text
+        lists = Lists()
+        report = {"source": "issue:7", "title": "Search", "kind": "bug"}
+        sync_sources(lists, self.config, [report], self.ledger)
+        publish(self.config, self.ledger, lists, lambda *args: {"message": "Bug recorded"})
+        lists.items[0]["kind"] = "feature"
+        sync_sources(lists, self.config, [dict(report, kind="feature")], self.ledger)
+        errors = publish(self.config, self.ledger, lists, lambda *args: {"message": "Task type changed"})
+        self.assertEqual(errors, [])
+        self.assertEqual(lists.messages, {("C2", "123.1"): "Task type changed"})
+
+    def test_issue_refresh_preserves_current_list_status_and_existing_pr(self):
+        class Lists:
+            def tasks(self, config):
+                return [{"source": "issue:7", "status": "PR ready", "pr": "https://github.com/MobaileyProject/sudan-phones/pull/12", "executor": "agy"}]
+        sync_sources(Lists(), self.config, [{"source": "issue:7", "title": "Search", "kind": "bug", "details": "Edited report"}], self.ledger)
+        result = self.ledger.get("report:F123:issue:7")["result"]
+        self.assertEqual(result["task"]["status"], "PR ready")
+        self.assertEqual(result["pr_url"], "https://github.com/MobaileyProject/sudan-phones/pull/12")
+        self.assertNotIn("mark Ready", result["next_action"])
+
     def test_merged_row_repairs_a_stale_pr_notification(self):
         key = "report:F123:pr:5"
         report = dict(self.task, source="pr:5", status="PR ready", pr="https://github.com/MobaileyProject/sudan-phones/pull/5")

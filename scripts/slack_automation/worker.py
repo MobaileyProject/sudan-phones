@@ -102,23 +102,33 @@ def _publish_one(config, ledger, lists, writer, job):
     message = writer(message_prompt(result), ["message"])["message"]
     if not message.strip() or len(message) > 3000 or "<!" in message:
         raise ValueError("agy returned an empty, overlong or broadcast message")
-    category = ("bugs" if task.get("kind") == "bug" else "updates") if reported else (
-        "updates" if status == "PR ready" else "questions")
+    channel = job.get("message_channel") or notification_channel(config, result)
     if job["message_ts"]:
-        lists.edit(config["channels"][category], job["message_ts"], message)
+        lists.edit(channel, job["message_ts"], message)
     else:
-        ts = lists.post(config["channels"][category], message, job["key"])
-        ledger.delivery(job["key"], ts)
+        ts = lists.post(channel, message, job["key"])
+        ledger.delivery(job["key"], ts, channel)
     ledger.delivery(job["key"])
 
 
+def notification_channel(config, result):
+    if result["outcome"] == "reported":
+        category = "bugs" if result["task"].get("kind") == "bug" else "updates"
+    else:
+        category = "updates" if result["outcome"] == "pr_ready" else "questions"
+    return config["channels"][category]
+
+
 def sync_sources(lists, config, reports, ledger=None):
-    existing = {task.get("source") for task in lists.tasks(config)}
+    existing = {task.get("source"): task for task in lists.tasks(config)}
     count = 0
     for report in reports:
+        if report["source"] in existing and not report["source"].startswith("pr:"):
+            current = existing[report["source"]]
+            report = dict(report, **{field: current[field] for field in ("status", "executor", "pr", "branch", "kind") if current.get(field)})
         if report["source"] not in existing:
             lists.create(config, dict(report, status=report.get("status", "Backlog"), executor=""))
-            existing.add(report["source"])
+            existing[report["source"]] = report
             count += 1
         if ledger:
             key = "report:" + config["list_id"] + ":" + report["source"]
@@ -126,6 +136,9 @@ def sync_sources(lists, config, reports, ledger=None):
             if ledger.claim(key, ""):
                 ledger.finish(key, result)
             elif ledger.get(key)["result"] != result:
+                previous = ledger.get(key)
+                if previous["message_ts"] and not previous.get("message_channel") and previous["result"]:
+                    ledger.delivery(key, previous["message_ts"], notification_channel(config, previous["result"]))
                 ledger.refresh(key, result)
     return count
 
@@ -136,10 +149,16 @@ def source_result(report):
     if status == "PR ready":
         action = "Review the existing PR personally; merge only after approval and passing checks"
     elif status == "Done":
-        action = "PR is merged; no review or requeue needed. Track follow-up work separately"
+        action = "Task is Done; no review or requeue needed. Track follow-up work separately"
+    elif status == "In progress":
+        action = "Follow the assigned worker and existing branch; do not start duplicate implementation"
+    elif status == "Ready":
+        action = "Item is Ready; confirm its executor and let the worker claim it once"
     elif status == "Blocked":
         action = "Resolve the recorded blocker with the founders before authorizing implementation"
-    summary = {"PR ready": "PR awaiting personal review", "Done": "PR merged"}.get(status, "Report recorded in the Slack backlog")
+    summary = {"PR ready": "PR awaiting personal review", "Done": "Task marked Done"}.get(status, "Report recorded in the Slack backlog")
+    if status == "Done" and report.get("merged_verified"):
+        summary = "PR merged"
     return {"outcome": "reported", "summary": summary,
             "task": report, "tests": report.get("tests", "No investigation recorded"),
             "limitations": "Only the recorded evidence is verified; additional runtime behavior is not independently checked",
@@ -206,7 +225,7 @@ def reconcile_merged(root, config, lists, ledger=None):
         if pr["state"] == "MERGED":
             if ledger:
                 if job and job["result"]:
-                    report = dict(job["result"]["task"], status="Done", details="Merged PR: " + url)
+                    report = dict(job["result"]["task"], status="Done", merged_verified=True, details="Merged PR: " + url)
                     checks = pr.get("statusCheckRollup") or []
                     report["tests"] = "; ".join((c.get("name") or c.get("context") or "Check") + ": " +
                                                 (c.get("conclusion") or c.get("state") or c.get("status") or "UNKNOWN") for c in checks) or "No GitHub checks reported"
