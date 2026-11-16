@@ -78,11 +78,22 @@ def lock(path):
             fcntl.flock(stream, fcntl.LOCK_UN)
 
 
+VALID_EXECUTORS = {"agy", "agy-low", "agy-medium", "agy-high", "agy-xhigh", "agy-max"}
+
+
+def extract_effort(executor):
+    if isinstance(executor, str) and executor.startswith("agy-"):
+        effort = executor.split("-", 1)[1]
+        if effort in {"low", "medium", "high", "xhigh", "max"}:
+            return effort
+    return None
+
+
 def eligible(task, config):
     return (config.get("execution_enabled") is True
             and task.get("list_id") == config["list_id"]
             and bool(re.fullmatch(r"[A-Za-z0-9_-]+", task.get("id", "")))
-            and task.get("status") == "Ready" and task.get("executor") == "agy"
+            and task.get("status") == "Ready" and task.get("executor") in VALID_EXECUTORS
             and task.get("kind") in {"bug", "feature"}
             and all(isinstance(task.get(k), str) and task[k].strip()
                     for k in ("title", "details", "acceptance")))

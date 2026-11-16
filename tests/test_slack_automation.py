@@ -33,10 +33,45 @@ class AutomationTest(unittest.TestCase):
 
     def test_only_ready_agy_tasks_in_configured_list_can_execute(self):
         self.assertTrue(eligible(self.task, self.config))
+        for valid in ["agy", "agy-low", "agy-medium", "agy-high", "agy-xhigh", "agy-max"]:
+            self.assertTrue(eligible(dict(self.task, executor=valid), self.config))
         for key, value in [("list_id", "F999"), ("status", "Backlog"),
-                           ("executor", "human"), ("kind", "other"), ("acceptance", "")]:
+                           ("executor", "human"), ("executor", "other"), ("kind", "other"), ("acceptance", "")]:
             self.assertFalse(eligible(dict(self.task, **{key: value}), self.config))
         self.assertFalse(eligible(self.task, dict(self.config, execution_enabled=False)))
+
+    def test_executor_effort_parsing_and_flag_propagation(self):
+        from slack_automation.core import extract_effort
+        self.assertIsNone(extract_effort("agy"))
+        self.assertIsNone(extract_effort("human"))
+        self.assertEqual(extract_effort("agy-low"), "low")
+        self.assertEqual(extract_effort("agy-medium"), "medium")
+        self.assertEqual(extract_effort("agy-high"), "high")
+        self.assertEqual(extract_effort("agy-xhigh"), "xhigh")
+        self.assertEqual(extract_effort("agy-max"), "max")
+
+        fake = self.root / "effort-agy"
+        fake.write_text("#!/usr/bin/env python3\nimport json, sys\n"
+                        "effort = sys.argv[sys.argv.index('--effort') + 1] if '--effort' in sys.argv else 'none'\n"
+                        "print(json.dumps({'status':'SUCCESS','structured_output':{'message':effort}}))\n")
+        fake.chmod(0o700)
+        base = dict(self.config, agy=str(fake))
+        self.assertEqual(run_agent(self.root, base, "Test", ["message"])["message"], "none")
+        self.assertEqual(run_agent(self.root, dict(base, _effort="high"), "Test", ["message"])["message"], "high")
+        self.assertEqual(run_agent(self.root, dict(base, _effort="low"), "Test", ["message"])["message"], "low")
+
+    def test_step_and_piece_architectural_context_in_prompt(self):
+        from slack_automation.agent import implementation_prompt, describe_piece
+        self.assertIn("Backend API", describe_piece("[P2][BE] BE-01: Baseline"))
+        self.assertIn("Customer Mobile App", describe_piece("[P2][FE-C] C-01: Home"))
+        self.assertIn("Merchant/Admin Web Portal", describe_piece("[P2][FE-M] M-01: Portal"))
+        self.assertIn("Joint Architecture", describe_piece("[P1][JOINT] SCOPE-01: Invariants"))
+
+        prompt_v1 = implementation_prompt(dict(self.task, list_id="F0CHZN3B0KC", title="01 · [P1][JOINT] INT-01"), "fix/test")
+        self.assertIn("Step 1 (Phase 1)", prompt_v1)
+        self.assertIn("Joint Architecture", prompt_v1)
+        self.assertIn("Antigravity Unified Engineering Agent", prompt_v1)
+        self.assertIn("docs/plans/ORDERED_STEP_BY_STEP_PLAN.md", prompt_v1)
 
     def test_creation_is_checkpointed_and_refuses_duplicate_list(self):
         path = self.root / "worker.json"
