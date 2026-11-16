@@ -1,0 +1,416 @@
+source_commit = "b69124d4353f478b4c2ca13b44028531456af5df"
+source_blob = "b5f81d7c3826ad3eda64900d53b44e3a9e71249a"
+archive = "docs/archive/STATE-20261116.md"
+
+[[item]]
+lines = "1"
+kind = "other"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "3"
+kind = "other"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "4"
+kind = "unfinished"
+disposition = "historical"
+reason = "The supporting worker-fix PR #8 was merged by the user in the source commit; its old merge/check instruction is obsolete. Ongoing runtime preservation is carried separately."
+refs = ["pr:8", "commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "6"
+kind = "other"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "7"
+kind = "duplicate"
+disposition = "historical"
+reason = "Canonical operating/architecture rule is retained in AGENTS.md, docs/ARCHITECTURE.md or docs/SLACK_AUTOMATION.md; this duplicate is archived without creating policy."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df", "file:AGENTS.md", "file:docs/ARCHITECTURE.md", "file:docs/SLACK_AUTOMATION.md"]
+
+[[item]]
+lines = "8"
+kind = "duplicate"
+disposition = "historical"
+reason = "Canonical operating/architecture rule is retained in AGENTS.md, docs/ARCHITECTURE.md or docs/SLACK_AUTOMATION.md; this duplicate is archived without creating policy."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df", "file:AGENTS.md", "file:docs/ARCHITECTURE.md", "file:docs/SLACK_AUTOMATION.md"]
+
+[[item]]
+lines = "9"
+kind = "duplicate"
+disposition = "historical"
+reason = "Canonical operating/architecture rule is retained in AGENTS.md, docs/ARCHITECTURE.md or docs/SLACK_AUTOMATION.md; this duplicate is archived without creating policy."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df", "file:AGENTS.md", "file:docs/ARCHITECTURE.md", "file:docs/SLACK_AUTOMATION.md"]
+
+[[item]]
+lines = "10"
+kind = "duplicate"
+disposition = "historical"
+reason = "Canonical operating/architecture rule is retained in AGENTS.md, docs/ARCHITECTURE.md or docs/SLACK_AUTOMATION.md; this duplicate is archived without creating policy."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df", "file:AGENTS.md", "file:docs/ARCHITECTURE.md", "file:docs/SLACK_AUTOMATION.md"]
+
+[[item]]
+lines = "11"
+kind = "duplicate"
+disposition = "historical"
+reason = "Canonical operating/architecture rule is retained in AGENTS.md, docs/ARCHITECTURE.md or docs/SLACK_AUTOMATION.md; this duplicate is archived without creating policy."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df", "file:AGENTS.md", "file:docs/ARCHITECTURE.md", "file:docs/SLACK_AUTOMATION.md"]
+
+[[item]]
+lines = "12"
+kind = "unfinished"
+disposition = "record"
+target = "HND-ddbb7c34ead98af2"
+refs = ["file:docs/memory/HND-ddbb7c34ead98af2-first-vertical-slice.md"]
+
+[[item]]
+lines = "14"
+kind = "other"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "15"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "16"
+kind = "unfinished"
+disposition = "historical"
+reason = "The supporting worker-fix PR #8 was merged by the user in the source commit; its old merge/check instruction is obsolete. Ongoing runtime preservation is carried separately."
+refs = ["pr:8", "commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "17"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "18"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "19"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "20"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "21"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "22"
+kind = "unfinished"
+disposition = "record"
+target = "HND-ec7b3a07e9795e22"
+refs = ["file:docs/memory/HND-ec7b3a07e9795e22-preserve-runtime.md"]
+
+[[item]]
+lines = "23"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "24"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "25"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "26"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "27"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "28"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "29"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "30"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "31"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "32"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "33"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "34"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "35"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "36"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "38"
+kind = "other"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "39"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "40"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "41"
+kind = "unfinished"
+disposition = "record"
+target = "HND-ec7b3a07e9795e22"
+refs = ["file:docs/memory/HND-ec7b3a07e9795e22-preserve-runtime.md"]
+
+[[item]]
+lines = "42"
+kind = "unfinished"
+disposition = "historical"
+reason = "The supporting worker-fix PR #8 was merged by the user in the source commit; its old merge/check instruction is obsolete. Ongoing runtime preservation is carried separately."
+refs = ["pr:8", "commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "43"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "44"
+kind = "unfinished"
+disposition = "record"
+target = "HND-1edd4ae3ec404bfe"
+refs = ["file:docs/memory/HND-1edd4ae3ec404bfe-product-decisions.md"]
+
+[[item]]
+lines = "45"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "46"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "47"
+kind = "unfinished"
+disposition = "record"
+target = "HND-1edd4ae3ec404bfe"
+refs = ["file:docs/memory/HND-1edd4ae3ec404bfe-product-decisions.md"]
+
+[[item]]
+lines = "49"
+kind = "other"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "50"
+kind = "unfinished"
+disposition = "historical"
+reason = "The supporting worker-fix PR #8 was merged by the user in the source commit; its old merge/check instruction is obsolete. Ongoing runtime preservation is carried separately."
+refs = ["pr:8", "commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "51"
+kind = "unfinished"
+disposition = "record"
+target = "HND-1edd4ae3ec404bfe"
+refs = ["file:docs/memory/HND-1edd4ae3ec404bfe-product-decisions.md"]
+
+[[item]]
+lines = "52"
+kind = "unfinished"
+disposition = "record"
+target = "HND-ddbb7c34ead98af2"
+refs = ["file:docs/memory/HND-ddbb7c34ead98af2-first-vertical-slice.md"]
+
+[[item]]
+lines = "54"
+kind = "other"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "55"
+kind = "duplicate"
+disposition = "historical"
+reason = "Canonical operating/architecture rule is retained in AGENTS.md, docs/ARCHITECTURE.md or docs/SLACK_AUTOMATION.md; this duplicate is archived without creating policy."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df", "file:AGENTS.md", "file:docs/ARCHITECTURE.md", "file:docs/SLACK_AUTOMATION.md"]
+
+[[item]]
+lines = "56"
+kind = "milestone"
+disposition = "historical"
+reason = "Historical snapshot or completed earlier task; subsequent PRs are verified live. Section labels carry no independent task state."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df"]
+
+[[item]]
+lines = "57"
+kind = "duplicate"
+disposition = "historical"
+reason = "Canonical operating/architecture rule is retained in AGENTS.md, docs/ARCHITECTURE.md or docs/SLACK_AUTOMATION.md; this duplicate is archived without creating policy."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df", "file:AGENTS.md", "file:docs/ARCHITECTURE.md", "file:docs/SLACK_AUTOMATION.md"]
+
+[[item]]
+lines = "58"
+kind = "unfinished"
+disposition = "record"
+target = "HND-4c8b8aa99782c44c"
+refs = ["file:docs/memory/HND-4c8b8aa99782c44c-credential-maintenance.md"]
+
+[[item]]
+lines = "59"
+kind = "unfinished"
+disposition = "record"
+target = "HND-8638ea7d7d3d156d"
+refs = ["file:docs/memory/HND-8638ea7d7d3d156d-application-executor-qa.md"]
+
+[[item]]
+lines = "60"
+kind = "blocker"
+disposition = "record"
+target = "BLK-3c3a68c6caa2ce27"
+refs = ["file:docs/memory/BLK-3c3a68c6caa2ce27-confirm-stack.md"]
+
+[[item]]
+lines = "61"
+kind = "duplicate"
+disposition = "historical"
+reason = "Canonical operating/architecture rule is retained in AGENTS.md, docs/ARCHITECTURE.md or docs/SLACK_AUTOMATION.md; this duplicate is archived without creating policy."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df", "file:AGENTS.md", "file:docs/ARCHITECTURE.md", "file:docs/SLACK_AUTOMATION.md"]
+
+[[item]]
+lines = "62"
+kind = "duplicate"
+disposition = "historical"
+reason = "Canonical operating/architecture rule is retained in AGENTS.md, docs/ARCHITECTURE.md or docs/SLACK_AUTOMATION.md; this duplicate is archived without creating policy."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df", "file:AGENTS.md", "file:docs/ARCHITECTURE.md", "file:docs/SLACK_AUTOMATION.md"]
+
+[[item]]
+lines = "63"
+kind = "unfinished"
+disposition = "record"
+target = "HND-5e1cfcea86409ba9"
+refs = ["file:docs/memory/HND-5e1cfcea86409ba9-pending-slack-summary.md"]
+
+[[item]]
+lines = "64"
+kind = "duplicate"
+disposition = "historical"
+reason = "Canonical operating/architecture rule is retained in AGENTS.md, docs/ARCHITECTURE.md or docs/SLACK_AUTOMATION.md; this duplicate is archived without creating policy."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df", "file:AGENTS.md", "file:docs/ARCHITECTURE.md", "file:docs/SLACK_AUTOMATION.md"]
+
+[[item]]
+lines = "65"
+kind = "duplicate"
+disposition = "historical"
+reason = "Canonical operating/architecture rule is retained in AGENTS.md, docs/ARCHITECTURE.md or docs/SLACK_AUTOMATION.md; this duplicate is archived without creating policy."
+refs = ["commit:b69124d4353f478b4c2ca13b44028531456af5df", "file:AGENTS.md", "file:docs/ARCHITECTURE.md", "file:docs/SLACK_AUTOMATION.md"]
