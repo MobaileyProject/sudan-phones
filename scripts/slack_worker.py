@@ -8,10 +8,11 @@ import shutil
 import sys
 
 from slack_automation.agent import run_agent
-from slack_automation.core import Ledger, eligible, lock
+from slack_automation.core import Ledger, lock
 from slack_automation.slack import Slack
 from slack_automation.setup import credential, create_backlog
-from slack_automation.worker import check_skills, collect_sources, command, execute, publish, reconcile_merged, sync_sources
+from slack_automation.worker import command, poll, publish
+from slack_automation.routing import contexts, validate_columns, validate_routes, verify_lists
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -20,8 +21,7 @@ def load_config(path):
     config = json.loads(path.read_text())
     if config.get("repo") != "MobaileyProject/sudan-phones" or config.get("workspace") != "T0CJRU4RSUQ":
         raise ValueError("Configuration must target the Sudan Phones repository and Slack workspace")
-    if config.get("execution_enabled", False) not in (True, False):
-        raise ValueError("execution_enabled must be a boolean")
+    validate_routes(config)
     return config
 
 
@@ -58,33 +58,21 @@ def main():
                 print(json.dumps({"id": parent.get("id"), "title": parent.get("title"),
                                   "schema": parent.get("schema") or parent.get("list_metadata", {}).get("schema")}, indent=2))
                 return
-            required = {"title", "kind", "status", "executor", "details", "acceptance", "source", "branch", "pr", "result"}
-            if not required.issubset(config.get("columns", {})):
-                raise ValueError("Map all required automation columns first; see docs/SLACK_AUTOMATION.md")
+            for context in contexts(config):
+                validate_columns(context.get("columns"), context["list_id"])
             writer = lambda prompt, fields: run_agent(ROOT, config, prompt, fields)
             if args.action == "doctor":
-                slack.tasks(config)
+                verify_lists(config, slack)
                 command(ROOT, "gh", "repo", "view", config["repo"], "--json", "nameWithOwner")
-                print("Slack workspace/List read and GitHub access verified; writes/agy execution not tested")
+                print("Slack workspace/all registered List schemas and reads plus GitHub access verified; writes/agy execution not tested")
                 return
             if args.action == "retry-delivery":
                 errors = publish(config, ledger, slack, writer)
                 if errors:
                     raise RuntimeError("Pending deliveries: " + "; ".join(errors))
                 return
-            count = sync_sources(slack, config, collect_sources(ROOT, config), ledger)
+            count, errors = poll(ROOT, config, ledger, slack, writer, execute_ready=args.action == "once")
             print("New backlog reports:", count)
-            reconcile_merged(ROOT, config, slack, ledger)
-            errors = publish(config, ledger, slack, writer)
-            if args.action == "once":
-                for task in slack.tasks(config):
-                    key = config["list_id"] + ":" + task["id"]
-                    if eligible(task, config) and ledger.get(key) is None:
-                        # Missing baseline skills must not consume a Ready item's claim.
-                        check_skills(ROOT, config)
-                        execute(ROOT, config, ledger, task, lists=slack)
-                        errors.extend(publish(config, ledger, slack, writer))
-                        break
             if errors:
                 raise RuntimeError("Pending deliveries: " + "; ".join(errors))
         finally:

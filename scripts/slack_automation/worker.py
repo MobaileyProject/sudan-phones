@@ -7,6 +7,7 @@ import subprocess
 
 from .agent import implementation_prompt, message_prompt, run_agent
 from .core import eligible, verify_pr
+from .routing import contexts, task_context
 
 
 def command(root, *args):
@@ -91,6 +92,7 @@ def publish(config, ledger, lists, writer):
 def _publish_one(config, ledger, lists, writer, job):
     result = job["result"]
     task = result["task"]
+    config = task_context(config, task)
     status = "PR ready" if result["outcome"] == "pr_ready" else "Blocked"
     reported = result["outcome"] == "reported"
     if not reported and not job["list_updated"]:
@@ -212,6 +214,8 @@ def collect_sources(root, config):
 
 def reconcile_merged(root, config, lists, ledger=None):
     for task in lists.tasks(config):
+        if task.get("list_id", config["list_id"]) != config["list_id"]:
+            raise ValueError("Reconciliation row belongs to a different List")
         if task.get("status") not in {"PR ready", "Done"}:
             continue
         url = task.get("pr", "")
@@ -232,3 +236,22 @@ def reconcile_merged(root, config, lists, ledger=None):
                     ledger.refresh(key, source_result(report))
             if task["status"] != "Done":
                 lists.update(config, task["id"], {"status": "Done"})
+
+
+def poll(root, config, ledger, lists, writer, execute_ready=False):
+    """Default-only source intake, all-List reconciliation, one execution slot."""
+    count = sync_sources(lists, config, collect_sources(root, config), ledger)
+    for context in contexts(config):
+        reconcile_merged(root, context, lists, ledger)
+    errors = publish(config, ledger, lists, writer)
+    if execute_ready:
+        for context in contexts(config):
+            for task in lists.tasks(context):
+                key = context["list_id"] + ":" + task["id"]
+                if eligible(task, context) and ledger.get(key) is None:
+                    # Baseline failure must not consume the durable claim.
+                    check_skills(root, context)
+                    execute(root, context, ledger, task, lists=lists)
+                    errors.extend(publish(config, ledger, lists, writer))
+                    return count, errors
+    return count, errors
