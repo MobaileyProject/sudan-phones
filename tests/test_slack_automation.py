@@ -205,6 +205,57 @@ class AutomationTest(unittest.TestCase):
                              ("state", "CLOSED"), ("url", "https://evil.test/pull/12")]:
             self.assertFalse(verify_pr(dict(good, **{field: value}), self.config["repo"], "fix/slack-abc"))
 
+    def test_execution_accepts_a_pr_merged_before_worker_verification(self):
+        url = "https://github.com/MobaileyProject/sudan-phones/pull/17"
+        calls = []
+        updates = []
+
+        def launch(*args):
+            calls.append(args)
+            return {"outcome": "pr_ready", "summary": "Foundation implemented",
+                    "pr_url": url, "tests": "Agent test evidence", "next_action": "Review PR"}
+
+        def github(*args):
+            branch = self.ledger.get("F123:Rec1")["branch"]
+            return json.dumps({"url": url, "headRefName": branch,
+                               "baseRefName": "main", "state": "MERGED"})
+
+        class Lists:
+            def update(self, config, item, fields):
+                updates.append(fields)
+
+            def post(self, channel, text, key):
+                self.channel = channel
+                return "123.1"
+
+        lists = Lists()
+        with patch("slack_automation.worker.prepare_worktree", return_value=self.root), \
+                patch("slack_automation.worker.prepare_context", return_value=(None, {})), \
+                patch("slack_automation.worker.command", side_effect=github):
+            execute(self.root, self.config, self.ledger, self.task, launch)
+            execute(self.root, self.config, self.ledger, self.task, launch)
+        result = self.ledger.get("F123:Rec1")["result"]
+        self.assertEqual(result["outcome"], "done")
+        self.assertTrue(result["merged_verified"])
+        self.assertEqual(result["pr_url"], url)
+        self.assertEqual(result["tests"], "Agent test evidence")
+        self.assertNotIn("review", result["next_action"].lower())
+        errors = publish(self.config, self.ledger, lists, lambda *args: {"message": "Merged foundation"})
+        self.assertEqual(errors, [])
+        self.assertEqual(updates[0]["status"], "Done")
+        self.assertEqual(updates[0]["pr"], url)
+        self.assertEqual(lists.channel, "C1")
+        self.assertEqual(len(calls), 1)
+
+    def test_merged_pr_still_requires_the_expected_branch_and_repository(self):
+        good = {"url": "https://github.com/MobaileyProject/sudan-phones/pull/17",
+                "headRefName": "fix/slack-abc", "baseRefName": "main", "state": "MERGED"}
+        self.assertTrue(verify_pr(good, self.config["repo"], "fix/slack-abc"))
+        for field, value in [("headRefName", "fix/unrelated"), ("baseRefName", "dev"),
+                             ("url", "https://github.com/other/repo/pull/17"), ("state", "CLOSED")]:
+            with self.subTest(field=field, value=value):
+                self.assertFalse(verify_pr(dict(good, **{field: value}), self.config["repo"], "fix/slack-abc"))
+
     def test_slack_cells_handle_select_and_rich_text_without_eval(self):
         column = {"id": "ColStatus", "type": "select", "values": {"Ready": "Opt1"}}
         self.assertEqual(encode(column, "Ready"), {"column_id": "ColStatus", "select": ["Opt1"]})

@@ -110,6 +110,6 @@ def parse_agent(output, required):
 
 
 def verify_pr(pr, repo, branch):
-    return (pr.get("state") == "OPEN" and pr.get("headRefName") == branch
+    return (pr.get("state") in {"OPEN", "MERGED"} and pr.get("headRefName") == branch
             and pr.get("baseRefName") == "main"
             and bool(re.fullmatch(r"https://github\.com/" + re.escape(repo) + r"/pull/[1-9][0-9]*", pr.get("url", ""))))
