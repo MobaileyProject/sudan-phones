@@ -23,10 +23,10 @@ units. Confirm lifecycle and currency/scale decisions before implementing them.
    persist the request fingerprint and durable result atomically with the change.
    Equal key/payload returns the original outcome; changed payload has an explicit
    conflict contract. Decide retention and response semantics before coding.
-4. Test real PostgreSQL concurrent writers with separate sessions: simultaneous
+4. Test real PostgreSQL concurrent writers with separate database connections: simultaneous
    duplicates, last permitted decrement, different commands racing, stale versions,
-   rollback, and commit followed by response timeout. Never share one SQLAlchemy
-   session between concurrent tasks or use SQLite as locking evidence.
+   rollback, and commit followed by response timeout. Never share database connection
+   state unsafely between concurrent tasks or use SQLite as locking evidence.
 5. Test the client retaining the same operation/key after an ambiguous timeout.
    Do not create a fresh mutation just because the first response was lost.
 

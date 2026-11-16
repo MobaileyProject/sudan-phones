@@ -1,0 +1,10 @@
+Django==5.1.15
+djangorestframework==3.17.2
+drf-spectacular==0.30.0
+psycopg[binary]==3.3.9
+asgiref==3.13.0
+sqlparse==0.6.1
+PyYAML==6.0.3
+uritemplate==4.2.0
+inflection==0.5.1
+jsonschema==4.26.0

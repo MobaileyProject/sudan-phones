@@ -44,6 +44,10 @@ jobs:
         run: python3 -m pip install -r backend/requirements.txt
       - name: Check OpenAPI Contract Drift
         run: make openapi-check
+      - name: Run Django System Checks
+        run: make backend-check
+      - name: Run Backend Tests
+        run: make backend-test
 
   notify:
     name: Notify Slack

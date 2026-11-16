@@ -19,7 +19,7 @@ are in [the manifest](../.agents/skills/manifest.json).
 
 | Skill | Source | Use and local adaptation |
 | --- | --- | --- |
-| [supabase-postgres-best-practices](../.agents/skills/supabase-postgres-best-practices/SKILL.md) | [Supabase](https://github.com/supabase/agent-skills/tree/c9be0e931b7930f7d02126d04774d904c381e7d7/skills/supabase-postgres-best-practices) | PostgreSQL schema/query/index/pool/locking guidance. Keeps PostgreSQL 16, SQLAlchemy and service transactions; does not select Supabase hosting/Auth or RLS. |
+| [supabase-postgres-best-practices](../.agents/skills/supabase-postgres-best-practices/SKILL.md) | [Supabase](https://github.com/supabase/agent-skills/tree/c9be0e931b7930f7d02126d04774d904c381e7d7/skills/supabase-postgres-best-practices) | PostgreSQL schema/query/index/pool/locking guidance. Keeps PostgreSQL 16, Django ORM and atomic service transactions; does not select Supabase hosting/Auth or RLS. |
 | [security-best-practices](../.agents/skills/security-best-practices/SKILL.md) | [OpenAI](https://github.com/openai/skills/tree/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-best-practices) | Requested security work on supported Python/web languages. Explicitly does not certify Kotlin or authorize unrelated hardening/external scans. |
 | [playwright-cli](../.agents/skills/playwright-cli/SKILL.md) | [Microsoft](https://github.com/microsoft/playwright-cli/tree/b21724888b8100b05ef8dee3a92f2bb03bf4dcde/skills/playwright-cli) | Real browser interactions, web QA and evidence. Checks installed tools, isolates sessions and distinguishes web from native Android coverage. |
 | [testing-setup](../.agents/skills/testing-setup/SKILL.md) | [Google / Android](https://github.com/android/skills/tree/c72942584fff970dac86ced78b367fce0c441e52/testing/testing-setup) | Android test strategy and infrastructure. Preserves selected DI/frameworks; no automatic Hilt/SDK/framework installation or unrequested scaffold. |
@@ -36,10 +36,10 @@ CC-BY-SA-4.0 as well. No repository-wide license change is implied.
 
 | Skill | Trigger and expected evidence |
 | --- | --- |
-| [api-domain-workflow](../.agents/skills/api-domain-workflow/SKILL.md) | Endpoint/schema/domain changes: five-layer implementation, service/domain tests, real contract regeneration and catalog updates. Includes FastAPI dependency guidance while retaining SQLAlchemy rather than adopting SQLModel. |
+| [api-domain-workflow](../.agents/skills/api-domain-workflow/SKILL.md) | Endpoint/schema/domain changes: views, serializers, domain services, real contract regeneration and catalog updates under Django REST Framework. |
 | [store-authorization](../.agents/skills/store-authorization/SKILL.md) | Ownership, verification and visibility changes: actor/action matrix, cross-store denials, suspension/cache coverage and explicit offline visibility limits. |
 | [inventory-transactions](../.agents/skills/inventory-transactions/SKILL.md) | New/used stock, price or retried mutations: defined invariants, real PostgreSQL concurrency tests, idempotency and stale-edit behavior. Does not invent checkout/reservations. |
-| [migration-safety](../.agents/skills/migration-safety/SKILL.md) | Alembic heads, schema/backfill/index changes: one-head graph, deployment compatibility, upgrade/recovery evidence on PostgreSQL. |
+| [migration-safety](../.agents/skills/migration-safety/SKILL.md) | Django migrations, schema/backfill/index changes: dependency graph, deployment compatibility, upgrade/recovery evidence on PostgreSQL 16. |
 | [arabic-offline-qa](../.agents/skills/arabic-offline-qa/SKILL.md) | RTL/mixed-script and connectivity work: screen/device/network matrix, accessible text behavior, pending-operation reconciliation and truthful coverage. |
 | [secure-media-workflow](../.agents/skills/secure-media-workflow/SKILL.md) | Images/evidence/jobs: purpose/owner access matrix, quarantine/decode checks, private evidence isolation and replay-safe publication state. |
 | [defect-to-regression](../.agents/skills/defect-to-regression/SKILL.md) | Confirmed bug fixes: targeted search, reproduction, failing/passing regression, accurate docs/bugs record and handoff. No fabricated defects or backend files. |
