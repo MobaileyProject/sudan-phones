@@ -8,6 +8,8 @@
   "founder_user_ids": [],
   "agy": "agy",
   "timeout": 1800,
+  "metrics_path": null,
+  "context_prompt_version": 1,
   "channels": {
     "updates": "C0CHSASMZMK",
     "bugs": "C0CJ1AM1BHA",

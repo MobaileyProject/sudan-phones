@@ -7,6 +7,7 @@ import subprocess
 
 from .agent import implementation_prompt, message_prompt, run_agent
 from .core import eligible, verify_pr
+from .context import prepare_context
 
 
 def command(root, *args):
@@ -54,8 +55,10 @@ def execute(root, config, ledger, task, launch=None, lists=None):
         if lists:
             lists.update(config, task["id"], {"status": "In progress", "branch": branch})
         worktree = prepare_worktree(root, config, branch)
-        launch = launch or (lambda path, prompt, fields: run_agent(path, dict(config, _branch=branch), prompt, fields))
-        result = launch(worktree, implementation_prompt(task, branch),
+        context, metadata = prepare_context(worktree, config)
+        run_config = dict(config, _branch=branch, _task_id=task["id"], **metadata)
+        launch = launch or (lambda path, prompt, fields: run_agent(path, run_config, prompt, fields))
+        result = launch(worktree, implementation_prompt(task, branch, context),
                         ["outcome", "summary", "pr_url", "tests", "next_action"])
         if result["outcome"] not in {"pr_ready", "blocked"}:
             raise ValueError("agy returned an unsupported outcome")

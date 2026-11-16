@@ -1,0 +1,11 @@
+{
+  "id": "BUG-2026-006",
+  "category": "logic",
+  "severity": "medium",
+  "status": "resolved",
+  "affected_files": ["scripts/search_codebase.py"],
+  "affected_endpoints": [],
+  "root_cause": "The original FTS search opened its disposable SQLite cache without recovery and indexed otherwise eligible text without a content secret-pattern check. A corrupt cache aborted the CLI, and a fixture token introduced into an eligible source could enter the cache and results.",
+  "fix_summary": "Rebuild the cache once after SQLite errors, then fall back to bounded safe source retrieval. Exclude secret-pattern content before indexing and evict an older cache when a newly unsafe source is detected. Synthetic tests use generated fake values only; no production credential exposure is claimed.",
+  "regression_test": "tests/test_context_search.py::ContextSearchTest.test_corrupt_cache_recovers_without_touching_other_files; tests/test_context_search.py::ContextSearchTest.test_secret_tripwire_evicts_cached_content; tests/test_context_search.py::ContextSearchTest.test_fallback_is_bounded_and_excludes_unsafe_sources"
+}

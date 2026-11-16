@@ -8,6 +8,9 @@ import re
 import sqlite3
 import subprocess
 import sys
+from types import SimpleNamespace
+
+from check_secrets import FORBIDDEN_PATTERNS
 
 EXTENSIONS = {".py", ".kt", ".kts", ".java", ".js", ".jsx", ".ts", ".tsx",
               ".md", ".json", ".sql", ".toml", ".yaml", ".yml", ".html", ".css"}
@@ -68,7 +71,67 @@ def chunks(name, content):
         yield (name, start, end, labels, "\n".join(lines[start - 1:end]))
 
 
-def refresh(db, root, rebuild=False):
+def safe_content(content):
+    return not any(pattern.search(content) for pattern, _ in FORBIDDEN_PATTERNS)
+
+
+def effective_view(root):
+    import context_memory as context
+    try:
+        return context.load_effective(root)
+    except (ValueError, OSError, subprocess.SubprocessError):
+        return SimpleNamespace(records={}, statuses={}, errors=["Accepted context unavailable"], base=None)
+
+
+def documents(root, *, memory=False, open_only=False, scope=None, history=False, view=None):
+    """Yield validated local sources plus original accepted Git-object records."""
+    import context_memory as context
+    view = effective_view(root) if view is None else view
+    unknown = bool(view.errors) or view.base is None
+    accepted = view.records
+    for record in accepted.values():
+        status = view.statuses.get(record.id, "unknown")
+        if not unknown and not history and status in {"closed", "retracted", "done"}:
+            continue
+        if open_only and not unknown and status not in {"active", "open"}:
+            continue
+        if scope and scope != "*" and not any(context.scope_matches(pattern, scope)
+                             for pattern in record.meta.get("paths", ["*"])):
+            continue
+        if safe_content(record.raw):
+            label = "UNKNOWN" if unknown else "ACCEPTED"
+            yield (f"{record.path} [{label} {status} {record.created}]", record.raw)
+    for name, path in source_files(root):
+        if not history and any(part.lower() in {"archive", "archives"}
+                               for part in Path(name).parts):
+            continue
+        is_memory = name.startswith("docs/memory/")
+        if (memory or open_only) and not is_memory:
+            continue
+        if not is_memory and scope and not context.scope_matches(scope, name):
+            continue
+        try:
+            content = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            continue
+        if "\0" in content or not safe_content(content):
+            continue
+        if is_memory:
+            try:
+                record = context.parse_record(name, content)
+            except ValueError:
+                continue
+            original = accepted.get(record.id)
+            if original and original.path == record.path and original.raw == record.raw:
+                continue
+            if scope and scope != "*" and not any(context.scope_matches(pattern, scope)
+                                 for pattern in record.meta.get("paths", ["*"])):
+                continue
+            name += f" [PROPOSED {record.created}]"
+        yield name, content
+
+
+def refresh(db, root, rebuild=False, sources=None):
     """Update changed files and remove deleted/ignored records in one transaction."""
     with db:
         if rebuild:
@@ -79,16 +142,21 @@ def refresh(db, root, rebuild=False):
                    "path, start UNINDEXED, end UNINDEXED, symbol, body)")
         previous = dict(db.execute("SELECT path, digest FROM files"))
         seen = set()
-        for name, path in source_files(root):
-            try:
-                data = path.read_bytes()
-                if b"\0" in data:
-                    continue
-                content = data.decode("utf-8")
-            except (OSError, UnicodeError):
+        if sources is None:
+            def local_sources():
+                for name, path in source_files(root):
+                    try:
+                        content = path.read_text(encoding="utf-8")
+                    except (OSError, UnicodeError):
+                        continue
+                    if "\0" not in content and safe_content(content):
+                        yield name, content
+            sources = local_sources()
+        for name, content in sources:
+            if not safe_content(content):
                 continue
             seen.add(name)
-            digest = hashlib.sha256(data).hexdigest()
+            digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
             if previous.get(name) == digest:
                 continue
             db.execute("DELETE FROM chunks WHERE path = ?", (name,))
@@ -100,50 +168,108 @@ def refresh(db, root, rebuild=False):
             db.execute("DELETE FROM files WHERE path = ?", (name,))
 
 
-def search(db, query, limit):
-    # Quoted literal tokens prevent FTS operators or SQL injection through queries.
-    terms = re.findall(r"[^\W_]+", query, flags=re.UNICODE)
-    expression = " AND ".join('"' + term + '"' for term in terms)
-    rows = db.execute(
-        "SELECT path, start, end, body FROM chunks WHERE chunks MATCH ? "
-        "ORDER BY bm25(chunks), path, CAST(start AS INTEGER) LIMIT ?",
-        (expression, limit),
-    ).fetchall()
+def render(rows, terms, mode):
     if not rows:
-        return "No matches. Try fewer terms or use rg for substring searches.\n"
+        attempted = "scope/open listing" if not terms else "AND and OR"
+        return f"No matches (attempted {attempted}). Try fewer terms or git grep for substrings.\n"
     blocks = []
-    # Give each result a fair share of the total output budget, paths included.
-    allowance = (MAX_OUTPUT - 1) // len(rows)
+    prefix = "OR fallback\n" if mode == "OR" else ""
+    allowance = (MAX_OUTPUT - len(prefix) - 1) // len(rows)
     for name, start, end, body in rows:
-        header = f"{name}:{start}-{end}\n"
+        tokens = set(re.findall(r"[^\W_]+", (name + " " + body).casefold(), re.UNICODE))
+        hits = sum(term.casefold() in tokens for term in terms)
+        weak = " [WEAK]" if terms and hits * 2 < len(terms) else ""
+        header = f"{name}:{start}-{end}{weak}\n"
         source = "\n".join(f"{int(start) + i}: {line}" for i, line in enumerate(body.splitlines()))
         block = header + source
         if len(block) > allowance - 2:
-            block = block[:allowance - 18] + "\n[truncated]"
+            block = block[:max(0, allowance - 18)] + "\n[truncated]"
         blocks.append(block)
-    return ("\n\n".join(blocks) + "\n")[:MAX_OUTPUT]
+    return (prefix + "\n\n".join(blocks) + "\n")[:MAX_OUTPUT]
+
+
+def search(db, query, limit):
+    # Literal quoted terms prevent FTS operators and SQL injection.
+    terms = re.findall(r"[^\W_]+", query, flags=re.UNICODE)
+    if not terms:
+        rows = db.execute("SELECT path, start, end, body FROM chunks ORDER BY path, "
+                          "CAST(start AS INTEGER) LIMIT ?", (limit,)).fetchall()
+        return render(rows, terms, "listing")
+    for mode in ("AND", "OR"):
+        expression = f" {mode} ".join('"' + term + '"' for term in terms)
+        rows = db.execute(
+            "SELECT path, start, end, body FROM chunks WHERE chunks MATCH ? "
+            "ORDER BY bm25(chunks), path, CAST(start AS INTEGER) LIMIT ?",
+            (expression, limit),
+        ).fetchall()
+        if rows:
+            return render(rows, terms, mode)
+    return render([], terms, "OR")
+
+
+def source_search(sources, query, limit):
+    """Safe dependency-free fallback when SQLite cannot rebuild."""
+    terms = re.findall(r"[^\W_]+", query, flags=re.UNICODE)
+    rows = [row for name, content in sources if safe_content(content)
+            for row in chunks(name, content)]
+    for mode in ("AND", "OR"):
+        hits = []
+        for name, start, end, symbol, body in rows:
+            words = set(re.findall(r"[^\W_]+", name.casefold() + " " + body.casefold()))
+            matches = [term.casefold() in words for term in terms]
+            if not terms or (all(matches) if mode == "AND" else any(matches)):
+                hits.append((name, start, end, body))
+        if hits:
+            return render(hits[:limit], terms, mode)
+    return render([], terms, "OR")
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("query", help="Literal words; all must match within one source chunk")
+    parser.add_argument("query", nargs="?", default="", help="Literal words to search")
+    parser.add_argument("--memory", action="store_true", help="Search memory records only")
+    parser.add_argument("--open", dest="open_only", action="store_true", help="List open context")
+    parser.add_argument("--scope", help="Filter using component-aware repository scope")
+    parser.add_argument("--history", action="store_true", help="Include closed records and archives")
     parser.add_argument("--limit", type=int, default=5, help="Maximum results, 1-20 (default 5)")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--rebuild", action="store_true", help="Rebuild this checkout's cache")
     args = parser.parse_args()
     if not 1 <= args.limit <= 20:
         parser.error("--limit must be between 1 and 20")
-    if not re.search(r"[^\W_]+", args.query, re.UNICODE):
+    if not re.search(r"[^\W_]+", args.query, re.UNICODE) and not (not args.query and (args.scope or args.open_only)):
         parser.error("query must contain at least one word or number")
+    if args.scope is not None and (not args.scope or Path(args.scope).is_absolute()
+            or ".." in Path(args.scope).parts or "\\" in args.scope
+            or any(ord(char) < 32 for char in args.scope)):
+        parser.error("--scope must be a safe relative repository path")
     root = args.root.resolve()
     try:
-        with sqlite3.connect(root / ".search_index.db", timeout=30) as db:
-            refresh(db, root, args.rebuild)
-            sys.stdout.write(search(db, args.query, args.limit))
-    except (sqlite3.Error, OSError, subprocess.SubprocessError) as exc:
-        print(f"Search failed: {exc}. SQLite FTS5 and a Git checkout are required. "
-              "Try --rebuild for an incompatible cache.", file=sys.stderr)
+        view = effective_view(root)
+        notice = "UNKNOWN context: accepted base unavailable or invalid; no status suppression.\n" if view.errors or view.base is None else ""
+        sources = list(documents(root, memory=args.memory, open_only=args.open_only,
+                                 scope=args.scope, history=args.history, view=view))
+    except (ValueError, OSError, subprocess.SubprocessError) as exc:
+        print(f"Search failed: {type(exc).__name__}", file=sys.stderr)
         return 1
+    cache = root / ".search_index.db"
+    output = None
+    for attempt in range(2):
+        try:
+            with sqlite3.connect(cache, timeout=30) as db:
+                refresh(db, root, args.rebuild or bool(attempt), sources)
+                output = search(db, args.query, args.limit)
+            break
+        except (sqlite3.Error, OSError):
+            if attempt == 0:
+                try:
+                    cache.unlink(missing_ok=True)
+                except OSError:
+                    pass
+    if output is None:
+        notice += "SQLite unavailable; safe source fallback.\n"
+        output = source_search(sources, args.query, args.limit)
+    sys.stdout.write((notice + output)[:MAX_OUTPUT])
     return 0
 
 

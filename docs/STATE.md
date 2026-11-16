@@ -1,7 +1,7 @@
 # Project State & Session Handoff
 
 ## Current Active Focus
-- The documentation executor smoke test passed and the user merged PR #7. Resolve the supporting worker-fix PR #8 against that merged handoff, preserving both task records. No application scaffold or RAG change is in scope.
+- Implement the approved lightweight context/history design through separate tooling and reviewed migration PRs. Owner Codex, branch feature/context-tooling, isolated .worktrees/context-tooling. Preserve live Slack runtime and startup v1 until accepted migration coverage permits v2.
 
 ## Architecture & Technology Stack
 - Backend: Modular FastAPI Monolith (Python 3.13)
@@ -12,6 +12,7 @@
 - These are target choices; no backend, database migrations, Android app or web client exists yet. Read docs/ARCHITECTURE.md and docs/PRODUCT.md before scaffolding.
 
 ## Completed Milestones
+- Context tooling: trusted-base Git-object record loader, uncapped safety brief, append-only record creation/lint, safe FTS history/status filters and recovery, gated worker prompt v2, opt-in content-free metrics and migration coverage checks are implemented. Local integration passes 100 tests plus 14 skill checks; final staged scan/CI follow. BUG-2026-006 records reproduced search-cache recovery/content filtering failures. No token savings, model behavior, real application fix, or v2 runtime activation claimed.
 - [x] Real agy executor smoke test: retry item Rec0CHSLH4CHZ reached PR ready on feature/slack-192fa58e0192cd35. agy created the 50-line guide and its own STATE entry, ran 42 tests and all 14 package checks, and opened PR #7: https://github.com/MobaileyProject/sudan-phones/pull/7. Both GitHub checks passed on run 43789198359. Parent verification confirmed the two-file scope, 50 lines, resolving relative links, clean task checkout and exact #project-updates completion message (1794794293.468909). The worker did not merge it; the user merged PR #7 at 2026-11-16 02:04:37 UTC as 8124fbe.
 - Worker-fix PR #8: https://github.com/MobaileyProject/sudan-phones/pull/8, implementation commit eb2474a. Its initial Validation & Secret Scan and Notify Slack checks passed on run 43789943869. The user then merged PR #7, causing a STATE.md-only overlap; main 8124fbe is being explicitly merged into the owned fix branch, retaining both records. Check the refreshed PR #8 CI before merging.
 - BUG-2026-005: per-task Git trust and the user's implementation-only permission opt-in passed both new regressions and the full 44-test suite plus all 14 package checks. Independent review found no important issues. The explicit setting is enabled in the private runtime config; the committed example remains disabled by default.
@@ -36,6 +37,7 @@
 - Recent baseline commits: `f84b457` remove setup blueprint PDF; `5b8fbe3` architecture blueprint; `ffe0016` initial protocol and integrations.
 
 ## In-Progress Tasks & Active Branches
+- Branch: `feature/context-tooling` | Owner: Codex | Targets: scripts/context_memory.py, scripts/ctx.py, search, worker metrics, context tests/docs | Status: implementing approved lightweight context tooling in isolated `.worktrees/context-tooling` from origin/main b69124d. Existing startup/runtime remain v1 until reviewed migration is accepted.
 - Branch: `feature/slack-192fa58e0192cd35` | Owner: Antigravity (agy) | PR: https://github.com/MobaileyProject/sudan-phones/pull/7 | Status: merged by the user as 8124fbe after successful smoke-test verification; the worker never merged it. The 50-line guide and task handoff are on main.
 - Branch: `feature/shared-agent-skills` | Owner: Codex | PR: https://github.com/MobaileyProject/sudan-phones/pull/4 | Status: merged by the user as bccc5de; all 14 skill entrypoints are now on main and available to the executor.
 - Runtime checkout: `.worktrees/slack-agent-automation` is on `fix/slack-agy-execution`. Keep its private config/ledger and enabled timer in place; do not run the old /tmp copy. The documentation smoke test passed end to end; application bug-fix execution has not been tested.
@@ -47,11 +49,13 @@
 - Local user input: `Marketplace_Complete_Product_and_Execution_Blueprint.pdf` is untracked and intentionally preserved. Its tracked product summary is docs/PRODUCT.md; do not stash/delete it or claim it is available in every clone.
 
 ## Immediate Next Tasks (Priority Queue)
+0. Review the context-tooling PR, then the dependent STATE migration PR; inspect every nonhistorical coverage item. Commands: python3 scripts/ctx.py lint; python3 scripts/context_migration.py; make check. Enable context_prompt_version 2 only after accepted migration, preserving private runtime config/ledger. PR URLs and CI evidence follow.
 1. Check `gh pr checks 8` after the STATE resolution, then personally review/merge PR #8; PR #7 is already merged. Do not auto-merge or request organization reviewers. Polling remains enabled from `.worktrees/slack-agent-automation`; inspect `python3 scripts/slack_worker.py doctor`, `status`, and `systemctl --user list-timers sudan-phones-slack-worker.timer`. New Ready/agy items with Details and Acceptance criteria can execute with all 14 skills on main.
 2. Confirm the stack discrepancy and product decisions with both founders; update docs/PRODUCT.md and docs/ARCHITECTURE.md with MVP, owner roles, pilot region, verification evidence, currency, and contact channels.
 3. Scaffold the first approved-store vertical slice in backend/app/{routers,schemas,services,repositories,models}/, add pinned backend dependencies, Alembic and PostgreSQL tests, initialize the Android/Web Preview clients, then `make openapi` and commit docs/openapi.json.
 
 ## Known Blockers & Design Decisions
+- Context rollout is staged: effective constraints are pinned to accepted origin/main ancestry; unmerged edits/closures cannot remove blockers. No embeddings or additional model calls. No new DEC is auto-promoted during migration. Live service remains on its owned checkout; both PRs require personal review, not automatic merge.
 - The user explicitly authorized `agy --dangerously-skip-permissions` for the executor after the first live denial. Implement it as local `agy_skip_permissions: true` for implementation sessions only; do not change global agy/Git settings or apply it to writers. This preference supersedes the earlier default of retaining all implementation prompts.
 - User-reported BUG-2026-004 was fixed in merged PR #6. Formatting/PR-evidence/edit-refresh/merged-row tests cover the defect. Both original PR messages were edited and verified through Slack history by their stored timestamps: no double-asterisk labels or mark-Ready instruction remained at verification. PR #5 correctly reflected MERGED and successful checks.
 - The user delegated implementation choices and explicitly authorized List creation/read/write and local agy task execution through PR delivery. No merge/deploy or organization-reviewer request is authorized. Codex Slack plugin remains unconnected, but the configured agy Slack server environment now supplies the API connector privately.

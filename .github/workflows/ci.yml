@@ -16,9 +16,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - name: Fetch Trusted Context Base
+        run: git fetch origin main:refs/remotes/origin/main
+      - name: Lint Proposed Context (PR)
+        if: github.event_name == 'pull_request'
+        run: python3 scripts/ctx.py lint --changed "$(git rev-parse origin/main)"
+      - name: Lint Context (main)
+        if: github.event_name == 'push'
+        run: python3 scripts/ctx.py lint
+      - name: Check Context Migration Coverage
+        run: python3 scripts/context_migration.py
       - name: Run Secret Scan
         run: python3 scripts/check_secrets.py
       - name: Run Workspace Tool Tests

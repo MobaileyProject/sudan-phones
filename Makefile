@@ -1,8 +1,8 @@
 PYTHON ?= python3
 
-.PHONY: check secrets test lint skills-check openapi openapi-check
+.PHONY: check secrets test lint skills-check openapi openapi-check context-check
 
-check: secrets test lint skills-check openapi-check
+check: secrets test lint skills-check openapi-check context-check
 
 secrets:
 	$(PYTHON) scripts/check_secrets.py
@@ -22,3 +22,7 @@ openapi:
 
 openapi-check:
 	$(PYTHON) scripts/export_openapi.py --check
+
+context-check:
+	$(PYTHON) scripts/ctx.py lint
+	$(PYTHON) scripts/context_migration.py
