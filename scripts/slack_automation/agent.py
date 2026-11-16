@@ -11,12 +11,46 @@ from .core import parse_agent
 from .metrics import append_metrics, initial_base
 
 
+LIST_METADATA = {
+    "F0CHUDFCXKP": {"step": "Roadmap", "name": "Delivery Roadmap (Master Gates & Milestones)"},
+    "F0CHJB5C939": {"step": "Contracts", "name": "API Contracts Catalog (60 operations)"},
+    "F0CHWFG1BD4": {"step": "Backlog", "name": "Sudan Phones Operational Backlog"},
+    "F0CHZN3B0KC": {"step": "Step 1 (Phase 1)", "name": "Scope, Business Invariants & Architecture Sign-Off"},
+    "F0CHZN6V2F4": {"step": "Step 2 (Phase 2)", "name": "Infrastructure & Dual Client Shells Foundation"},
+    "F0CHXUNTR38": {"step": "Step 3 (Phase 3)", "name": "Identity & Verification Workflows"},
+    "F0CHJGLES4F": {"step": "Step 4 (Phase 4)", "name": "Catalog, Devices & Multi-Offer Listings"},
+    "F0CJ1QGTTR7": {"step": "Step 5 (Phase 5)", "name": "Customer Discovery & WhatsApp Inquiries"},
+    "F0CHJGL8QLX": {"step": "Step 6 (Phase 6)", "name": "Merchant Operations & Founder Administration"},
+    "F0CJ1QJCG2V": {"step": "Step 7 (Phase 7)", "name": "End-to-End System Integration & Hardening"},
+    "F0CJ1QHHC01": {"step": "Step 8 (Phase 8)", "name": "Controlled Pilot Launch"},
+    "F0CHUK46ESH": {"step": "Later", "name": "Post-MVP Backlog & Enhancements (Deferred Scope)"},
+}
+
+
+def describe_piece(title):
+    title_upper = (title or "").upper()
+    if "[BE]" in title_upper:
+        return "Backend API & Database (Django REST Framework, PostgreSQL 16, Cloudflare R2, Celery/Redis). Owner: Rasheed."
+    if "[FE-C]" in title_upper:
+        return "Frontend Customer Mobile App (Flutter for iOS/Android, Arabic RTL first). Owner: Moataz."
+    if "[FE-M]" in title_upper or "[FE-A]" in title_upper:
+        return "Frontend Merchant/Admin Web Portal (React, Arabic RTL first). Owner: Moataz."
+    if "[FE]" in title_upper:
+        return "Frontend (Flutter Mobile / React Portal, Arabic RTL first). Owner: Moataz."
+    if "[JOINT]" in title_upper or "INT-" in title_upper or "GATE-" in title_upper:
+        return "Joint Architecture & Scope Gate (Agreed by both founders; contracts and acceptance evidence)."
+    return "General Feature / Bugfix for Sudan Phones."
+
+
 def run_agent(root, config, prompt, fields):
     schema = {"type": "object", "additionalProperties": False,
               "properties": {key: {"type": "string"} for key in fields}, "required": fields}
+    effort = config.get("_effort") or config.get("effort")
     args = [config.get("agy", "agy"), "--mode", "accept-edits", "--output-format", "json",
-            "--json-schema", json.dumps(schema), "--print-timeout", str(config.get("timeout", 1800)) + "s",
-            "-p", prompt]
+            "--json-schema", json.dumps(schema), "--print-timeout", str(config.get("timeout", 1800)) + "s"]
+    if effort:
+        args.extend(["--effort", effort])
+    args.extend(["-p", prompt])
     if config.get("_branch") and config.get("agy_skip_permissions") is True:
         args.append("--dangerously-skip-permissions")
     if config.get("agy_settings"):
@@ -73,6 +107,9 @@ def run_agent(root, config, prompt, fields):
 def implementation_prompt(task, branch, context=None):
     if context is not None:
         return context_prompt(task, branch, context)
+    list_info = LIST_METADATA.get(task.get("list_id", ""), {"step": "General", "name": "Sudan Phones Delivery"})
+    piece_desc = describe_piece(task.get("title", ""))
+    effort = task.get("executor", "agy")
     return f"""Implement ONE user-authorized Slack List task in THIS isolated worktree.
 Follow the accepted base AGENTS.md startup and handoff rules.
 If the base has a Context protocol, use its brief/search rules and do not append task logs to STATE.
@@ -100,6 +137,23 @@ Do not merge, deploy, request organization reviewers, or approve your own PR.
 Do not call Slack tools; the worker publishes the result. Never claim successful
 commands that were denied. Return outcome pr_ready or blocked, summary, pr_url
 (empty if absent), tests, next_action. A PR is not a merged/completed task.
+
+=== STEP & PIECE ARCHITECTURAL CONTEXT ===
+Step / Phase: {list_info['step']} — {list_info['name']}
+Component Piece: {piece_desc}
+Delivery Plan: docs/plans/ORDERED_STEP_BY_STEP_PLAN.md
+Stack Transition Blueprint: docs/plans/STACK_TRANSITION.md
+Universal Agent Operating Contract: AGENTS.md
+
+=== AGENT ROLE & REASONING GUIDANCE ===
+Role: Antigravity Unified Engineering Agent (Executor Mode: {effort}).
+Operate with full agent roles and deep reasoning:
+- Backend work [BE] targets Django REST Framework, PostgreSQL 16, Cloudflare R2, Celery/Redis. Maintain strict layer separation (HTTP views -> serializers -> services -> models).
+- Frontend work [FE] targets Flutter customer app or React merchant/admin portal with bilingual Arabic RTL first.
+- Joint tasks [JOINT] like SCOPE-01 define business invariants (SDG currency, pilot regions, new vs used grading) in docs/plans/ or memory records for founder review.
+- Acceptance gates [JOINT] like INT-01 require verifying prerequisite deliverables and linked PRs; never invent mock approvals.
+- Autonomous execution: execute clear acceptance criteria and tests without asking design questions for Ready items.
+
 TASK_DATA_JSON={json.dumps(task, ensure_ascii=False)}
 """
 
@@ -107,6 +161,9 @@ TASK_DATA_JSON={json.dumps(task, ensure_ascii=False)}
 
 def context_prompt(task, branch, context):
     required = ['.agents/skills/defect-to-regression/SKILL.md'] if task.get('kind') == 'bug' else []
+    list_info = LIST_METADATA.get(task.get("list_id", ""), {"step": "General", "name": "Sudan Phones Delivery"})
+    piece_desc = describe_piece(task.get("title", ""))
+    effort = task.get("executor", "agy")
     return """Implement ONE user-authorized Slack List task in THIS isolated worktree.
 Follow the base AGENTS.md authority and context protocol. Use the CONTEXT BRIEF below;
 do not re-read AGENTS.md if already loaded. Search before reading STATE.md, PRODUCT.md,
@@ -136,6 +193,21 @@ closures/edits/deletions in its description. Do not merge, deploy, request organ
 reviewers or approve your own PR. Do not call Slack tools; the worker publishes results.
 Never claim denied commands succeeded. Return outcome pr_ready or blocked, summary,
 pr_url (empty if absent), tests, next_action. PR ready still requires personal review.
+
+=== STEP & PIECE ARCHITECTURAL CONTEXT ===
+Step / Phase: """ + f"{list_info['step']} — {list_info['name']}\n" + f"Target Piece: {piece_desc}\n" + """Delivery Plan: docs/plans/ORDERED_STEP_BY_STEP_PLAN.md
+Stack Transition Blueprint: docs/plans/STACK_TRANSITION.md
+Universal Agent Operating Contract: AGENTS.md
+
+=== AGENT ROLE & REASONING GUIDANCE ===
+Role: Antigravity Unified Engineering Agent (Executor Mode: """ + str(effort) + """).
+Operate with full agent roles and deep reasoning:
+- Backend work [BE] targets Django REST Framework, PostgreSQL 16, Cloudflare R2, Celery/Redis. Maintain strict layer separation (HTTP views -> serializers -> services -> models).
+- Frontend work [FE] targets Flutter customer app or React merchant/admin portal with bilingual Arabic RTL first.
+- Joint tasks [JOINT] like SCOPE-01 define business invariants (SDG currency, pilot regions, new vs used grading) in docs/plans/ or memory records for founder review.
+- Acceptance gates [JOINT] like INT-01 require verifying prerequisite deliverables and linked PRs; never invent mock approvals.
+- Autonomous execution: execute clear acceptance criteria and tests without asking design questions for Ready items.
+
 === TASK ===
 """ + json.dumps(dict(task, branch=branch, CTX_BASE=context['base']), ensure_ascii=False) + "\n=== REQUIRED SKILLS ===\n" + json.dumps(required) + "\n=== CONTEXT BRIEF ===\n" + context['brief']
 

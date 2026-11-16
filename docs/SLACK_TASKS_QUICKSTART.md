@@ -8,7 +8,11 @@ and worker operational setup, refer to [SLACK_AUTOMATION.md](SLACK_AUTOMATION.md
 
 The worker polls the configured Slack List and claims tasks only when:
 - **`Status`**: set to `Ready`
-- **`Executor`**: set to `agy`
+- **`Executor`**: set to `agy`, or with an explicit reasoning effort level:
+  - `agy` / `agy-medium`: Standard reasoning effort (balanced for most tasks).
+  - `agy-high`: Deep reasoning effort (for complex architecture, invariants, or multi-module design).
+  - `agy-low`: Fast lightweight effort (for simple text/doc/syntax changes).
+  - `agy-xhigh` / `agy-max`: Maximum reasoning effort for critical system hardening.
 
 Tasks must provide explicit and actionable context in these core List fields:
 - **`Title`**: Concrete summary of the defect or feature.
