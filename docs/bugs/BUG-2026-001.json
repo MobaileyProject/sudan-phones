@@ -1,0 +1,11 @@
+{
+  "id": "BUG-2026-001",
+  "category": "schema",
+  "severity": "low",
+  "status": "resolved",
+  "affected_files": ["scripts/check_skills.py", "tests/test_skill_packages.py"],
+  "affected_endpoints": [],
+  "root_cause": "The new skill metadata parser used whitespace matching that crossed line boundaries and treated YAML block or collection markers as plain strings, allowing malformed descriptions to pass package validation.",
+  "fix_summary": "Restrict scalar matching to the same line and reject unsupported YAML forms while accepting plain text and JSON-quoted strings. Reproduced during independent pre-merge review; no shipped package contained malformed metadata.",
+  "regression_test": "tests/test_skill_packages.py::SkillPackagesTest.test_empty_and_unsupported_description_scalars_fail"
+}

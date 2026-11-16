@@ -76,3 +76,18 @@ Use `--root /path/to/checkout` to search another checkout.
 The existing secret scanner checks tracked/staged files: stage intended new files
 before running `make check`. Application lint/test/build commands must be added
 when each application is scaffolded.
+
+## Shared agent skills
+
+All 14 approved skills are tracked in [`.agents/skills/`](.agents/skills/) for
+Codex and Antigravity. The [skill catalog](docs/SKILLS.md) explains their triggers,
+prerequisites and pinned upstream sources. Use a fresh session or your client's
+skill reload capability to refresh discovery after pulling this branch.
+
+```bash
+make skills-check
+```
+
+Adding these instruction packages does not install their runtime tools or change
+the chosen application stack. Only the relevant skill and references are loaded
+for a matching task.

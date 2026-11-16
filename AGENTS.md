@@ -125,3 +125,20 @@ Never read, print, commit, or copy raw Slack tokens into prompts or docs. If Sla
 MCP is unavailable, rely on existing CI/app delivery for supported events and
 record any undelivered message in STATE.md; never claim it was posted or expose
 secrets to work around missing access.
+
+## Shared task skills
+
+Both agents use the tracked `.agents/skills/` collection. See docs/SKILLS.md for
+all 14 task triggers and .agents/skills/manifest.json for source revisions. Load
+only the matching SKILL.md and the references needed for the current task.
+Project entrypoints adapt upstream guidance; upstream/GUIDE.md is a reference,
+not a separate operating contract. This file and the user's instructions resolve
+conflicts, including SQLAlchemy, transaction ownership and personal PR review.
+
+Skills do not install SDKs, browsers, frameworks or hosting services when loaded.
+Check prerequisites in the actual task and preserve chosen dependencies. A skill's
+presence does not select Navigation 3, Supabase or a different stack. If no backend
+or client exists yet, state the scaffold/prerequisite gap. Do not claim runtime
+verification from instruction-package validation. `make skills-check` validates
+metadata, entry links, source pins and upstream payload integrity; updates to
+vendored payloads must be deliberate and provenance/hash changes reviewed.
