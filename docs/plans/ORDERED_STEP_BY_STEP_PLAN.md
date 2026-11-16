@@ -56,9 +56,9 @@ This plan is organized into **8 strict linear steps**. You execute them sequenti
 ## 📋 Quick Navigation & Slack Lists Hub
 
 All 136 items are mirrored in your Slack Workspace (**Elrasheed Workplace** `T0CJRU4RSUQ`):
-- 🗺️ **[Slack Delivery Roadmap](https://elrasheedworkplace.slack.com/lists/T0CJRU4RSUQ/F0CHUDFCXKP)** (`F0CHUDFCXKP`): 8 Phase Gates (`GATE-01`..`08`) and 14 Milestones (`MILE-01`..`14`).
-- 📋 **[Slack Implementation Backlog](https://elrasheedworkplace.slack.com/lists/T0CJRU4RSUQ/F0CHWFG1BD4)** (`F0CHWFG1BD4`): 54 Implementation tasks (`SCOPE-01`, `BE-01`..`12`, `FE-00`, `C-00`..`C-10`, `M-01`..`M-13`, `A-01`..`A-09`, `INT-01`..`08`).
-- 🔌 **[Slack API Contracts](https://elrasheedworkplace.slack.com/lists/T0CJRU4RSUQ/F0CHJB5C939)** (`F0CHJB5C939`): 60 Proposed API operations (`API-001`..`API-060`).
+- 🗺️ **[Slack Delivery Roadmap](https://app.slack.com/client/T0CJRU4RSUQ/unified-files/list/F0CHUDFCXKP)** (`F0CHUDFCXKP`): 8 Phase Gates (`GATE-01`..`08`) and 14 Milestones (`MILE-01`..`14`).
+- 📋 **[Slack Implementation Backlog](https://app.slack.com/client/T0CJRU4RSUQ/unified-files/list/F0CHWFG1BD4)** (`F0CHWFG1BD4`): 54 Implementation tasks (`SCOPE-01`, `BE-01`..`12`, `FE-00`, `C-00`..`C-10`, `M-01`..`M-13`, `A-01`..`A-09`, `INT-01`..`08`).
+- 🔌 **[Slack API Contracts](https://app.slack.com/client/T0CJRU4RSUQ/unified-files/list/F0CHJB5C939)** (`F0CHJB5C939`): 60 Proposed API operations (`API-001`..`API-060`).
 
 ---
 
