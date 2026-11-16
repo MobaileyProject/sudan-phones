@@ -18,9 +18,14 @@ external effects independently and preserve uncertain work for reconciliation.
   docs/SLACK_AUTOMATION.md with exact commands, statuses and recovery rules.
 - [x] Audit live agy Slack capabilities; improve actual Lists only when tools are
   available. Never claim unsupported operations; record precise missing access.
-- [ ] Run make check, review independently, stage exact files and secret scan,
+- [x] Run make check, review independently, stage exact files and secret scan,
   commit/push, open PR, monitor CI and record the handoff in STATE.md.
 
 Baseline: make check passes 9 tests on origin/main 32fb346; OpenAPI scaffold skip.
 Shared skills PR #4 is open and passing; do not duplicate its payload. Execution
 must wait until those skills are present on origin/main.
+
+Delivery: PR #5 was merged by the user after CI passed. A user-reported message
+format/evidence defect is tracked as BUG-2026-004 and fixed in a separate follow-up.
+The five-minute timer is installed and its first run passed. Runtime task execution
+still waits for shared-skills PR #4; no end-to-end implementation run is claimed.

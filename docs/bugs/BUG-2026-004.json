@@ -1,0 +1,11 @@
+{
+  "id": "BUG-2026-004",
+  "category": "ui",
+  "severity": "medium",
+  "status": "resolved",
+  "affected_files": ["scripts/slack_automation/slack.py", "scripts/slack_automation/agent.py", "scripts/slack_automation/worker.py", "scripts/slack_automation/core.py"],
+  "affected_endpoints": [],
+  "root_cause": "The writer was not constrained to Slack's mrkdwn dialect, and source notifications used generic Backlog evidence/actions even for PR-ready items. CI check results and the PR URL were discarded, and delivered source messages did not refresh when evidence changed.",
+  "fix_summary": "Normalize model-generated bold/bullets for Slack, preserve PR URLs and GitHub check evidence, use current List status for issue/bug actions, and edit existing notifications on evidence changes. Persist the original message channel so task-type changes do not misroute edits. Live repair evidence is recorded in STATE.md.",
+  "regression_test": "tests/test_slack_automation.py::AutomationTest.test_github_bold_and_bullets_render_as_slack_mrkdwn; tests/test_slack_automation.py::AutomationTest.test_pr_notification_keeps_ci_evidence_and_requests_review; tests/test_slack_automation.py::AutomationTest.test_ci_refresh_edits_the_existing_notification_without_a_duplicate"
+}

@@ -82,6 +82,9 @@ List reads and GitHub access; it does not claim write permissions or agent execu
 Each imported bug gets an agy-written update in `#tasks-and-bugs`; features go to
 `#project-updates`. agy writes summaries from actual task/result evidence, not canned
 CI strings. Failure to generate or post a message remains pending locally.
+Generated text is normalized to Slack mrkdwn (single asterisks for bold). PR
+notifications retain actual GitHub check results and ask for review; merged PRs
+ask for no requeue. Changes in check evidence edit the existing message timestamp.
 
 ## Execute ready work
 

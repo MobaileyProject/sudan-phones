@@ -15,9 +15,9 @@ class Ledger:
         self.db.execute("""CREATE TABLE IF NOT EXISTS jobs (
             key TEXT PRIMARY KEY, branch TEXT NOT NULL, result TEXT,
             delivered INTEGER NOT NULL DEFAULT 0, message_ts TEXT,
-            list_updated INTEGER NOT NULL DEFAULT 0, delivery_error TEXT)""")
+            list_updated INTEGER NOT NULL DEFAULT 0, delivery_error TEXT, message_channel TEXT)""")
         columns = {row[1] for row in self.db.execute("PRAGMA table_info(jobs)")}
-        for name, definition in (("list_updated", "INTEGER NOT NULL DEFAULT 0"), ("delivery_error", "TEXT")):
+        for name, definition in (("list_updated", "INTEGER NOT NULL DEFAULT 0"), ("delivery_error", "TEXT"), ("message_channel", "TEXT")):
             if name not in columns:
                 self.db.execute(f"ALTER TABLE jobs ADD COLUMN {name} {definition}")
         self.db.commit()
@@ -40,14 +40,18 @@ class Ledger:
         with self.db:
             self.db.execute("UPDATE jobs SET result=? WHERE key=?", (json.dumps(result), key))
 
+    def refresh(self, key, result):
+        with self.db:
+            self.db.execute("UPDATE jobs SET result=?, delivered=0 WHERE key=?", (json.dumps(result), key))
+
     def pending(self):
         return [self.get(row[0]) for row in self.db.execute(
             "SELECT key FROM jobs WHERE delivered=0 AND result IS NOT NULL")]
 
-    def delivery(self, key, ts=None):
+    def delivery(self, key, ts=None, channel=None):
         with self.db:
             if ts:
-                self.db.execute("UPDATE jobs SET message_ts=? WHERE key=?", (ts, key))
+                self.db.execute("UPDATE jobs SET message_ts=?, message_channel=COALESCE(?, message_channel) WHERE key=?", (ts, channel, key))
             else:
                 self.db.execute("UPDATE jobs SET delivered=1 WHERE key=?", (key,))
 

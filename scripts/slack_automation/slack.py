@@ -6,6 +6,12 @@ from urllib.request import Request, urlopen
 import uuid
 
 
+def slack_mrkdwn(text):
+    """Normalize common model-produced GitHub Markdown for Slack's dialect."""
+    text = re.sub(r"\*\*([^*\n]+)\*\*", r"*\1*", text)
+    return re.sub(r"(?m)^\* ", "• ", text)
+
+
 def rich_text(value):
     return [{"type": "rich_text", "elements": [{"type": "rich_text_section", "elements": [
         {"type": "text", "text": value}]}]}]
@@ -97,9 +103,15 @@ class Slack:
 
     def post(self, channel, text, key):
         # Stable client message ID reduces duplicate messages after ambiguous delivery.
-        result = self.call("chat.postMessage", channel=channel, text=text,
+        result = self.call("chat.postMessage", channel=channel, text=slack_mrkdwn(text), mrkdwn=True,
                            client_msg_id=str(uuid.uuid5(uuid.NAMESPACE_URL, key)),
                            parse="none", unfurl_links=False, unfurl_media=False)
         if not result.get("ts"):
             raise RuntimeError("Slack did not return message delivery evidence")
         return result["ts"]
+
+    def edit(self, channel, ts, text):
+        result = self.call("chat.update", channel=channel, ts=ts, text=slack_mrkdwn(text), mrkdwn=True,
+                           parse="none", unfurl_links=False, unfurl_media=False)
+        if result.get("ts") != ts:
+            raise RuntimeError("Slack did not confirm the expected message update")

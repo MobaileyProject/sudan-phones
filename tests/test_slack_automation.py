@@ -9,10 +9,10 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from slack_automation.core import Ledger, eligible, lock, parse_agent, verify_pr
-from slack_automation.slack import Slack, encode, decode
+from slack_automation.slack import Slack, encode, decode, slack_mrkdwn
 from slack_automation.agent import run_agent
 from slack_automation.setup import create_backlog, credential
-from slack_automation.worker import execute, publish, sync_sources, prepare_worktree, collect_sources
+from slack_automation.worker import execute, publish, sync_sources, prepare_worktree, collect_sources, reconcile_merged
 
 
 class AutomationTest(unittest.TestCase):
@@ -155,6 +155,103 @@ class AutomationTest(unittest.TestCase):
         text = {"id": "ColText", "type": "text"}
         value = "Arabic العربية $(touch /tmp/nope)"
         self.assertEqual(decode(text, encode(text, value)), value)
+
+    def test_github_bold_and_bullets_render_as_slack_mrkdwn(self):
+        source = "Task Update\n\n* **Status / Change:** PR ready.\n* **Next Action:** Review PR."
+        self.assertEqual(slack_mrkdwn(source), "Task Update\n\n• *Status / Change:* PR ready.\n• *Next Action:* Review PR.")
+
+    def test_pr_notification_keeps_ci_evidence_and_requests_review(self):
+        class Lists:
+            def tasks(self, config):
+                return []
+            def create(self, config, fields):
+                pass
+        report = {"source": "pr:5", "title": "Automation", "kind": "feature", "status": "PR ready",
+                  "pr": "https://github.com/MobaileyProject/sudan-phones/pull/5", "tests": "Validation & Secret Scan: SUCCESS"}
+        sync_sources(Lists(), self.config, [report], self.ledger)
+        result = self.ledger.get("report:F123:pr:5")["result"]
+        self.assertEqual(result["pr_url"], "https://github.com/MobaileyProject/sudan-phones/pull/5")
+        self.assertEqual(result["tests"], "Validation & Secret Scan: SUCCESS")
+        self.assertNotIn("mark Ready", result["next_action"])
+        self.assertIn("review", result["next_action"].lower())
+
+    def test_ci_refresh_edits_the_existing_notification_without_a_duplicate(self):
+        class Lists:
+            items = []
+            messages = {}
+            def tasks(self, config):
+                return list(self.items)
+            def create(self, config, fields):
+                self.items.append(fields)
+            def post(self, channel, text, key):
+                self.messages["123.1"] = text
+                return "123.1"
+            def edit(self, channel, ts, text):
+                self.messages[ts] = text
+        lists = Lists()
+        report = {"source": "pr:5", "title": "Automation", "kind": "feature", "status": "PR ready",
+                  "pr": "https://github.com/MobaileyProject/sudan-phones/pull/5", "tests": "Validation: PENDING"}
+        sync_sources(lists, self.config, [report], self.ledger)
+        publish(self.config, self.ledger, lists, lambda *args: {"message": "Checks pending; review PR"})
+        sync_sources(lists, self.config, [dict(report, tests="Validation: SUCCESS")], self.ledger)
+        publish(self.config, self.ledger, lists, lambda *args: {"message": "Checks passed; review PR"})
+        self.assertEqual(lists.messages, {"123.1": "Checks passed; review PR"})
+        self.assertTrue(self.ledger.get("report:F123:pr:5")["delivered"])
+
+    def test_refresh_reuses_original_channel_after_kind_change(self):
+        class Lists:
+            items = []
+            messages = {}
+            def tasks(self, config):
+                return list(self.items)
+            def create(self, config, fields):
+                self.items.append(fields)
+            def post(self, channel, text, key):
+                self.messages[(channel, "123.1")] = text
+                return "123.1"
+            def edit(self, channel, ts, text):
+                if (channel, ts) not in self.messages:
+                    raise RuntimeError("message_not_found")
+                self.messages[(channel, ts)] = text
+        lists = Lists()
+        report = {"source": "issue:7", "title": "Search", "kind": "bug"}
+        sync_sources(lists, self.config, [report], self.ledger)
+        publish(self.config, self.ledger, lists, lambda *args: {"message": "Bug recorded"})
+        lists.items[0]["kind"] = "feature"
+        sync_sources(lists, self.config, [dict(report, kind="feature")], self.ledger)
+        errors = publish(self.config, self.ledger, lists, lambda *args: {"message": "Task type changed"})
+        self.assertEqual(errors, [])
+        self.assertEqual(lists.messages, {("C2", "123.1"): "Task type changed"})
+
+    def test_issue_refresh_preserves_current_list_status_and_existing_pr(self):
+        class Lists:
+            def tasks(self, config):
+                return [{"source": "issue:7", "status": "PR ready", "pr": "https://github.com/MobaileyProject/sudan-phones/pull/12", "executor": "agy"}]
+        sync_sources(Lists(), self.config, [{"source": "issue:7", "title": "Search", "kind": "bug", "details": "Edited report"}], self.ledger)
+        result = self.ledger.get("report:F123:issue:7")["result"]
+        self.assertEqual(result["task"]["status"], "PR ready")
+        self.assertEqual(result["pr_url"], "https://github.com/MobaileyProject/sudan-phones/pull/12")
+        self.assertNotIn("mark Ready", result["next_action"])
+
+    def test_merged_row_repairs_a_stale_pr_notification(self):
+        key = "report:F123:pr:5"
+        report = dict(self.task, source="pr:5", status="PR ready", pr="https://github.com/MobaileyProject/sudan-phones/pull/5")
+        self.ledger.claim(key, "")
+        self.ledger.finish(key, {"task": report, "outcome": "reported", "summary": "PR ready"})
+        self.ledger.delivery(key, "123.1")
+        self.ledger.delivery(key)
+        class Lists:
+            def tasks(self, config):
+                return [dict(report, status="Done")]
+            def update(self, *args):
+                raise AssertionError("Already Done row must not be rewritten")
+        with patch("slack_automation.worker.command", return_value=json.dumps({"state": "MERGED", "statusCheckRollup": [{"name": "Validation", "conclusion": "SUCCESS"}]})):
+            reconcile_merged(self.root, self.config, Lists(), self.ledger)
+        result = self.ledger.get(key)
+        self.assertFalse(result["delivered"])
+        self.assertEqual(result["message_ts"], "123.1")
+        self.assertEqual(result["result"]["task"]["status"], "Done")
+        self.assertEqual(result["result"]["tests"], "Validation: SUCCESS")
 
     def test_slack_api_rejections_are_errors_without_echoing_body(self):
         with patch("slack_automation.slack.urlopen") as opened:
