@@ -35,6 +35,7 @@ def main():
     with lock(state / "lock"):
         config = load_config(args.config)
         ledger = Ledger(state / "jobs.db")
+        config["_ledger_path"] = str(state / "jobs.db")
         try:
             if args.action == "status":
                 rows = ledger.db.execute("SELECT key,branch,result IS NOT NULL,delivered FROM jobs").fetchall()

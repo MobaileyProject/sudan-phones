@@ -176,3 +176,21 @@ References: [agy headless mode](https://antigravity.google/docs/cli/headless/),
 [Slack List reads](https://docs.slack.dev/reference/methods/slackLists.items.list/),
 [cell updates](https://docs.slack.dev/reference/methods/slackLists.items.update/),
 [List metadata updates](https://docs.slack.dev/reference/methods/slackLists.update/).
+
+## Context and run measurements
+
+See [Lightweight project context](CONTEXT.md) for the two-stage rollout and rollback.
+`context_prompt_version` defaults to `1`, preserving current startup. Version `2`
+requires a reviewed, validated STATE migration at the task's accepted base; proposed
+records cannot authorize activation. The worker injects the complete pinned brief,
+exports `CTX_BASE`, and keeps agy-generated Slack notifications and existing Ready/agy
+execution, permission and PR checks unchanged.
+
+`metrics_path` defaults to `null`. An opt-in absolute path must be outside the repo,
+inside a private mode-0700 directory, and separate from the ledger. Allowlisted final
+JSON counters are appended to a mode-0600 file. Missing/contended metrics never change
+the task result. No prompts, responses, task details or error text enter this log.
+After tooling PR #9 merges, update the single owned service checkout while idle,
+preserving private config/ledger, before merging the migration. Its compatible v1
+prompt obeys either accepted startup contract. After the migration merges, set
+version 2 locally and run `doctor` before resuming polls. Never start a second worker.
