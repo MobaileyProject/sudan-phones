@@ -1,0 +1,2777 @@
+{
+  "SCREENS": [
+    {
+      "id": "C-00",
+      "name": "Application Entry",
+      "sticker": "🚪",
+      "role": "Customer",
+      "priority": "MVP",
+      "purpose": "Splash/loading state, localization initialization, guest access and app configuration.",
+      "ui": [
+        "Logo splash",
+        "Loading indicator",
+        "Minimal background"
+      ],
+      "interactions": [
+        "Automatic transition once config loads",
+        "Continue as guest",
+        "Sign in (if returning user)"
+      ],
+      "fields": [],
+      "validation": [
+        "None — passive screen"
+      ],
+      "apis": [
+        "GET /api/v1/config",
+        "GET /api/v1/i18n/bundle?locale={ar|en}"
+      ],
+      "responses": [
+        "Feature flags",
+        "Default locale & currency",
+        "Minimum app version"
+      ],
+      "permissions": "Public — no authentication required.",
+      "states": [
+        "Loading",
+        "Config failed → retry screen",
+        "Offline → continue with cached config"
+      ],
+      "dependencies": "Precedes every customer screen; feeds locale to the whole app.",
+      "acceptance": [
+        "App opens to splash in under 2s on mid-range devices",
+        "Guest access lands on C-01 homepage",
+        "Locale (AR/EN + RTL) applied before first content screen"
+      ],
+      "frontend": [
+        "Render splash with animated logo",
+        "Request config, apply locale and theme (AR/EN, RTL/LTR)",
+        "Cache last good config for offline starts",
+        "Route to C-01 or C-07 based on session"
+      ],
+      "backend": [
+        "Serve lightweight config endpoint (feature flags, versions)",
+        "Serve localization bundles",
+        "No personal data returned without auth"
+      ]
+    },
+    {
+      "id": "C-01",
+      "name": "Homepage",
+      "sticker": "🏠",
+      "role": "Customer",
+      "priority": "MVP",
+      "purpose": "Marketplace storefront: featured phones, new/used sections, brands, verified-store highlights.",
+      "ui": [
+        "Search bar",
+        "Featured phones carousel",
+        "New & used sections",
+        "Brands & categories chips",
+        "Verified-store highlights",
+        "Promotional placements (where enabled)"
+      ],
+      "interactions": [
+        "Tap search → C-02",
+        "Tap product → C-03",
+        "Tap store card → C-04",
+        "Tap brand/category → filtered C-02",
+        "Tap promo → C-03 or C-02"
+      ],
+      "fields": [
+        "Search text (quick)"
+      ],
+      "validation": [
+        "Empty search → no-op or focus C-02"
+      ],
+      "apis": [
+        "GET /api/v1/home",
+        "GET /api/v1/stores/featured",
+        "GET /api/v1/promotions?placement=home"
+      ],
+      "responses": [
+        "Featured listings",
+        "Top brands & categories",
+        "Verified store cards",
+        "Active promo placements"
+      ],
+      "permissions": "Public — guest accessible.",
+      "states": [
+        "Loading skeletons",
+        "Content",
+        "Partially failed sections",
+        "Offline → cached last home"
+      ],
+      "dependencies": "C-00 config; published listings (M-07/M-08) and verified stores (M-04).",
+      "acceptance": [
+        "Guest sees populated home with real published data",
+        "Every card navigates to the right screen",
+        "Pull-to-refresh works"
+      ],
+      "frontend": [
+        "Compose sections from home API response",
+        "Skeleton loaders per section",
+        "Handle failed sections independently (partial failure)",
+        "Log tapped promo placement"
+      ],
+      "backend": [
+        "Aggregate home payload efficiently (single call preferred)",
+        "Only return published listings & verified stores",
+        "Respect promo placement enablement flags"
+      ]
+    },
+    {
+      "id": "C-02",
+      "name": "Search & Filters",
+      "sticker": "🔎",
+      "role": "Customer",
+      "priority": "MVP",
+      "purpose": "Find phones by keyword, brand/model, price range, condition, storage and specs; sort & paginate results.",
+      "ui": [
+        "Search input",
+        "Filter sheet (brand, price, condition, storage, specs)",
+        "Sort control",
+        "Results grid",
+        "Pagination / infinite scroll",
+        "Empty & error states"
+      ],
+      "interactions": [
+        "Type query + submit",
+        "Open/apply/clear filters",
+        "Change sort",
+        "Scroll for more pages",
+        "Tap result → C-03",
+        "Retry on error"
+      ],
+      "fields": [
+        "Query text (required to search)",
+        "Brand/model (optional)",
+        "Price min/max (optional, numeric)",
+        "Condition new/used (optional)",
+        "Storage & specs (optional)"
+      ],
+      "validation": [
+        "Price min ≤ max",
+        "Numeric price inputs",
+        "Query trimmed before submit"
+      ],
+      "apis": [
+        "GET /api/v1/listings?query&brand&condition&price_min&price_max&storage&sort&page"
+      ],
+      "responses": [
+        "Paginated listing summaries",
+        "Total count & facets",
+        "Applied-filter echo"
+      ],
+      "permissions": "Public.",
+      "states": [
+        "Loading",
+        "Results",
+        "Empty results (with suggestions)",
+        "Search error (retry)",
+        "Offline"
+      ],
+      "dependencies": "C-03 for details; published listings from M-07/M-08.",
+      "acceptance": [
+        "Filters compose together correctly (AND semantics)",
+        "Pagination stable under filter changes",
+        "Empty state suggests removing filters"
+      ],
+      "frontend": [
+        "Debounced search input",
+        "Filter sheet with chips summary",
+        "Infinite scroll with page caching",
+        "Clear visual empty & error states"
+      ],
+      "backend": [
+        "Search adapter with filters, sorting, pagination",
+        "Facet counts for filter UI",
+        "Only published listings visible"
+      ]
+    },
+    {
+      "id": "C-03",
+      "name": "Product Details",
+      "sticker": "📱",
+      "role": "Customer",
+      "priority": "MVP",
+      "purpose": "Show a single listing: gallery, price, specs, condition, seller info, and paths to contact or compare.",
+      "ui": [
+        "Image gallery",
+        "Price + currency",
+        "Brand / model / variant",
+        "Technical specifications",
+        "New/used badge",
+        "Used condition details",
+        "Warranty & accessories (when applicable)",
+        "Availability",
+        "Verified seller card",
+        "Contact seller button",
+        "Related offers"
+      ],
+      "interactions": [
+        "Swipe gallery",
+        "Tap store → C-04",
+        "Tap contact → C-05",
+        "Tap compare offers → C-06",
+        "Tap related listing → C-03"
+      ],
+      "fields": [],
+      "validation": [],
+      "apis": [
+        "GET /api/v1/listings/{id}",
+        "GET /api/v1/listings/{id}/related"
+      ],
+      "responses": [
+        "Published listing + product info",
+        "Authorized seller info",
+        "Price & availability",
+        "Related offers for same variant"
+      ],
+      "permissions": "Public listing visibility enforced server-side.",
+      "states": [
+        "Loading",
+        "Listing available",
+        "Listing removed (seller deleted)",
+        "Listing unavailable (suspended)",
+        "Offline/network error"
+      ],
+      "dependencies": "C-04, C-05, C-06 navigation; M-13 publication states.",
+      "acceptance": [
+        "All listing states handled with clear messages",
+        "Failed gallery images show placeholder, never break layout",
+        "Used listing shows condition, battery health, defects & real photos"
+      ],
+      "frontend": [
+        "Render product gallery with lazy images and failure fallback",
+        "Display pricing, specs, condition, availability",
+        "Show verified seller badge",
+        "Navigate to store / contact / compare"
+      ],
+      "backend": [
+        "Return published listing and related product information",
+        "Enforce public listing visibility",
+        "Return only authorized seller information",
+        "Handle deleted, suspended or unavailable listings with proper status codes"
+      ]
+    },
+    {
+      "id": "C-04",
+      "name": "Store Profile",
+      "sticker": "🏪",
+      "role": "Customer",
+      "priority": "MVP",
+      "purpose": "Public face of a verified phone store: identity, location, contacts and current inventory.",
+      "ui": [
+        "Store name + verification badge",
+        "Location & description",
+        "Business contact details",
+        "Published inventory grid",
+        "Search within store",
+        "Store availability / status"
+      ],
+      "interactions": [
+        "Tap listing → C-03",
+        "Search within store",
+        "Contact store → C-05",
+        "Back navigation"
+      ],
+      "fields": [
+        "In-store search text (optional)"
+      ],
+      "validation": [],
+      "apis": [
+        "GET /api/v1/stores/{id}",
+        "GET /api/v1/stores/{id}/listings?query&page"
+      ],
+      "responses": [
+        "Store profile (verified status)",
+        "Published inventory (paginated)"
+      ],
+      "permissions": "Public — only verified/published data exposed.",
+      "states": [
+        "Loading",
+        "Store found",
+        "Store suspended/unavailable",
+        "Empty inventory",
+        "Offline"
+      ],
+      "dependencies": "C-03, C-05; M-04 verification status; M-11 store settings.",
+      "acceptance": [
+        "Verification badge reflects real backend status",
+        "Suspended store shows friendly notice, not broken page",
+        "In-store search filters only that store"
+      ],
+      "frontend": [
+        "Store header with badge & description",
+        "Inventory grid with in-store search",
+        "Handle suspended/unavailable store states"
+      ],
+      "backend": [
+        "Expose only public store fields",
+        "Scope inventory query to the store",
+        "Reflect suspension status"
+      ]
+    },
+    {
+      "id": "C-05",
+      "name": "Contact Seller",
+      "sticker": "💬",
+      "role": "Customer",
+      "priority": "MVP",
+      "purpose": "Reach the store through available contact methods (phone or supported external messaging).",
+      "ui": [
+        "Available contact methods",
+        "Phone action",
+        "External messaging action (where supported)",
+        "Confirmation note",
+        "Unavailable-method notice"
+      ],
+      "interactions": [
+        "Tap phone → dialer",
+        "Tap messaging → external app",
+        "Back to listing",
+        "Confirm contact sent (where necessary)"
+      ],
+      "fields": [],
+      "validation": [],
+      "apis": [
+        "GET /api/v1/listings/{id}/contact-methods"
+      ],
+      "responses": [
+        "Allowed contact methods",
+        "Masked/authorized contact values"
+      ],
+      "permissions": "Contact info only served for listings that allow it; never raw merchant PII dumps.",
+      "states": [
+        "Loading",
+        "Methods available",
+        "No methods available (message)",
+        "Offline"
+      ],
+      "dependencies": "C-03/C-04 entry; M-11 store contact settings.",
+      "acceptance": [
+        "Only methods the store enabled are shown",
+        "Unavailable methods show helpful message",
+        "Works for guests where store allows it"
+      ],
+      "frontend": [
+        "Render method cards with deep links (tel:, messaging apps)",
+        "Handle missing apps gracefully",
+        "Optional contact confirmation step"
+      ],
+      "backend": [
+        "Serve permitted contact methods per listing/store",
+        "Rate-limit contact endpoint"
+      ]
+    },
+    {
+      "id": "C-06",
+      "name": "Compare Offers",
+      "sticker": "⚖️",
+      "role": "Customer",
+      "priority": "MVP",
+      "purpose": "Compare multiple listings of the same product variant across stores: price, condition, availability.",
+      "ui": [
+        "Variant header (brand/model/storage)",
+        "Offer cards per store",
+        "Price & condition comparison",
+        "Availability badges",
+        "Back to listings"
+      ],
+      "interactions": [
+        "Tap offer → C-03",
+        "Sort offers by price",
+        "Back → C-02/C-03"
+      ],
+      "fields": [],
+      "validation": [],
+      "apis": [
+        "GET /api/v1/product-variants/{id}/listings"
+      ],
+      "responses": [
+        "All published listings for the variant with price, condition, availability, store summary"
+      ],
+      "permissions": "Public.",
+      "states": [
+        "Loading",
+        "Offers found",
+        "Single offer (no comparison needed)",
+        "No offers",
+        "Offline"
+      ],
+      "dependencies": "C-03 entry point; consistent product variant matching (M-06).",
+      "acceptance": [
+        "Same-variant listings only — no cross-model mixing",
+        "Cheapest & best-condition highlighted",
+        "Empty compare shows gentle empty state"
+      ],
+      "frontend": [
+        "Side-by-side offer cards",
+        "Highlight best price",
+        "Deep link each offer to C-03"
+      ],
+      "backend": [
+        "Correct variant matching across stores",
+        "Only published & in-stock offers"
+      ]
+    },
+    {
+      "id": "C-07",
+      "name": "Customer Account",
+      "sticker": "👤",
+      "role": "Customer",
+      "priority": "MVP",
+      "purpose": "Registration/login where needed, profile, account recovery and session management.",
+      "ui": [
+        "Sign-in / register form",
+        "Profile summary",
+        "Recovery flow entry",
+        "Sign out",
+        "Language toggle"
+      ],
+      "interactions": [
+        "Register",
+        "Sign in",
+        "Recover account",
+        "Sign out",
+        "Switch language"
+      ],
+      "fields": [
+        "Phone or email (required)",
+        "Password (required, min 8)",
+        "Display name (optional)"
+      ],
+      "validation": [
+        "Contact format validated",
+        "Password strength feedback",
+        "Duplicate account error",
+        "Rate-limit messages"
+      ],
+      "apis": [
+        "POST /api/v1/auth/register",
+        "POST /api/v1/auth/login",
+        "POST /api/v1/auth/recover",
+        "DELETE /api/v1/auth/session"
+      ],
+      "responses": [
+        "Session token",
+        "Profile payload",
+        "Error codes for each failure mode"
+      ],
+      "permissions": "Account owner only for profile actions.",
+      "states": [
+        "Idle",
+        "Submitting",
+        "Success",
+        "Validation errors",
+        "Wrong credentials",
+        "Offline"
+      ],
+      "dependencies": "C-00 config; guest browsing works without an account where allowed.",
+      "acceptance": [
+        "Register → login → recovery all work in both languages",
+        "Sessions expire safely and re-authenticate cleanly",
+        "Guests are never blocked from browsing"
+      ],
+      "frontend": [
+        "Forms with inline validation feedback",
+        "Session storage & auto-refresh",
+        "Auth-gated actions redirect here"
+      ],
+      "backend": [
+        "Authentication & session management",
+        "Password hashing & throttling",
+        "Account recovery tokens"
+      ]
+    },
+    {
+      "id": "C-08",
+      "name": "Saved Listings",
+      "sticker": "🔖",
+      "role": "Customer",
+      "priority": "Later",
+      "purpose": "Let signed-in customers bookmark products and manage them later.",
+      "ui": [
+        "Saved items grid",
+        "Unsave action",
+        "Unavailable-listing state"
+      ],
+      "interactions": [
+        "Save from C-03",
+        "Unsave",
+        "Open saved listing",
+        "Handle listing that no longer exists"
+      ],
+      "fields": [],
+      "validation": [],
+      "apis": [
+        "GET /api/v1/me/saved-listings",
+        "PUT /api/v1/me/saved-listings/{id}",
+        "DELETE /api/v1/me/saved-listings/{id}"
+      ],
+      "responses": [
+        "Saved listing summaries with availability flag"
+      ],
+      "permissions": "Authenticated customer, own saves only.",
+      "states": [
+        "Loading",
+        "Saved items",
+        "Empty state",
+        "Item unavailable (soft state)",
+        "Offline"
+      ],
+      "dependencies": "C-07 auth; C-03 save action. Future feature — not MVP.",
+      "acceptance": [
+        "Saves persist across devices after login",
+        "Removed listings show \"no longer available\", never error"
+      ],
+      "frontend": [
+        "Save toggle on C-03",
+        "Saved grid with unavailable styling"
+      ],
+      "backend": [
+        "Saved-listing CRUD scoped to user",
+        "Availability flag computed at read time"
+      ]
+    },
+    {
+      "id": "C-09",
+      "name": "Loading, Empty & Offline States",
+      "sticker": "🧭",
+      "role": "Customer",
+      "priority": "MVP",
+      "purpose": "Reusable interface states applied across all customer screens — not an independent screen.",
+      "ui": [
+        "Skeleton loaders",
+        "Empty-state illustrations & messages",
+        "Offline banner",
+        "Retry buttons",
+        "Error illustrations"
+      ],
+      "interactions": [
+        "Retry failed load",
+        "Dismiss offline banner when back online"
+      ],
+      "fields": [],
+      "validation": [],
+      "apis": [
+        "(No dedicated endpoint — applies to all)"
+      ],
+      "responses": [],
+      "permissions": "Applies to every screen per its own rules.",
+      "states": [
+        "Loading",
+        "Empty",
+        "Error",
+        "Offline — this screen IS the states"
+      ],
+      "dependencies": "Used by C-01…C-08, C-10.",
+      "acceptance": [
+        "Every screen has all four states designed & implemented",
+        "Retry actually re-fetches",
+        "Offline cache never shows stale prices as current"
+      ],
+      "frontend": [
+        "Shared state components (skeleton, empty, error, offline)",
+        "Connectivity listener",
+        "Consistent friendly copy in AR & EN"
+      ],
+      "backend": [
+        "Predictable error schema so the app can map codes to states"
+      ]
+    },
+    {
+      "id": "C-10",
+      "name": "Categories & Brands",
+      "sticker": "🗂️",
+      "role": "Customer",
+      "priority": "MVP",
+      "purpose": "Browse the catalog by brand or category and jump to relevant listings.",
+      "ui": [
+        "Brand grid with logos",
+        "Category chips (new, used, accessories…)",
+        "Counts per brand/category"
+      ],
+      "interactions": [
+        "Tap brand → filtered C-02",
+        "Tap category → filtered C-02",
+        "Back to C-01"
+      ],
+      "fields": [],
+      "validation": [],
+      "apis": [
+        "GET /api/v1/brands",
+        "GET /api/v1/categories"
+      ],
+      "responses": [
+        "Brands with listing counts",
+        "Categories with counts"
+      ],
+      "permissions": "Public.",
+      "states": [
+        "Loading",
+        "Content",
+        "Empty catalog (early days)",
+        "Offline"
+      ],
+      "dependencies": "C-02 for results.",
+      "acceptance": [
+        "Counts match reality",
+        "Brands with zero listings hidden or marked"
+      ],
+      "frontend": [
+        "Grid layouts",
+        "Smooth transition into filtered results"
+      ],
+      "backend": [
+        "Brand/category endpoints with counts",
+        "Hide empty brands when appropriate"
+      ]
+    },
+    {
+      "id": "M-01",
+      "name": "Merchant Registration",
+      "sticker": "🪪",
+      "role": "Merchant",
+      "priority": "MVP",
+      "purpose": "Create the merchant account: required fields, validation and confirmation.",
+      "ui": [
+        "Registration form",
+        "Field validation feedback",
+        "Terms acceptance",
+        "Confirmation screen"
+      ],
+      "interactions": [
+        "Fill form",
+        "Submit",
+        "Resend confirmation",
+        "Continue to M-02"
+      ],
+      "fields": [
+        "Full name (required)",
+        "Email or phone (required, unique)",
+        "Password (required, min 8)",
+        "Terms agreement (required)"
+      ],
+      "validation": [
+        "Unique account",
+        "Contact format",
+        "Password strength",
+        "All required fields present"
+      ],
+      "apis": [
+        "POST /api/v1/merchant/auth/register",
+        "POST /api/v1/merchant/auth/verify"
+      ],
+      "responses": [
+        "Account created",
+        "Verification token",
+        "Duplicate-account error"
+      ],
+      "permissions": "Public registration; merchant role assigned on creation.",
+      "states": [
+        "Idle",
+        "Submitting",
+        "Created (confirm)",
+        "Validation errors",
+        "Duplicate account",
+        "Offline"
+      ],
+      "dependencies": "Starts the M-01→M-04 verification path toward M-05.",
+      "acceptance": [
+        "Registration works in AR & EN with RTL",
+        "Duplicate accounts get a clear message",
+        "Account exists but is unverified — cannot publish"
+      ],
+      "frontend": [
+        "Multi-step-friendly form with live validation",
+        "Clear duplicate-account handling",
+        "Confirmation screen guiding to M-02"
+      ],
+      "backend": [
+        "Merchant account creation with unique constraints",
+        "Contact verification tokens",
+        "No store privileges until verified"
+      ]
+    },
+    {
+      "id": "M-02",
+      "name": "Business Information",
+      "sticker": "🏬",
+      "role": "Merchant",
+      "priority": "MVP",
+      "purpose": "Capture the store identity: name, business location, contact details and owner information.",
+      "ui": [
+        "Store name field",
+        "Location picker",
+        "Contact fields",
+        "Owner information section",
+        "Save & continue"
+      ],
+      "interactions": [
+        "Enter details",
+        "Save draft",
+        "Continue to M-03"
+      ],
+      "fields": [
+        "Store name (required)",
+        "Business location (required)",
+        "Business phone (required)",
+        "Owner full name (required)",
+        "Owner ID reference (required for verification)"
+      ],
+      "validation": [
+        "Store name not already taken",
+        "Phone format per region",
+        "Location selected from list"
+      ],
+      "apis": [
+        "PUT /api/v1/stores/me/profile",
+        "GET /api/v1/stores/me"
+      ],
+      "responses": [
+        "Saved profile",
+        "Name-conflict error",
+        "Completion status"
+      ],
+      "permissions": "Authenticated merchant, own store only.",
+      "states": [
+        "Loading saved data",
+        "Editing",
+        "Saved",
+        "Save error",
+        "Offline"
+      ],
+      "dependencies": "M-01; feeds M-03 evidence submission.",
+      "acceptance": [
+        "Draft saves without losing data on refresh",
+        "Name conflicts flagged immediately"
+      ],
+      "frontend": [
+        "Autosave drafts",
+        "Inline validation",
+        "Progress indicator of registration steps"
+      ],
+      "backend": [
+        "Store profile CRUD",
+        "Name uniqueness check",
+        "Owner info stored securely"
+      ]
+    },
+    {
+      "id": "M-03",
+      "name": "Business Verification",
+      "sticker": "🛡️",
+      "role": "Merchant",
+      "priority": "MVP",
+      "purpose": "Upload verification evidence, meet requirements, and submit the application for review.",
+      "ui": [
+        "Requirements checklist",
+        "Document upload slots",
+        "Secure upload progress",
+        "Review summary",
+        "Submit application"
+      ],
+      "interactions": [
+        "Upload documents",
+        "Replace documents",
+        "Review summary",
+        "Submit for verification"
+      ],
+      "fields": [
+        "Business license (required, image/PDF)",
+        "Owner ID document (required)",
+        "Optional supporting evidence"
+      ],
+      "validation": [
+        "File type & size limits",
+        "All required documents present before submit",
+        "Readable-image advisory check"
+      ],
+      "apis": [
+        "POST /api/v1/stores/me/verification/documents",
+        "POST /api/v1/stores/me/verification/submit"
+      ],
+      "responses": [
+        "Upload receipts",
+        "Application state → pending",
+        "Rejection of invalid files"
+      ],
+      "permissions": "Authenticated merchant, own store. Documents are access-restricted after upload.",
+      "states": [
+        "Uploading",
+        "Uploaded",
+        "Submitted",
+        "Upload failed (retry)",
+        "Offline (queue uploads)"
+      ],
+      "dependencies": "M-02 data; reviewed in A-02/A-03/A-04.",
+      "acceptance": [
+        "Documents only accessible to authorized reviewers",
+        "Cannot submit with missing required evidence",
+        "Upload failures are retryable"
+      ],
+      "frontend": [
+        "Upload widget with progress & retry",
+        "Requirements checklist with live completion",
+        "Confirm-before-submit summary"
+      ],
+      "backend": [
+        "Secure document storage (private bucket, signed access)",
+        "Document verification & virus scanning",
+        "Application state machine: draft → submitted → pending"
+      ]
+    },
+    {
+      "id": "M-04",
+      "name": "Verification Status",
+      "sticker": "🚦",
+      "role": "Merchant",
+      "priority": "MVP",
+      "purpose": "Show where the store stands: pending, approved, rejected or changes-requested.",
+      "ui": [
+        "Status banner with illustration",
+        "Reviewer notes (when rejected / changes requested)",
+        "Resubmit action",
+        "Next-step guidance"
+      ],
+      "interactions": [
+        "View status",
+        "Read reviewer notes",
+        "Edit & resubmit (changes requested)",
+        "Contact support"
+      ],
+      "fields": [],
+      "validation": [],
+      "apis": [
+        "GET /api/v1/stores/me/verification"
+      ],
+      "responses": [
+        "Current verification state",
+        "Reviewer feedback",
+        "History of decisions"
+      ],
+      "permissions": "Authenticated merchant, own store.",
+      "states": [
+        "Pending review",
+        "Approved → unlock M-05+",
+        "Rejected (final, with reason)",
+        "Changes requested → back to M-03",
+        "Offline"
+      ],
+      "dependencies": "A-04 decisions drive this state; gating for M-05+.",
+      "acceptance": [
+        "Every state clearly communicated with next action",
+        "Changes-requested shows exactly what to fix",
+        "Approved stores immediately gain publishing rights"
+      ],
+      "frontend": [
+        "State-specific illustrations & guidance",
+        "Deep-link to the exact form section to fix",
+        "Poll or refresh status"
+      ],
+      "backend": [
+        "Verification state machine with history",
+        "Publishing permission checks verification state"
+      ]
+    },
+    {
+      "id": "M-05",
+      "name": "Merchant Dashboard",
+      "sticker": "📊",
+      "role": "Merchant",
+      "priority": "MVP",
+      "purpose": "Home for the verified store: listing summaries, store status, low-stock indicators and key actions.",
+      "ui": [
+        "Welcome header with store status",
+        "Listing summary cards (active, drafts, pending, out of stock)",
+        "Low-stock indicators",
+        "Quick actions (new listing, inventory)",
+        "Announcements area (later phase)"
+      ],
+      "interactions": [
+        "Create listing → M-06",
+        "Open inventory → M-09",
+        "Adjust price → M-10",
+        "Store settings → M-11"
+      ],
+      "fields": [],
+      "validation": [],
+      "apis": [
+        "GET /api/v1/stores/me/dashboard"
+      ],
+      "responses": [
+        "Listing counts by state",
+        "Low-stock alerts",
+        "Store status",
+        "Recent activity"
+      ],
+      "permissions": "Verified merchant or authorized staff member.",
+      "states": [
+        "Loading",
+        "Populated dashboard",
+        "Unverified (blocked with guidance to M-04)",
+        "Offline"
+      ],
+      "dependencies": "M-04 approval gate; aggregates M-09/M-13 data.",
+      "acceptance": [
+        "Unverified store sees verification guidance instead of tools",
+        "Numbers match the inventory screens"
+      ],
+      "frontend": [
+        "Stat cards with friendly illustrations",
+        "Conditional sections by store state"
+      ],
+      "backend": [
+        "Dashboard aggregation query",
+        "Permission gate on verification"
+      ]
+    },
+    {
+      "id": "M-06",
+      "name": "Create Listing — Select Type",
+      "sticker": "🧭",
+      "role": "Merchant",
+      "priority": "MVP",
+      "purpose": "Choose brand & model from the catalog, match the product variant, and pick new vs used.",
+      "ui": [
+        "Brand selector",
+        "Model selector",
+        "Variant matcher (storage, color)",
+        "New / Used choice cards",
+        "Continue"
+      ],
+      "interactions": [
+        "Search catalog",
+        "Select brand → model → variant",
+        "Choose condition type",
+        "Continue to M-07 or M-08"
+      ],
+      "fields": [
+        "Brand (required)",
+        "Model (required)",
+        "Variant (required when model has variants)",
+        "Condition type: new or used (required)"
+      ],
+      "validation": [
+        "Only catalog-listed brands/models accepted",
+        "Variant must exist (request addition if missing)"
+      ],
+      "apis": [
+        "GET /api/v1/catalog/brands",
+        "GET /api/v1/catalog/models?brand={id}",
+        "GET /api/v1/catalog/variants?model={id}"
+      ],
+      "responses": [
+        "Catalog trees for selection",
+        "Variant details"
+      ],
+      "permissions": "Verified merchant.",
+      "states": [
+        "Loading catalog",
+        "Selection",
+        "Model not in catalog (request flow)",
+        "Offline"
+      ],
+      "dependencies": "Entry to M-07 (new) and M-08 (used); catalog managed by platform.",
+      "acceptance": [
+        "Branch to new vs used form is explicit",
+        "Missing model has a \"request addition\" path"
+      ],
+      "frontend": [
+        "Cascading selectors",
+        "Clear new/used visual branch"
+      ],
+      "backend": [
+        "Catalog endpoints",
+        "Variant matching for compare (C-06)",
+        "Model request intake"
+      ]
+    },
+    {
+      "id": "M-07",
+      "name": "New Phone Listing Form",
+      "sticker": "🆕",
+      "role": "Merchant",
+      "priority": "MVP",
+      "purpose": "Publish an offer for new stock: quantity-based with uniform specifications.",
+      "ui": [
+        "Quantity input",
+        "Specification confirmation (from variant)",
+        "Price + currency",
+        "Warranty fields",
+        "Image upload",
+        "Availability toggle",
+        "Publish / save draft"
+      ],
+      "interactions": [
+        "Set quantity & price",
+        "Upload images",
+        "Save draft",
+        "Submit for publication"
+      ],
+      "fields": [
+        "Quantity (required, ≥1)",
+        "Price (required, > 0)",
+        "Currency (from config)",
+        "Warranty months (optional)",
+        "Images (required, min 1)",
+        "Availability (default on)"
+      ],
+      "validation": [
+        "Quantity integer ≥ 1",
+        "Price positive decimal",
+        "Minimum one image",
+        "Warranty 0–36 months"
+      ],
+      "apis": [
+        "POST /api/v1/stores/me/listings",
+        "POST /api/v1/media/uploads"
+      ],
+      "responses": [
+        "Created listing (draft state)",
+        "Publication state",
+        "Validation errors"
+      ],
+      "permissions": "Verified merchant, own store.",
+      "states": [
+        "Draft",
+        "Submitting",
+        "Processing → pending review (M-13)",
+        "Validation errors",
+        "Offline (draft preserved)"
+      ],
+      "acceptance": [
+        "Quantity decrements as stock sells (no per-unit condition)",
+        "Draft never lost on refresh"
+      ],
+      "frontend": [
+        "Form with sections & live validation",
+        "Image upload with reorder",
+        "Draft autosave"
+      ],
+      "backend": [
+        "New listing = single record + quantity inventory",
+        "Price history entry on change",
+        "Publication workflow trigger"
+      ]
+    },
+    {
+      "id": "M-08",
+      "name": "Used Phone Listing Form",
+      "sticker": "♻️",
+      "role": "Merchant",
+      "priority": "MVP",
+      "purpose": "Publish an individual used device: unique condition, battery health, accessories, defects and real photos.",
+      "ui": [
+        "Condition grade selector",
+        "Battery health input",
+        "Defects list",
+        "Accessories checklist",
+        "Actual photos upload (multiple, required)",
+        "Price",
+        "Publish / save draft"
+      ],
+      "interactions": [
+        "Describe condition",
+        "Add defects",
+        "Upload actual device photos",
+        "Save draft",
+        "Submit"
+      ],
+      "fields": [
+        "Condition grade (required)",
+        "Battery health % (required where relevant)",
+        "Defects (free list)",
+        "Accessories included (checklist)",
+        "Actual photos (required, multiple)",
+        "Price (required)"
+      ],
+      "validation": [
+        "Battery 1–100%",
+        "At least 3 actual photos",
+        "Condition grade required",
+        "Price > 0"
+      ],
+      "apis": [
+        "POST /api/v1/stores/me/listings",
+        "POST /api/v1/media/uploads"
+      ],
+      "responses": [
+        "Created used-device listing (quantity locked to 1)",
+        "Validation errors"
+      ],
+      "permissions": "Verified merchant, own store.",
+      "states": [
+        "Draft",
+        "Submitting",
+        "Pending review",
+        "Validation errors",
+        "Offline"
+      ],
+      "dependencies": "M-06 branch; different business rules than M-07.",
+      "acceptance": [
+        "Used listing is quantity 1 — one unit, one record",
+        "Buyer sees condition, battery health & defects on C-03",
+        "Stock photos forbidden — actual photos enforced by policy"
+      ],
+      "frontend": [
+        "Condition stepper",
+        "Defect tag input",
+        "Guided photo checklist"
+      ],
+      "backend": [
+        "Used listing = individual inventory unit with condition data",
+        "Listing removed automatically when unit sold"
+      ]
+    },
+    {
+      "id": "M-09",
+      "name": "Inventory Management",
+      "sticker": "📦",
+      "role": "Merchant",
+      "priority": "MVP",
+      "purpose": "View, search, edit, deactivate and manage all store listings in one place.",
+      "ui": [
+        "Inventory table/grid",
+        "Search & filters (state, condition, brand)",
+        "Row actions (edit, deactivate, archive)",
+        "State badges from M-13",
+        "Bulk selection (later phase)"
+      ],
+      "interactions": [
+        "Search",
+        "Filter by state",
+        "Edit → M-07/M-08 prefilled",
+        "Deactivate/reactivate",
+        "Archive"
+      ],
+      "fields": [
+        "Search text (optional)",
+        "State filter (optional)"
+      ],
+      "validation": [],
+      "apis": [
+        "GET /api/v1/stores/me/listings?query&state&page",
+        "PATCH /api/v1/stores/me/listings/{id}"
+      ],
+      "responses": [
+        "Paginated own listings with states & stock",
+        "Update confirmations"
+      ],
+      "permissions": "Verified merchant / authorized staff, own store only.",
+      "states": [
+        "Loading",
+        "Table",
+        "Empty inventory",
+        "Update failed",
+        "Offline"
+      ],
+      "dependencies": "M-07/M-08 for editing; M-13 states.",
+      "acceptance": [
+        "Every M-13 state visible & correct",
+        "Edits preserve publication rules"
+      ],
+      "frontend": [
+        "Sortable table with sticky actions",
+        "State badge colors",
+        "Prefill edit forms"
+      ],
+      "backend": [
+        "Own-store scoping enforced",
+        "State transitions validated server-side"
+      ]
+    },
+    {
+      "id": "M-10",
+      "name": "Price & Stock Updates",
+      "sticker": "🏷️",
+      "role": "Merchant",
+      "priority": "MVP",
+      "purpose": "Fast adjustments: quick price edits, quantity changes, validation and update feedback.",
+      "ui": [
+        "Quick-edit inline fields",
+        "Price stepper",
+        "Quantity stepper",
+        "Save feedback toast",
+        "History hint"
+      ],
+      "interactions": [
+        "Inline price edit",
+        "Inline quantity edit",
+        "Save",
+        "See feedback",
+        "View price history (later phase)"
+      ],
+      "fields": [
+        "New price (required)",
+        "New quantity (new-phone listings only)"
+      ],
+      "validation": [
+        "Price > 0",
+        "Quantity ≥ 0",
+        "Optimistic-lock conflict detection"
+      ],
+      "apis": [
+        "PATCH /api/v1/stores/me/listings/{id}/price",
+        "PATCH /api/v1/stores/me/listings/{id}/stock"
+      ],
+      "responses": [
+        "Updated values",
+        "Price history confirmation",
+        "Conflict error if stale"
+      ],
+      "permissions": "Verified merchant, own listings.",
+      "states": [
+        "Editing",
+        "Saving",
+        "Saved (feedback)",
+        "Conflict (refresh values)",
+        "Offline"
+      ],
+      "dependencies": "M-09 table; backend price history.",
+      "acceptance": [
+        "Price change recorded in history",
+        "Concurrent edits detected, never silently overwritten"
+      ],
+      "frontend": [
+        "Inline editors with optimistic UI + rollback",
+        "Instant feedback"
+      ],
+      "backend": [
+        "Transactional price & stock updates",
+        "Price history logging",
+        "Optimistic concurrency"
+      ]
+    },
+    {
+      "id": "M-11",
+      "name": "Store Settings",
+      "sticker": "⚙️",
+      "role": "Merchant",
+      "priority": "MVP",
+      "purpose": "Manage store description, locations, contacts, profile images and staff access.",
+      "ui": [
+        "Store profile editor",
+        "Locations manager",
+        "Contact methods toggles",
+        "Profile image upload",
+        "Staff invitations (where authorized)"
+      ],
+      "interactions": [
+        "Edit fields",
+        "Toggle contact methods (affects C-05)",
+        "Invite staff",
+        "Revoke staff access"
+      ],
+      "fields": [
+        "Description",
+        "Locations (multi)",
+        "Phone",
+        "Messaging handles",
+        "Profile image",
+        "Staff emails & roles"
+      ],
+      "validation": [
+        "Contact formats",
+        "Staff must have existing accounts",
+        "Image limits"
+      ],
+      "apis": [
+        "PUT /api/v1/stores/me",
+        "POST /api/v1/stores/me/staff",
+        "DELETE /api/v1/stores/me/staff/{id}"
+      ],
+      "responses": [
+        "Updated settings",
+        "Staff membership changes"
+      ],
+      "permissions": "Merchant owner + authorized staff (scoped).",
+      "states": [
+        "Loading",
+        "Saved",
+        "Validation errors",
+        "Offline"
+      ],
+      "dependencies": "Feeds public C-04/C-05 data.",
+      "acceptance": [
+        "Contact toggles instantly reflected on customer side",
+        "Staff can be limited to inventory-only access"
+      ],
+      "frontend": [
+        "Settings sections with save states",
+        "Staff role matrix UI"
+      ],
+      "backend": [
+        "Store settings CRUD",
+        "Staff membership & scoped roles"
+      ]
+    },
+    {
+      "id": "M-12",
+      "name": "Advertisement Management",
+      "sticker": "📣",
+      "role": "Merchant",
+      "priority": "Later",
+      "purpose": "Create promotional campaigns: placements, audiences, schedule, approval and results.",
+      "ui": [
+        "Campaign list",
+        "Create campaign wizard",
+        "Placement picker",
+        "Audience selector",
+        "Schedule",
+        "Results dashboard"
+      ],
+      "interactions": [
+        "Create campaign",
+        "Select placements & audience",
+        "Schedule",
+        "Submit for approval (A-08)",
+        "View results"
+      ],
+      "fields": [
+        "Campaign name",
+        "Creative images",
+        "Placements",
+        "Target audience",
+        "Start/end dates",
+        "Budget (if applicable)"
+      ],
+      "validation": [
+        "Creative specs per placement",
+        "Date range valid",
+        "Required approval before run"
+      ],
+      "apis": [
+        "POST /api/v1/stores/me/campaigns",
+        "GET /api/v1/stores/me/campaigns/{id}/results"
+      ],
+      "responses": [
+        "Campaign state (draft → pending → approved/rejected → running)",
+        "Impression/click stats"
+      ],
+      "permissions": "Verified merchant; campaigns require admin approval.",
+      "states": [
+        "Draft",
+        "Pending approval",
+        "Approved/running",
+        "Rejected (reasons)",
+        "Completed",
+        "Offline"
+      ],
+      "dependencies": "A-08 review; C-01 placements. FUTURE FEATURE — not MVP.",
+      "acceptance": [
+        "No campaign runs without approval",
+        "Results reflect real placements"
+      ],
+      "frontend": [
+        "Campaign wizard",
+        "Results charts"
+      ],
+      "backend": [
+        "Campaign rules & approval workflow",
+        "Placement serving with enablement flags",
+        "Result aggregation"
+      ]
+    },
+    {
+      "id": "M-13",
+      "name": "Listing Publication Status",
+      "sticker": "🚦",
+      "role": "Merchant",
+      "priority": "MVP",
+      "purpose": "Communicate every listing lifecycle state and what the merchant can do in each.",
+      "ui": [
+        "State badge system",
+        "State explanation cards",
+        "Actions per state",
+        "History timeline"
+      ],
+      "interactions": [
+        "View state reasons",
+        "Edit draft",
+        "Correct & resubmit rejected",
+        "Appeal suspension",
+        "Archive"
+      ],
+      "fields": [],
+      "validation": [],
+      "apis": [
+        "GET /api/v1/stores/me/listings/{id}/status"
+      ],
+      "responses": [
+        "Current state",
+        "Reasons (rejection/suspension)",
+        "Available actions",
+        "Transition history"
+      ],
+      "permissions": "Verified merchant, own listings.",
+      "states": [
+        "Draft",
+        "Processing",
+        "Pending review",
+        "Published",
+        "Rejected (with reasons)",
+        "Suspended (admin action)",
+        "Archived"
+      ],
+      "dependencies": "Used across M-07…M-12; driven by backend workflow & A-05 moderation.",
+      "acceptance": [
+        "Merchant always knows why a listing is not public",
+        "Rejected listings can be corrected without starting over"
+      ],
+      "frontend": [
+        "Unified status badge component",
+        "Reason display + fix-it deep links"
+      ],
+      "backend": [
+        "Publication state machine with audited transitions",
+        "Moderation hooks"
+      ]
+    },
+    {
+      "id": "A-01",
+      "name": "Administrative Overview",
+      "sticker": "🛰️",
+      "role": "Administrator",
+      "priority": "MVP",
+      "purpose": "Operational pulse: metrics, verification queues, moderation queues and alerts.",
+      "ui": [
+        "Key metric cards (stores, listings, verifications)",
+        "Queue counters with links",
+        "Alert feed",
+        "Recent audit events"
+      ],
+      "interactions": [
+        "Open verification queue → A-02",
+        "Open moderation queue → A-05",
+        "Acknowledge alerts",
+        "Jump to audit logs → A-07"
+      ],
+      "fields": [],
+      "validation": [],
+      "apis": [
+        "GET /api/v1/admin/overview"
+      ],
+      "responses": [
+        "Aggregated metrics",
+        "Queue sizes",
+        "Alerts",
+        "Recent critical audit events"
+      ],
+      "permissions": "Administrator role required.",
+      "states": [
+        "Loading",
+        "Populated",
+        "Partial failure (per-widget)",
+        "Offline"
+      ],
+      "dependencies": "Aggregates A-02/A-05/A-07 activity.",
+      "acceptance": [
+        "Metrics match queue screens",
+        "Alerts actionable"
+      ],
+      "frontend": [
+        "Dashboard widgets",
+        "Queue deep links"
+      ],
+      "backend": [
+        "Efficient aggregation",
+        "Role-gated endpoint"
+      ]
+    },
+    {
+      "id": "A-02",
+      "name": "Store Verification Queue",
+      "sticker": "📥",
+      "role": "Administrator",
+      "priority": "MVP",
+      "purpose": "Work through new applications, pending decisions and re-verification cases.",
+      "ui": [
+        "Queue list with applicant summary",
+        "Filters (new, pending, re-verification)",
+        "Age/waiting indicators",
+        "Open case → A-03"
+      ],
+      "interactions": [
+        "Filter queue",
+        "Open case",
+        "Assign to self (audit)",
+        "Sort by waiting time"
+      ],
+      "fields": [],
+      "validation": [],
+      "apis": [
+        "GET /api/v1/admin/verifications?state&page"
+      ],
+      "responses": [
+        "Applications with store & document summaries",
+        "State metadata"
+      ],
+      "permissions": "Administrator with verification scope.",
+      "states": [
+        "Loading",
+        "Queue",
+        "Empty queue",
+        "Offline"
+      ],
+      "dependencies": "M-03 submissions arrive here; A-03/A-04 decisions.",
+      "acceptance": [
+        "No application can be lost or stuck invisibly",
+        "Assignment recorded in audit"
+      ],
+      "frontend": [
+        "Queue table with aging highlights",
+        "Case assignment UI"
+      ],
+      "backend": [
+        "Queue queries",
+        "Assignment & state transitions with audit events"
+      ]
+    },
+    {
+      "id": "A-03",
+      "name": "Review Store Evidence",
+      "sticker": "🔍",
+      "role": "Administrator",
+      "priority": "MVP",
+      "purpose": "Inspect submitted evidence in a restricted-access view and record reviewer notes.",
+      "ui": [
+        "Evidence viewer (documents, images)",
+        "Store profile summary",
+        "Reviewer notes editor",
+        "Decision panel (A-04)"
+      ],
+      "interactions": [
+        "View documents (signed, expiring URLs)",
+        "Write notes",
+        "Proceed to decision",
+        "Request more evidence"
+      ],
+      "fields": [
+        "Reviewer notes (required before decision)"
+      ],
+      "validation": [
+        "Notes required to proceed",
+        "Evidence viewed before decision enabled (policy)"
+      ],
+      "apis": [
+        "GET /api/v1/admin/verifications/{id}",
+        "GET /api/v1/admin/verifications/{id}/documents"
+      ],
+      "responses": [
+        "Application details",
+        "Time-limited document access",
+        "Note storage confirmation"
+      ],
+      "permissions": "Administrator with verification scope; access logged; evidence never downloaded unlogged.",
+      "states": [
+        "Loading",
+        "Reviewing",
+        "Notes saved",
+        "Access error",
+        "Offline"
+      ],
+      "dependencies": "A-02 queue; feeds A-04.",
+      "acceptance": [
+        "Every document access is audited",
+        "Notes persist per case"
+      ],
+      "frontend": [
+        "In-app secure viewer (no unlogged download)",
+        "Notes with autosave"
+      ],
+      "backend": [
+        "Signed short-lived document URLs",
+        "Access audit events",
+        "Notes storage"
+      ]
+    },
+    {
+      "id": "A-04",
+      "name": "Verification Decision",
+      "sticker": "✅",
+      "role": "Administrator",
+      "priority": "MVP",
+      "purpose": "Approve, reject or request corrections with recorded reasons and audit events.",
+      "ui": [
+        "Decision buttons (approve / reject / request changes)",
+        "Reason editor (required)",
+        "Consequence preview",
+        "Confirmation step"
+      ],
+      "interactions": [
+        "Choose decision",
+        "Write reason",
+        "Confirm",
+        "Notify merchant (state → M-04)"
+      ],
+      "fields": [
+        "Decision (required)",
+        "Reason (required)",
+        "Internal note (optional)"
+      ],
+      "validation": [
+        "Reason mandatory for reject & changes-requested",
+        "Dual approval needed for reversal cases"
+      ],
+      "apis": [
+        "POST /api/v1/admin/verifications/{id}/decision"
+      ],
+      "responses": [
+        "Decision recorded",
+        "Merchant state change",
+        "Audit event ID"
+      ],
+      "permissions": "Administrator with verification scope; critical reversals need dual approval (A-07).",
+      "states": [
+        "Confirming",
+        "Applied",
+        "Conflict (case already decided)",
+        "Offline"
+      ],
+      "dependencies": "A-03 notes; triggers M-04 state change via backend workflow (NOT by admin logging into merchant UI).",
+      "acceptance": [
+        "Merchant sees decision & reason in M-04",
+        "Decision & actor recorded in audit log",
+        "Backend state change — no admin session in merchant portal"
+      ],
+      "frontend": [
+        "Decision UI with consequence preview",
+        "Reason templates"
+      ],
+      "backend": [
+        "Decision state machine",
+        "Merchant notification",
+        "Audit event emission",
+        "Dual-approval enforcement for reversals"
+      ]
+    },
+    {
+      "id": "A-05",
+      "name": "Listing Moderation",
+      "sticker": "🧹",
+      "role": "Administrator",
+      "priority": "MVP",
+      "purpose": "Inspect reports, remove listings, suspend or restore content and record decisions.",
+      "ui": [
+        "Moderation queue (reports & flags)",
+        "Listing preview",
+        "Actions (remove, suspend, restore)",
+        "Decision reason editor",
+        "Outcome log"
+      ],
+      "interactions": [
+        "Inspect reported listing",
+        "Suspend/remove/restore",
+        "Record reason",
+        "Notify merchant (M-13 state)"
+      ],
+      "fields": [
+        "Action (required)",
+        "Reason (required)"
+      ],
+      "validation": [
+        "Reason mandatory",
+        "Restore requires review note"
+      ],
+      "apis": [
+        "GET /api/v1/admin/moderation/queue",
+        "POST /api/v1/admin/listings/{id}/moderate"
+      ],
+      "responses": [
+        "Queue items",
+        "Action confirmation",
+        "Audit event ID"
+      ],
+      "permissions": "Administrator with moderation scope.",
+      "states": [
+        "Loading",
+        "Queue",
+        "Acted (confirmation)",
+        "Conflict (listing changed)",
+        "Offline"
+      ],
+      "dependencies": "Affects M-13 merchant states & public visibility on C-01/C-02.",
+      "acceptance": [
+        "Suspended listing disappears from public search instantly",
+        "Merchant sees suspension reason in M-13",
+        "Every action audited"
+      ],
+      "frontend": [
+        "Queue with preview pane",
+        "One-click actions with confirm"
+      ],
+      "backend": [
+        "Moderation actions with state transitions",
+        "Public visibility enforcement",
+        "Audit events"
+      ]
+    },
+    {
+      "id": "A-06",
+      "name": "Roles & Permissions",
+      "sticker": "🔑",
+      "role": "Administrator",
+      "priority": "MVP",
+      "purpose": "Manage authorized staff, store memberships and administrative access.",
+      "ui": [
+        "Staff list with roles",
+        "Role assignment matrix",
+        "Store membership manager",
+        "Invite/revoke actions"
+      ],
+      "interactions": [
+        "Invite admin/staff",
+        "Change role",
+        "Revoke access",
+        "View membership of a store"
+      ],
+      "fields": [
+        "User (required)",
+        "Role (required)",
+        "Scope (store / platform)"
+      ],
+      "validation": [
+        "Cannot remove own admin access",
+        "Critical roles need dual approval"
+      ],
+      "apis": [
+        "GET /api/v1/admin/roles",
+        "POST /api/v1/admin/roles",
+        "DELETE /api/v1/admin/roles/{id}"
+      ],
+      "responses": [
+        "Role matrix",
+        "Membership changes",
+        "Audit events"
+      ],
+      "permissions": "Founder-level administrator only.",
+      "states": [
+        "Loading",
+        "Matrix",
+        "Change pending dual approval",
+        "Applied",
+        "Offline"
+      ],
+      "dependencies": "Dual approval via A-07.",
+      "acceptance": [
+        "No single founder can silently grant critical access",
+        "Role changes take effect immediately"
+      ],
+      "frontend": [
+        "Role matrix UI with dual-approval badges"
+      ],
+      "backend": [
+        "RBAC model",
+        "Object-level permissions",
+        "Dual-approval workflow for critical changes"
+      ]
+    },
+    {
+      "id": "A-07",
+      "name": "Audit Logs & Dual Approval",
+      "sticker": "📜",
+      "role": "Administrator",
+      "priority": "MVP",
+      "purpose": "Review sensitive changes and independently approve especially critical founder operations.",
+      "ui": [
+        "Audit event stream (filterable)",
+        "Event detail (actor, action, before/after)",
+        "Pending dual-approval requests",
+        "Approve/reject request"
+      ],
+      "interactions": [
+        "Filter & search events",
+        "Inspect event detail",
+        "Approve or reject pending critical operation"
+      ],
+      "fields": [],
+      "validation": [
+        "Approver must differ from requester"
+      ],
+      "apis": [
+        "GET /api/v1/admin/audit-events?actor&action&page",
+        "POST /api/v1/admin/dual-approvals/{id}/decision"
+      ],
+      "responses": [
+        "Paginated audit events",
+        "Approval outcomes"
+      ],
+      "permissions": "Founder-level administrator; approver ≠ requester enforced.",
+      "states": [
+        "Loading",
+        "Event list",
+        "Event detail",
+        "Pending approvals",
+        "Offline"
+      ],
+      "dependencies": "Consumes audit events from A-04/A-05/A-06 and backend actions.",
+      "acceptance": [
+        "Every sensitive action traceable to an actor & timestamp",
+        "Critical operations blocked until second founder approves"
+      ],
+      "frontend": [
+        "Audit timeline UI",
+        "Pending approvals inbox"
+      ],
+      "backend": [
+        "Immutable audit log",
+        "Dual-approval state machine",
+        "Actor separation enforcement"
+      ]
+    },
+    {
+      "id": "A-08",
+      "name": "Advertisement Review",
+      "sticker": "🪧",
+      "role": "Administrator",
+      "priority": "Later",
+      "purpose": "Review merchant campaigns, validate placements and approve or reject them.",
+      "ui": [
+        "Campaign review queue",
+        "Creative preview",
+        "Placement validation checklist",
+        "Approve/reject with reasons"
+      ],
+      "interactions": [
+        "Inspect campaign (M-12)",
+        "Validate placement fit",
+        "Approve / reject with reason"
+      ],
+      "fields": [
+        "Decision reason (required on reject)"
+      ],
+      "validation": [
+        "Creative meets placement specs",
+        "No disallowed content"
+      ],
+      "apis": [
+        "GET /api/v1/admin/campaigns/queue",
+        "POST /api/v1/admin/campaigns/{id}/decision"
+      ],
+      "responses": [
+        "Campaign queue",
+        "Decision confirmations",
+        "Audit events"
+      ],
+      "permissions": "Administrator with advertising scope. FUTURE FEATURE.",
+      "states": [
+        "Loading",
+        "Queue",
+        "Decided",
+        "Offline"
+      ],
+      "dependencies": "M-12 submissions; C-01 placements. Not MVP.",
+      "acceptance": [
+        "Approved campaigns only appear on enabled placements"
+      ],
+      "frontend": [
+        "Review UI with creative preview"
+      ],
+      "backend": [
+        "Campaign approval workflow",
+        "Placement rules engine"
+      ]
+    },
+    {
+      "id": "A-09",
+      "name": "Platform Announcements",
+      "sticker": "📢",
+      "role": "Administrator",
+      "priority": "Later",
+      "purpose": "Create announcements targeted at merchants, customers or other authorized audiences.",
+      "ui": [
+        "Announcement composer",
+        "Audience selector",
+        "Schedule",
+        "Delivery log"
+      ],
+      "interactions": [
+        "Write announcement",
+        "Choose audience",
+        "Schedule/publish",
+        "View delivery"
+      ],
+      "fields": [
+        "Title & body (required, AR & EN)",
+        "Audience (required)",
+        "Schedule (optional)"
+      ],
+      "validation": [
+        "Both languages present",
+        "Audience valid"
+      ],
+      "apis": [
+        "POST /api/v1/admin/announcements",
+        "GET /api/v1/admin/announcements/{id}/delivery"
+      ],
+      "responses": [
+        "Announcement record",
+        "Delivery stats"
+      ],
+      "permissions": "Administrator with announcements scope. FUTURE FEATURE.",
+      "states": [
+        "Draft",
+        "Scheduled",
+        "Sent",
+        "Offline"
+      ],
+      "dependencies": "Shown in M-05 (merchant) area. Not MVP.",
+      "acceptance": [
+        "Only selected audience sees the announcement"
+      ],
+      "frontend": [
+        "Composer with bilingual fields"
+      ],
+      "backend": [
+        "Audience-scoped delivery"
+      ]
+    }
+  ],
+  "MILESTONES": [
+    {
+      "seq": 1,
+      "name": "Product Definition & MVP Planning",
+      "sticker": "🧭",
+      "description": "Agree what the marketplace is: new & used phones, verified stores, MVP scope.",
+      "owner": "Both founders",
+      "deliverable": "MVP scope document + business rules",
+      "dependencies": "None — starting point",
+      "completion": "Both founders sign off on MVP scope and out-of-scope list."
+    },
+    {
+      "seq": 2,
+      "name": "User Journeys & Screen Mapping",
+      "sticker": "🗺️",
+      "description": "Map every customer, merchant and admin journey to concrete screens.",
+      "owner": "Founder B — Frontend",
+      "deliverable": "Screen inventory (C-00…C-10, M-01…M-13, A-01…A-09)",
+      "dependencies": "Milestone 1",
+      "completion": "Every user goal is covered by at least one screen; IDs agreed."
+    },
+    {
+      "seq": 3,
+      "name": "Technology Architecture",
+      "sticker": "🏗️",
+      "description": "Flutter app, React portal, Django REST API, PostgreSQL, R2 storage, Redis/Celery.",
+      "owner": "Founder A — Backend",
+      "deliverable": "System architecture diagram (Zone 7)",
+      "dependencies": "Milestone 1",
+      "completion": "Architecture reviewed and approved by both founders."
+    },
+    {
+      "seq": 4,
+      "name": "Database & API Design",
+      "sticker": "🗃️",
+      "description": "Domain model: users, stores, verifications, catalog, listings, inventory, audit.",
+      "owner": "Founder A — Backend",
+      "deliverable": "ERD + draft API contract (single source of truth)",
+      "dependencies": "Milestones 2, 3",
+      "completion": "API contract for MVP screens agreed with Founder B."
+    },
+    {
+      "seq": 5,
+      "name": "Authentication & Permissions",
+      "sticker": "🔐",
+      "description": "Sessions, roles, object-level permissions, merchant membership, admin access.",
+      "owner": "Founder A — Backend",
+      "deliverable": "Auth + RBAC implementation with tests",
+      "dependencies": "Milestone 4",
+      "completion": "Role matrix passes backend tests; no unauthorized action possible."
+    },
+    {
+      "seq": 6,
+      "name": "Store Verification & Administration",
+      "sticker": "🛡️",
+      "description": "Verification applications, evidence review, approve/reject/request-changes, audit events.",
+      "owner": "Both founders",
+      "deliverable": "Verification workflow end-to-end",
+      "dependencies": "Milestone 5",
+      "completion": "A test store passes the full verification lifecycle with audit trail."
+    },
+    {
+      "seq": 7,
+      "name": "Product Catalog & Inventory",
+      "sticker": "📦",
+      "description": "Catalog products/variants, new-stock quantity listings, individual used-device listings.",
+      "owner": "Founder A — Backend",
+      "deliverable": "Catalog, listing, inventory & media models + APIs",
+      "dependencies": "Milestones 4, 5",
+      "completion": "New and used listing flows both persist correctly with media."
+    },
+    {
+      "seq": 8,
+      "name": "Mobile Application Development",
+      "sticker": "📱",
+      "description": "Flutter customer app: browse, search, details, stores, compare, contact, account.",
+      "owner": "Founder B — Frontend",
+      "deliverable": "Flutter app wired to real APIs (AR/EN, RTL)",
+      "dependencies": "Milestones 2, 7",
+      "completion": "All C-series MVP screens work against the staging API."
+    },
+    {
+      "seq": 9,
+      "name": "Merchant Dashboard Development",
+      "sticker": "🏪",
+      "description": "React portal: registration, business info, verification, listings, inventory, settings.",
+      "owner": "Founder B — Frontend",
+      "deliverable": "Merchant portal wired to real APIs (AR/EN, RTL)",
+      "dependencies": "Milestones 2, 6, 7",
+      "completion": "A merchant can register, get verified, and publish a listing end-to-end."
+    },
+    {
+      "seq": 10,
+      "name": "Marketplace Integration",
+      "sticker": "🧩",
+      "description": "Public listing visibility, search across stores, moderation queue, admin operations.",
+      "owner": "Both founders",
+      "deliverable": "Integrated marketplace flows",
+      "dependencies": "Milestones 8, 9",
+      "completion": "Published listings appear in customer search within SLA; moderation works."
+    },
+    {
+      "seq": 11,
+      "name": "Testing & Stabilization",
+      "sticker": "🧪",
+      "description": "Integration tests, security checks, both interfaces regression-tested, bug fixing.",
+      "owner": "Both founders",
+      "deliverable": "Green test suites + security checklist",
+      "dependencies": "Milestone 10",
+      "completion": "No open critical bugs; security checklist fully green."
+    },
+    {
+      "seq": 12,
+      "name": "Production Deployment",
+      "sticker": "🚀",
+      "description": "Deploy API, portals and storage; configure monitoring, backups, alerts.",
+      "owner": "Founder A — Backend",
+      "deliverable": "Live production environment",
+      "dependencies": "Milestone 11",
+      "completion": "Deployment runbook executed; monitoring dashboards live."
+    },
+    {
+      "seq": 13,
+      "name": "Pilot Launch",
+      "sticker": "🧺",
+      "description": "Onboard first verified phone stores, support them closely, collect feedback.",
+      "owner": "Both founders",
+      "deliverable": "Pilot cohort of verified stores trading",
+      "dependencies": "Milestone 12",
+      "completion": "Pilot stores successfully publish listings and receive customer contact."
+    },
+    {
+      "seq": 14,
+      "name": "Monitoring & Future Expansion",
+      "sticker": "🌱",
+      "description": "Track metrics, stabilize, then: saved listings, advertising, announcements, AI features.",
+      "owner": "Both founders",
+      "deliverable": "Growth roadmap + prioritized backlog",
+      "dependencies": "Milestone 13",
+      "completion": "Expansion features scheduled; pilot lessons folded into backlog."
+    }
+  ],
+  "STAGES": [
+    {
+      "seq": 1,
+      "name": "Planning",
+      "sticker": "🧭",
+      "summary": "Finalize business rules, screen inventory, user journeys and MVP scope.",
+      "backend": [
+        "Business rules for new vs used",
+        "Verification policy draft"
+      ],
+      "frontend": [
+        "Journey maps (Zones 2–4)",
+        "Screen inventory with IDs"
+      ],
+      "integration": "MVP scope + screen spec cards (Zone 5) agreed",
+      "dependencies": "None — start here",
+      "checklist": [
+        "MVP scope signed off",
+        "Screen IDs fixed",
+        "Priority labels set"
+      ],
+      "status": "Not started"
+    },
+    {
+      "seq": 2,
+      "name": "Foundation",
+      "sticker": "🧱",
+      "summary": "Initialize backend, mobile app, web portal, database, repository and CI.",
+      "backend": [
+        "Django + DRF project",
+        "PostgreSQL schema baseline",
+        "CI + tests",
+        "R2 bucket"
+      ],
+      "frontend": [
+        "Flutter app skeleton",
+        "React portal skeleton",
+        "Design tokens, AR/EN + RTL setup"
+      ],
+      "integration": "API contract format + OpenAPI skeleton",
+      "dependencies": "Stage 1",
+      "checklist": [
+        "Repos + CI green",
+        "Apps render hello world",
+        "DB migrations run"
+      ],
+      "status": "Not started"
+    },
+    {
+      "seq": 3,
+      "name": "Identity & Verification",
+      "sticker": "🔐",
+      "summary": "Backend builds auth and merchant approval rules while frontend builds the forms and screens.",
+      "backend": [
+        "Auth & sessions",
+        "Roles + object permissions",
+        "Verification workflow",
+        "Audit events"
+      ],
+      "frontend": [
+        "Login / register (C-07, M-01)",
+        "Business info & evidence upload (M-02, M-03)",
+        "Verification status (M-04)"
+      ],
+      "integration": "Auth + verification endpoints contract-tested",
+      "dependencies": "Stage 2",
+      "checklist": [
+        "Unverified store cannot publish",
+        "Audit trail records decisions",
+        "Both languages render"
+      ],
+      "status": "Not started"
+    },
+    {
+      "seq": 4,
+      "name": "Catalog & Listings",
+      "sticker": "📦",
+      "summary": "Backend builds product, listing, inventory and media functionality; frontend builds new/used listing forms.",
+      "backend": [
+        "Catalog product & variant models",
+        "Listing + inventory + price history",
+        "Media authorization & processing"
+      ],
+      "frontend": [
+        "New phone form (M-07)",
+        "Used phone form (M-08)",
+        "Inventory table (M-09, M-10)",
+        "Publication status (M-13)"
+      ],
+      "integration": "Listing CRUD + media upload contract",
+      "dependencies": "Stage 3",
+      "checklist": [
+        "New listing = quantity",
+        "Used listing = individual unit",
+        "Draft → pending → published flow"
+      ],
+      "status": "Not started"
+    },
+    {
+      "seq": 5,
+      "name": "Customer Discovery",
+      "sticker": "🔎",
+      "summary": "Backend builds search and public listing APIs; frontend builds the Flutter browsing experience.",
+      "backend": [
+        "Search + filters + pagination",
+        "Public listing visibility rules",
+        "Store profile API"
+      ],
+      "frontend": [
+        "Home (C-01)",
+        "Search & filters (C-02)",
+        "Details (C-03)",
+        "Store profile (C-04)",
+        "Compare (C-06)"
+      ],
+      "integration": "Public catalog endpoints contract-tested",
+      "dependencies": "Stage 4",
+      "checklist": [
+        "Guests can browse",
+        "Filters compose & paginate",
+        "Details handles all listing states"
+      ],
+      "status": "Not started"
+    },
+    {
+      "seq": 6,
+      "name": "Merchant & Admin Operations",
+      "sticker": "🛠️",
+      "summary": "Complete inventory management, moderation, permissions and administrative workflows.",
+      "backend": [
+        "Moderation actions + audit",
+        "Roles & permissions admin (A-06, A-07)",
+        "Announcement delivery rules"
+      ],
+      "frontend": [
+        "Admin overview & queues (A-01…A-05)",
+        "Merchant dashboard polish (M-05, M-11)",
+        "Contact seller (C-05)"
+      ],
+      "integration": "Admin workflows contract-tested",
+      "dependencies": "Stage 5",
+      "checklist": [
+        "Dual approval on critical ops",
+        "Moderation actions auditable",
+        "Admin never enters merchant UI"
+      ],
+      "status": "Not started"
+    },
+    {
+      "seq": 7,
+      "name": "Integration & Testing",
+      "sticker": "🧪",
+      "summary": "Connect real APIs, test both interfaces, verify security and fix problems.",
+      "backend": [
+        "Integration test suite",
+        "Security review",
+        "Performance & backups"
+      ],
+      "frontend": [
+        "E2E flows on real APIs",
+        "Offline / error states",
+        "Accessibility pass"
+      ],
+      "integration": "Full journey tests: register → verify → list → discover → contact",
+      "dependencies": "Stages 5, 6",
+      "checklist": [
+        "No critical bugs",
+        "Security checklist green",
+        "Both languages complete"
+      ],
+      "status": "Not started"
+    },
+    {
+      "seq": 8,
+      "name": "Controlled Launch",
+      "sticker": "🚀",
+      "summary": "Deploy production, onboard initial verified stores, monitor and collect feedback.",
+      "backend": [
+        "Production deploy",
+        "Monitoring & alerts",
+        "Backup & restore drill"
+      ],
+      "frontend": [
+        "Store listing pre-launch checks",
+        "Pilot feedback channels"
+      ],
+      "integration": "Go / no-go review against release gates",
+      "dependencies": "Stage 7",
+      "checklist": [
+        "Runbook executed",
+        "First stores verified",
+        "Feedback loop running"
+      ],
+      "status": "Not started"
+    }
+  ],
+  "ARCH_NODES": [
+    {
+      "id": "flutter",
+      "emoji": "📱",
+      "label": "Flutter App",
+      "sub": "Customer · AR/EN · RTL",
+      "x": 40,
+      "y": 40,
+      "w": 200,
+      "tone": "cyan"
+    },
+    {
+      "id": "react",
+      "emoji": "🖥️",
+      "label": "React Web Portal",
+      "sub": "Merchant dashboard",
+      "x": 40,
+      "y": 160,
+      "w": 200,
+      "tone": "mint"
+    },
+    {
+      "id": "django-admin",
+      "emoji": "🧑‍💼",
+      "label": "Django Admin",
+      "sub": "Restricted · founders only",
+      "x": 40,
+      "y": 280,
+      "w": 200,
+      "tone": "orange"
+    },
+    {
+      "id": "api",
+      "emoji": "🔌",
+      "label": "Django REST API",
+      "sub": "OpenAPI contract",
+      "x": 320,
+      "y": 160,
+      "w": 220,
+      "tone": "lavender"
+    },
+    {
+      "id": "auth",
+      "emoji": "🔐",
+      "label": "Auth & Permissions",
+      "sub": "Sessions · RBAC · object-level",
+      "x": 320,
+      "y": 300,
+      "w": 220,
+      "tone": "lavender"
+    },
+    {
+      "id": "modules",
+      "emoji": "🧩",
+      "label": "Marketplace Modules",
+      "sub": "Verification · catalog · listings · moderation",
+      "x": 320,
+      "y": 40,
+      "w": 220,
+      "tone": "lavender"
+    },
+    {
+      "id": "db",
+      "emoji": "🗃️",
+      "label": "PostgreSQL",
+      "sub": "Domain data",
+      "x": 620,
+      "y": 40,
+      "w": 190,
+      "tone": "yellow"
+    },
+    {
+      "id": "search",
+      "emoji": "🔎",
+      "label": "Search Adapter",
+      "sub": "Filters · facets · pagination",
+      "x": 620,
+      "y": 150,
+      "w": 190,
+      "tone": "yellow"
+    },
+    {
+      "id": "r2",
+      "emoji": "🪣",
+      "label": "Cloudflare R2",
+      "sub": "Private media + public bucket",
+      "x": 620,
+      "y": 260,
+      "w": 190,
+      "tone": "yellow"
+    },
+    {
+      "id": "cdn",
+      "emoji": "⚡",
+      "label": "CDN",
+      "sub": "Public media delivery",
+      "x": 860,
+      "y": 260,
+      "w": 160,
+      "tone": "pink"
+    },
+    {
+      "id": "redis",
+      "emoji": "⚙️",
+      "label": "Redis + Celery",
+      "sub": "Background jobs · queues",
+      "x": 620,
+      "y": 370,
+      "w": 190,
+      "tone": "yellow"
+    },
+    {
+      "id": "notify",
+      "emoji": "🔔",
+      "label": "Notifications",
+      "sub": "Email / SMS / push hooks",
+      "x": 320,
+      "y": 440,
+      "w": 220,
+      "tone": "gray"
+    },
+    {
+      "id": "monitor",
+      "emoji": "📈",
+      "label": "Monitoring & Audit",
+      "sub": "Metrics · immutable logs",
+      "x": 620,
+      "y": 480,
+      "w": 190,
+      "tone": "gray"
+    },
+    {
+      "id": "ai",
+      "emoji": "🤖",
+      "label": "AI Integration",
+      "sub": "Optional · future",
+      "x": 860,
+      "y": 480,
+      "w": 160,
+      "tone": "pink"
+    }
+  ],
+  "ARCH_EDGES": [
+    [
+      "flutter",
+      "api",
+      "REST · JSON",
+      "api"
+    ],
+    [
+      "react",
+      "api",
+      "REST · JSON",
+      "api"
+    ],
+    [
+      "django-admin",
+      "api",
+      "internal ops",
+      "api"
+    ],
+    [
+      "api",
+      "modules",
+      "business logic",
+      "api"
+    ],
+    [
+      "api",
+      "auth",
+      "authenticate",
+      "api"
+    ],
+    [
+      "modules",
+      "db",
+      "ORM",
+      "api"
+    ],
+    [
+      "modules",
+      "search",
+      "queries",
+      "api"
+    ],
+    [
+      "modules",
+      "r2",
+      "signed media",
+      "api"
+    ],
+    [
+      "r2",
+      "cdn",
+      "public cache",
+      "api"
+    ],
+    [
+      "modules",
+      "redis",
+      "async tasks",
+      "api"
+    ],
+    [
+      "redis",
+      "notify",
+      "jobs emit",
+      "api"
+    ],
+    [
+      "api",
+      "monitor",
+      "events",
+      "api"
+    ],
+    [
+      "search",
+      "db",
+      "index sync",
+      "api"
+    ],
+    [
+      "modules",
+      "ai",
+      "optional",
+      "future"
+    ]
+  ],
+  "ENTITIES": [
+    {
+      "id": "user",
+      "label": "User",
+      "fields": [
+        "id",
+        "name",
+        "contact",
+        "auth credentials"
+      ],
+      "x": 40,
+      "y": 40,
+      "w": 190,
+      "tone": "cyan"
+    },
+    {
+      "id": "membership",
+      "label": "Store Membership",
+      "fields": [
+        "id",
+        "user →",
+        "store →",
+        "staff role"
+      ],
+      "x": 300,
+      "y": 40,
+      "w": 190,
+      "tone": "mint"
+    },
+    {
+      "id": "store",
+      "label": "Store",
+      "fields": [
+        "id",
+        "name",
+        "location",
+        "verification state"
+      ],
+      "x": 560,
+      "y": 40,
+      "w": 200,
+      "tone": "mint"
+    },
+    {
+      "id": "verification",
+      "label": "Verification Application",
+      "fields": [
+        "id",
+        "store →",
+        "documents",
+        "decision + reason"
+      ],
+      "x": 560,
+      "y": 180,
+      "w": 200,
+      "tone": "orange"
+    },
+    {
+      "id": "product",
+      "label": "Catalog Product",
+      "fields": [
+        "id",
+        "brand",
+        "model",
+        "specs"
+      ],
+      "x": 40,
+      "y": 200,
+      "w": 190,
+      "tone": "lavender"
+    },
+    {
+      "id": "variant",
+      "label": "Product Variant",
+      "fields": [
+        "id",
+        "product →",
+        "storage",
+        "color"
+      ],
+      "x": 300,
+      "y": 200,
+      "w": 190,
+      "tone": "lavender"
+    },
+    {
+      "id": "listing",
+      "label": "Listing",
+      "fields": [
+        "id",
+        "store →",
+        "variant →",
+        "condition (new/used)",
+        "state"
+      ],
+      "x": 300,
+      "y": 330,
+      "w": 210,
+      "tone": "yellow"
+    },
+    {
+      "id": "inventory",
+      "label": "Inventory",
+      "fields": [
+        "quantity (new) OR unit (used)",
+        "condition · battery · defects"
+      ],
+      "x": 560,
+      "y": 330,
+      "w": 200,
+      "tone": "yellow"
+    },
+    {
+      "id": "pricehistory",
+      "label": "Price History",
+      "fields": [
+        "listing →",
+        "old → new",
+        "timestamp"
+      ],
+      "x": 560,
+      "y": 450,
+      "w": 200,
+      "tone": "yellow"
+    },
+    {
+      "id": "media",
+      "label": "Media",
+      "fields": [
+        "listing →",
+        "object key",
+        "kind"
+      ],
+      "x": 820,
+      "y": 330,
+      "w": 180,
+      "tone": "pink"
+    },
+    {
+      "id": "campaign",
+      "label": "Advertising Campaign",
+      "fields": [
+        "store →",
+        "placements",
+        "state (later phase)"
+      ],
+      "x": 820,
+      "y": 180,
+      "w": 180,
+      "tone": "pink"
+    },
+    {
+      "id": "role",
+      "label": "Role Assignment",
+      "fields": [
+        "user →",
+        "role",
+        "scope"
+      ],
+      "x": 40,
+      "y": 330,
+      "w": 190,
+      "tone": "orange"
+    },
+    {
+      "id": "audit",
+      "label": "Audit Event",
+      "fields": [
+        "actor →",
+        "action",
+        "before/after",
+        "ts"
+      ],
+      "x": 40,
+      "y": 450,
+      "w": 190,
+      "tone": "orange"
+    }
+  ],
+  "RELATIONSHIPS": [
+    [
+      "user",
+      "membership",
+      "belongs to"
+    ],
+    [
+      "membership",
+      "store",
+      "member of"
+    ],
+    [
+      "store",
+      "verification",
+      "applies for"
+    ],
+    [
+      "product",
+      "variant",
+      "has"
+    ],
+    [
+      "store",
+      "listing",
+      "offers"
+    ],
+    [
+      "variant",
+      "listing",
+      "of variant"
+    ],
+    [
+      "listing",
+      "inventory",
+      "stocked as"
+    ],
+    [
+      "listing",
+      "pricehistory",
+      "repriced"
+    ],
+    [
+      "listing",
+      "media",
+      "illustrated by"
+    ],
+    [
+      "store",
+      "campaign",
+      "advertises (later)"
+    ],
+    [
+      "user",
+      "role",
+      "assigned"
+    ],
+    [
+      "role",
+      "audit",
+      "actions logged"
+    ]
+  ],
+  "CONTRACT_ITEMS": [
+    "Endpoint & HTTP method",
+    "Input parameters",
+    "Request body",
+    "Response schema",
+    "Authentication requirements",
+    "Authorization scope",
+    "Error responses",
+    "Pagination & filtering",
+    "Side effects & business-state changes",
+    "Acceptance tests"
+  ],
+  "CONTRACT_WORKFLOW": [
+    {
+      "label": "Screen specification",
+      "sub": "Zone 5 cards",
+      "sticker": "📋"
+    },
+    {
+      "label": "API contract",
+      "sub": "single source of truth",
+      "sticker": "📜"
+    },
+    {
+      "label": "Parallel implementation",
+      "sub": "backend + frontend at once",
+      "sticker": "⚡"
+    },
+    {
+      "label": "Integration tests",
+      "sub": "contract-tested",
+      "sticker": "🧪"
+    },
+    {
+      "label": "Feature complete",
+      "sub": "acceptance criteria met",
+      "sticker": "🎉"
+    }
+  ]
+}
