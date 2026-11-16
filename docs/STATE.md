@@ -1,16 +1,22 @@
 # Project State & Session Handoff
 
 ## Current Active Focus
-- Workspace setup and personal-review preference are merged; resolve the recorded product/stack decisions before application scaffolding.
+- Deliver Slack Lists-to-agy automation on feature/slack-agent-automation; preserve personal PR review. Resolve recorded product/stack decisions before application scaffolding.
 
 ## Architecture & Technology Stack
 - Backend: Modular FastAPI Monolith (Python 3.13)
 - Database: PostgreSQL 16 (Alembic single-head migrations)
 - Clients: Native Android (Kotlin Jetpack Compose) & Web Preview
 - CI / Integration: GitHub Actions + Slack Alerts
+- Local operations: Python standard-library Slack Lists connector, durable SQLite claims, isolated agy worktrees and optional user systemd timer; see docs/SLACK_AUTOMATION.md. This is operational tooling, not application scaffolding.
 - These are target choices; no backend, database migrations, Android app or web client exists yet. Read docs/ARCHITECTURE.md and docs/PRODUCT.md before scaffolding.
 
 ## Completed Milestones
+- [x] Created Sudan Phones Backlog F0CHWFG1BD4 and shared write access with #tasks-and-bugs. Verified Lists create/read/row-write and agy-written channel notifications. Local credential consumption stays out of prompts/output/tracked files.
+- Visibility follow-up: the user did not see the bot-created List in their Lists home. Its actual Slack permalink and non-trial status were verified; direct write sharing was granted to the active founder account. Do not claim the user's UI view is verified. Runtime worktree is `.worktrees/slack-agent-automation` under the original project; copied from /tmp and repaired because Git worktree move cannot cross filesystems. The old /tmp copy is preserved and must not run a second worker.
+- [x] Worker covers source-key deduplication, Ready/agy execution gates, fresh-main skill checks, isolated worktrees, structured agy results, independent PR identity checks and delivery-only recovery. Local worker tests passed; final full-suite/CI evidence follows in this task's handoff.
+- Validation: after staging, `scripts/check_secrets.py` passed as part of `make check`; all 31 tests passed (22 worker and 9 foundation), Python/JSON syntax passed, OpenAPI explicitly skipped because the backend is absent. `systemd-analyze verify` passed outside the sandbox. Independent code review was completed; recovery fixes passed reproducing tests. No real queued bug-to-PR run or runtime permission-matching proof is claimed.
+- Independent review found recovery defects; reproducing tests and fixes recorded as BUG-2026-002. First live intake exposed historical-CI noise; BUG-2026-003 fixes newest-completed-workflow selection. Both historical rows were corrected to Done with successful main run 43773944527 as evidence; correction delivered through agy.
 - [x] Initial workspace reset & clean root commit
 - [x] GitHub repository linkage & collaborator permissions (@marco47t, @MoatazAbdElmutaal)
 - [x] Slack MCP integration & GitHub Actions CI alert pipeline
@@ -21,17 +27,22 @@
 - Recent baseline commits: `f84b457` remove setup blueprint PDF; `5b8fbe3` architecture blueprint; `ffe0016` initial protocol and integrations.
 
 ## In-Progress Tasks & Active Branches
-- Branch: `docs/final-workspace-handoff` | Owner: Codex | Status: Final handoff documentation only. Use `gh pr view docs/final-workspace-handoff` for its live PR/CI state; do not request organization reviewers.
+- Branch: `feature/slack-agent-automation` | Owner: Codex | Targets: scripts/slack_worker.py, scripts/slack_automation/, config/, tests/test_slack_automation.py, docs/SLACK_AUTOMATION.md and task handoff | Status: publication and timer setup in progress; do not claim autonomous bug-to-PR execution has been verified.
+- Branch: `feature/shared-agent-skills` | Owner: Codex | PR #4 open and passing at inspection: https://github.com/MobaileyProject/sudan-phones/pull/4. All 14 shared skill entrypoints must reach origin/main before queued code execution. Preserve this separate PR and its state additions when merging.
+- Final handoff PR #3 is merged at 32fb346. The original checkout remains on feature/shared-agent-skills with its untracked PDF preserved. A separate temporary worktree was created from origin/main; main was not pulled into the unfinished skills branch.
 - Setup PR #1 and preference PR #2 are merged: https://github.com/MobaileyProject/sudan-phones/pull/1 and https://github.com/MobaileyProject/sudan-phones/pull/2. Older feature/preference branches were recreated by pushes racing with the user’s merges; they are superseded and are not active implementation tasks.
 - Remote inspection at setup start: no open PRs or issues. Recheck `gh pr list` / `gh issue list` each session.
 - Local user input: `Marketplace_Complete_Product_and_Execution_Blueprint.pdf` is untracked and intentionally preserved. Its tracked product summary is docs/PRODUCT.md; do not stash/delete it or claim it is available in every clone.
 
 ## Immediate Next Tasks (Priority Queue)
-1. Check the final handoff documentation PR with `gh pr view docs/final-workspace-handoff`; if open, leave its review/merge to the user. The setup and reviewer preference are already on main; do not duplicate them or request organization reviewers.
+1. Review shared-skills PR #4 personally, then the Slack automation PR (`gh pr view feature/slack-agent-automation`). Inspect `python3 scripts/slack_worker.py doctor`, `status`, and the installed timer before queuing Ready work. Exact runtime path and final PR/CI evidence are recorded in the publication handoff below.
 2. Confirm the stack discrepancy and product decisions with both founders; update docs/PRODUCT.md and docs/ARCHITECTURE.md with MVP, owner roles, pilot region, verification evidence, currency, and contact channels.
 3. Scaffold the first approved-store vertical slice in backend/app/{routers,schemas,services,repositories,models}/, add pinned backend dependencies, Alembic and PostgreSQL tests, initialize the Android/Web Preview clients, then `make openapi` and commit docs/openapi.json.
 
 ## Known Blockers & Design Decisions
+- The user delegated implementation choices and explicitly authorized List creation/read/write and local agy task execution through PR delivery. No merge/deploy or organization-reviewer request is authorized. Codex Slack plugin remains unconnected, but the configured agy Slack server environment now supplies the API connector privately.
+- The local Slack skill contains an embedded credential; rotation/removal remains a user-side credential-maintenance task. The worker never reads that skill. Lists access, row writes and agy messages were verified using the configured connection, with no token values printed or committed.
+- Autonomous implementation remains unverified end to end. The host lacks agy Auto terminal sandbox; accept-edits plus session-only command grants are used. Unsupported/denied application-specific commands block and preserve work. No fabricated backend checks.
 - Explicit setup request selects FastAPI/Kotlin; product PDF specifies Django/Flutter/React. Follow requested stack for this setup; confirm before application implementation.
 - User selected feature branch and PR delivery, resolving the conflicting `git push origin main` line. User subsequently directed that they will review PRs personally: never automatically request the other founder/organization members. The earlier request to @MoatazAbdElmutaal was removed. The user merged PRs #1 and #2; the preference is persisted in AGENTS.md. No review requests remain on those PRs.
 - No backend exists: OpenAPI export/check must report a scaffold-pending skip until backend Python code is introduced. No placeholder API contract should be committed.

@@ -1,0 +1,11 @@
+[Unit]
+Description=Poll Sudan Phones Slack backlog every five minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=5min
+Persistent=true
+Unit=sudan-phones-slack-worker.service
+
+[Install]
+WantedBy=timers.target

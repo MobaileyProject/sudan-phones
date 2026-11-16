@@ -1,0 +1,11 @@
+{
+  "id": "BUG-2026-002",
+  "category": "logic",
+  "severity": "medium",
+  "status": "resolved",
+  "affected_files": ["scripts/slack_automation/core.py", "scripts/slack_automation/worker.py", "scripts/slack_worker.py"],
+  "affected_endpoints": [],
+  "root_cause": "The initial worker publication loop had no durable checkpoint between List mutation and channel delivery, and aborted the whole loop on an individual delivery failure. A delayed notification could repeat old status writes and block unrelated results.",
+  "fix_summary": "Persist List-update completion separately from message delivery, retain per-job delivery errors, continue unrelated publication and task execution, and omit empty PR writes. Reproduced during pre-publication independent review, before live activation.",
+  "regression_test": "tests/test_slack_automation.py::AutomationTest.test_message_retry_never_rewrites_list_status; tests/test_slack_automation.py::AutomationTest.test_bad_pending_row_does_not_block_unrelated_delivery"
+}

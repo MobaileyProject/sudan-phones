@@ -1,5 +1,8 @@
 # GitHub & Slack Integration Architecture
 
+For the Slack Lists backlog, local agy worker, durable claims, scoped permissions,
+live access evidence and timer setup, see [Slack automation](SLACK_AUTOMATION.md).
+
 This document describes the inherited GitHub/Slack setup. Per-session tool access can differ: check available tools rather than assuming the Antigravity MCP connection also exists in Codex. Follow [AGENTS.md](../AGENTS.md) for the current contract and record unavailable deliveries in [STATE.md](STATE.md).
 
 ---
