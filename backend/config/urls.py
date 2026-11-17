@@ -12,3 +12,6 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ]
+
+handler404 = 'core.views.api_404'
+handler500 = 'core.views.api_500'
