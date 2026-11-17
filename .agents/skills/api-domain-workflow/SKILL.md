@@ -27,6 +27,11 @@ the approved architecture; it does not authorize an application scaffold or a st
 5. Run make openapi, review docs/openapi.json, update docs/api/<domain>.md and run
    make openapi-check plus the actual domain suite. A scaffold-pending skip proves
    no API behavior. The entrypoint is backend/manage.py once implemented.
+6. Synchronize the live Slack API Contracts List (`F0CHJB5C939`): update existing rows
+   or add missing rows with what the API does, stage/phase, how to use it, input formula
+   (method, path, headers, query/body schema), output formula (status codes, JSON envelopes,
+   headers), and set the status from Proposed to `Backend ready`. Run
+   `python3 scripts/sync_slack_api_contracts.py --sync` (verified by `make api-check`).
 
 ## Example boundary
 

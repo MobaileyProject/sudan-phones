@@ -1,8 +1,8 @@
 PYTHON ?= python3
 
-.PHONY: check secrets test lint skills-check openapi openapi-check context-check backend-check backend-test
+.PHONY: check secrets test lint skills-check openapi openapi-check api-sync api-check context-check backend-check backend-test
 
-check: secrets test lint skills-check openapi-check context-check backend-check backend-test
+check: secrets test lint skills-check openapi-check api-check context-check backend-check backend-test
 
 secrets:
 	$(PYTHON) scripts/check_secrets.py
@@ -24,6 +24,12 @@ openapi:
 openapi-check:
 	$(PYTHON) scripts/export_openapi.py --check
 	$(PYTHON) scripts/export_api_catalog.py --check
+
+api-sync:
+	$(PYTHON) scripts/sync_slack_api_contracts.py --sync
+
+api-check:
+	$(PYTHON) scripts/sync_slack_api_contracts.py --check --allow-skip-no-token
 
 context-check:
 	$(PYTHON) scripts/ctx.py lint

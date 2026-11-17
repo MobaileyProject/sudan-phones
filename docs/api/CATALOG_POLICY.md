@@ -36,10 +36,14 @@ phase task. Imported proposals are preserved in
 3. For every endpoint or schema change, run `make openapi`, review the generated
    contract and update the affected domain documentation in the same PR. Run the
    contract drift check and appropriate backend tests.
-4. Reconcile the Slack catalog against the exact reviewed implementation revision;
-   report which revision it describes. Keep branch proposals out of the current
-   delivered catalog until the implementation is merged. Enumerate additions,
-   removals and changes before applying the update and read the result back.
+4. Reconcile the Slack API Contracts List (`F0CHJB5C939`) using
+   `python3 scripts/sync_slack_api_contracts.py --sync` (or `make api-sync`).
+   For every implemented API: update existing rows or create missing rows, document
+   the stage/phase and purpose, provide full usage instructions and curl examples,
+   record the input formula (method, path, headers, query/body validation rules) and
+   output formula (status codes, response JSON envelope, error envelope, headers),
+   and set the status from Proposed to `Backend ready`. Verify synchronization with
+   `make api-check`.
 5. Verify that every implemented application operation has a catalog entry and
    every current entry has an implemented operation. Check complete pagination
    when reading Slack Lists. Preserve the delivery roadmap and phase task Lists.

@@ -88,6 +88,12 @@ Endpoint/schema changes require `make openapi`, reviewed committed docs/openapi.
 and docs/api/<domain>.md updates. `make openapi` also generates the exact implemented
 catalog; CI `make openapi-check` rejects schema/catalog drift. Unimplemented
 proposals belong in docs/plans, not the current catalog. Never fabricate an API.
+Whenever an API endpoint is implemented or modified in backend, synchronize the
+live Slack API Contracts List (`F0CHJB5C939`): update existing rows or add missing
+rows with what the API does, stage/phase, how to use it, input formula (method, path,
+headers, query/body schema), output formula (status codes, JSON envelopes, headers),
+and transition status from Proposed to `Backend ready`. Run `python3 scripts/sync_slack_api_contracts.py --sync`
+(verified via `make api-check`).
 
 ## Validation, completion, and handoff — every task
 
