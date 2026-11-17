@@ -43,9 +43,9 @@ COLUMNS = {
     "source": "Col0CJ1K2NE9F",     # Text: Source key
 }
 
-# Canonical specifications of implemented backend APIs
-IMPLEMENTED_APIS = [
-    {
+# Canonical specifications of implemented backend APIs (with detailed overrides)
+KNOWN_SPECS = {
+    "API-019": {
         "api_id": "API-019",
         "method": "GET",
         "path": "/api/v1/config",
@@ -119,7 +119,7 @@ IMPLEMENTED_APIS = [
         "gate": "Implemented in PR #19 (BE-02 / Step 2). OpenAPI: docs/openapi.json #/paths/~1api~1v1~1config. Tests: backend/core/tests/test_bootstrap.py",
         "source": "souq-blueprint:v1:api:438189941e90976a",
     },
-    {
+    "API-021": {
         "api_id": "API-021",
         "method": "GET",
         "path": "/api/v1/i18n/bundle",
@@ -184,7 +184,7 @@ IMPLEMENTED_APIS = [
         "gate": "Implemented in PR #19 (BE-02 / Step 2). OpenAPI: docs/openapi.json #/paths/~1api~1v1~1i18n~1bundle. Tests: backend/core/tests/test_bootstrap.py",
         "source": "souq-blueprint:v1:api:1054e739dce05b5d",
     },
-    {
+    "API-061": {
         "api_id": "API-061",
         "method": "GET",
         "path": "/api/v1/health",
@@ -233,7 +233,140 @@ IMPLEMENTED_APIS = [
         "gate": "Implemented in PR #19 (BE-02 / Step 2). OpenAPI: docs/openapi.json #/paths/~1api~1v1~1health. Tests: backend/core/tests/test_bootstrap.py",
         "source": "souq-blueprint:v1:api:API-061",
     },
-]
+}
+
+IMPLEMENTED_APIS = list(KNOWN_SPECS.values())
+
+
+def build_spec_from_openapi(api_id, method, path, phase, openapi, blueprint_manifest=None):
+    """Automatically synthesize a 10-field API contract spec directly from OpenAPI."""
+    op = openapi.get("paths", {}).get(path, {}).get(method.lower(), {})
+    summary = op.get("summary") or op.get("description") or f"{method.upper()} {path} operation"
+    tags = op.get("tags", [])
+    tag_name = tags[0] if tags else "API"
+
+    blueprint_api = {}
+    if blueprint_manifest and "apis" in blueprint_manifest:
+        for b_api in blueprint_manifest["apis"]:
+            if b_api.get("key") == api_id or (b_api.get("method") == method.upper() and b_api.get("path") == path):
+                blueprint_api = b_api
+                break
+
+    screens = ", ".join(blueprint_api.get("screen_consumers", [])) or "All clients"
+    auth_req = "Public — no authentication required." if op.get("security") is None else "Authenticated endpoint."
+
+    inputs_lines = [
+        "Input formula:",
+        f"Method: {method.upper()}",
+        f"Canonical path: {path} (no trailing slash)",
+    ]
+    headers, queries = [], []
+    for param in op.get("parameters", []):
+        p_in = param.get("in")
+        p_name = param.get("name")
+        p_type = param.get("schema", {}).get("type", "string")
+        p_enum = param.get("schema", {}).get("enum")
+        enum_str = f", enum: {p_enum}" if p_enum else ""
+        req_str = "required" if param.get("required") else "optional"
+        if p_in == "header":
+            headers.append(f"  - {p_name}: {p_type} ({req_str}{enum_str})")
+        elif p_in == "query":
+            queries.append(f"  - {p_name}: {p_type} ({req_str}{enum_str})")
+
+    if headers:
+        inputs_lines.append("Headers:")
+        inputs_lines.extend(headers)
+    else:
+        inputs_lines.append("Headers: None required")
+
+    if queries:
+        inputs_lines.append("Query parameters:")
+        inputs_lines.extend(queries)
+    else:
+        inputs_lines.append("Query parameters: None")
+
+    if "requestBody" in op:
+        content = op["requestBody"].get("content", {}).get("application/json", {})
+        schema_ref = content.get("schema", {}).get("$ref", "")
+        inputs_lines.append(f"Request body: JSON ({schema_ref.split('/')[-1] if schema_ref else 'object'})")
+    else:
+        inputs_lines.append("Request body: None")
+
+    resp_lines = ["Output formula:"]
+    for code, resp in op.get("responses", {}).items():
+        desc = resp.get("description", "")
+        content = resp.get("content", {}).get("application/json", {})
+        schema_ref = content.get("schema", {}).get("$ref", "")
+        ref_name = f" ({schema_ref.split('/')[-1]})" if schema_ref else ""
+        resp_lines.append(f"Status {code}: {desc or 'Response'}{ref_name}")
+
+    resp_headers = []
+    for code, resp in op.get("responses", {}).items():
+        for h_name in resp.get("headers", {}):
+            if f"  - {h_name}" not in resp_headers:
+                resp_headers.append(f"  - {h_name}")
+    if resp_headers:
+        resp_lines.append("Response headers:")
+        resp_lines.extend(resp_headers)
+
+    how_to_use = (
+        f"How to use:\n"
+        f"Call {method.upper()} {path} for {tag_name} operations.\n"
+        f"Curl:\n"
+        f"curl -i -X {method.upper()} 'http://127.0.0.1:8000{path}'"
+    )
+
+    stage_str = f"Step {phase} ({phase})" if phase else "Backend"
+
+    return {
+        "api_id": api_id,
+        "method": method.upper(),
+        "path": path,
+        "title": f"{api_id}: {method.upper()} {path}",
+        "stage": stage_str,
+        "domain": f"{stage_str} · {tag_name.capitalize()}",
+        "owner": "U0CHXBNE6F4",
+        "frontend": "Flutter Customer App, React Portal",
+        "screens": screens,
+        "status": "Backend ready",
+        "scope": f"{stage_str} · {summary}",
+        "inputs": "\n".join(inputs_lines),
+        "response": "\n".join(resp_lines),
+        "auth": auth_req,
+        "how_to_use": how_to_use,
+        "gate": f"Implemented in backend. OpenAPI: docs/openapi.json #/paths/~1{path.replace('/', '~1')}",
+        "source": blueprint_api.get("source") or f"souq-blueprint:v1:api:{api_id}",
+    }
+
+
+def get_implemented_apis(root=ROOT):
+    """Retrieve all implemented API specs, synthesizing any new endpoints from OpenAPI."""
+    ops_file = root / "docs/api/operations.json"
+    if not ops_file.is_file():
+        return list(KNOWN_SPECS.values())
+
+    operations = json.loads(ops_file.read_text(encoding="utf-8"))
+    openapi_file = root / "docs/openapi.json"
+    openapi = json.loads(openapi_file.read_text(encoding="utf-8")) if openapi_file.is_file() else {}
+
+    manifest_file = root / "docs/plans/slack-plan-manifest.json"
+    manifest = json.loads(manifest_file.read_text(encoding="utf-8")) if manifest_file.is_file() else {}
+
+    specs = []
+    for op in operations:
+        api_id = op["api_id"]
+        if api_id in KNOWN_SPECS:
+            specs.append(KNOWN_SPECS[api_id])
+        else:
+            specs.append(build_spec_from_openapi(
+                api_id=api_id,
+                method=op["method"],
+                path=op["path"],
+                phase=op.get("phase", ""),
+                openapi=openapi,
+                blueprint_manifest=manifest,
+            ))
+    return specs
 
 
 def load_worker_config(root=ROOT):
@@ -282,8 +415,10 @@ def encode_item_fields(spec, row_id=None):
     return fields
 
 
-def sync_contracts(slack, list_id=LIST_ID, dry_run=False):
+def sync_contracts(slack, list_id=LIST_ID, dry_run=False, specs=None):
     """Synchronize implemented API contracts to Slack List F0CHJB5C939."""
+    if specs is None:
+        specs = get_implemented_apis()
     rows = slack.rows(list_id)
     title_to_row = {}
     id_to_row = {}
@@ -300,7 +435,7 @@ def sync_contracts(slack, list_id=LIST_ID, dry_run=False):
 
     summary = {"updated": [], "created": [], "unchanged": []}
 
-    for spec in IMPLEMENTED_APIS:
+    for spec in specs:
         api_id = spec["api_id"]
         title = spec["title"]
         existing_row = id_to_row.get(api_id) or title_to_row.get(title)
@@ -323,8 +458,10 @@ def sync_contracts(slack, list_id=LIST_ID, dry_run=False):
     return summary
 
 
-def check_contracts(slack, list_id=LIST_ID):
+def check_contracts(slack, list_id=LIST_ID, specs=None):
     """Verify that all implemented API contracts in docs/api/operations.json are synced to Slack."""
+    if specs is None:
+        specs = get_implemented_apis()
     rows = slack.rows(list_id)
     id_to_row = {}
 
@@ -338,7 +475,7 @@ def check_contracts(slack, list_id=LIST_ID):
     missing = []
     not_ready = []
 
-    for spec in IMPLEMENTED_APIS:
+    for spec in specs:
         api_id = spec["api_id"]
         if api_id not in id_to_row:
             missing.append(api_id)

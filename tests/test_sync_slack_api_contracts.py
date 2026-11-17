@@ -6,8 +6,10 @@ from unittest.mock import MagicMock
 from scripts.sync_slack_api_contracts import (
     COLUMNS,
     IMPLEMENTED_APIS,
+    build_spec_from_openapi,
     check_contracts,
     encode_item_fields,
+    get_implemented_apis,
     sync_contracts,
 )
 
@@ -95,6 +97,48 @@ class TestSyncSlackApiContracts(unittest.TestCase):
         # The other 2 APIs should be created
         self.assertEqual(len(summary["created"]), len(IMPLEMENTED_APIS) - 1)
         self.assertTrue(slack.call.called)
+
+    def test_build_spec_from_openapi(self):
+        openapi = {
+            "paths": {
+                "/api/v1/auth/register": {
+                    "post": {
+                        "summary": "Register new account",
+                        "tags": ["auth"],
+                        "parameters": [
+                            {"name": "X-Client", "in": "header", "schema": {"type": "string"}},
+                            {"name": "channel", "in": "query", "schema": {"type": "string", "enum": ["web", "mobile"]}},
+                        ],
+                        "requestBody": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/RegisterRequest"}
+                                }
+                            }
+                        },
+                        "responses": {
+                            "201": {"description": "Created"},
+                            "400": {"description": "Bad Request"},
+                        },
+                    }
+                }
+            }
+        }
+        spec = build_spec_from_openapi("API-001", "POST", "/api/v1/auth/register", "P3", openapi)
+        self.assertEqual(spec["api_id"], "API-001")
+        self.assertEqual(spec["title"], "API-001: POST /api/v1/auth/register")
+        self.assertEqual(spec["status"], "Backend ready")
+        self.assertIn("X-Client", spec["inputs"])
+        self.assertIn("channel", spec["inputs"])
+        self.assertIn("RegisterRequest", spec["inputs"])
+        self.assertIn("Status 201: Created", spec["response"])
+        self.assertIn("curl -i -X POST", spec["how_to_use"])
+
+    def test_get_implemented_apis_returns_specs(self):
+        apis = get_implemented_apis()
+        self.assertGreaterEqual(len(apis), 3)
+        ids = {a["api_id"] for a in apis}
+        self.assertTrue({"API-019", "API-021", "API-061"}.issubset(ids))
 
 
 if __name__ == "__main__":
