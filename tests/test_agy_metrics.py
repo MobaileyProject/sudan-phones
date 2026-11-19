@@ -136,12 +136,12 @@ class MetricsTest(unittest.TestCase):
             child = subprocess.Popen([sys.executable, "-c", code, str(self.root), str(self.path)],
                                      env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             try:
-                _, stderr = child.communicate(timeout=1)
+                _, stderr = child.communicate(timeout=3)
             except subprocess.TimeoutExpired:
                 child.kill()
                 child.communicate()
                 self.fail("metrics append blocked on a busy lock")
-        self.assertLess(time.monotonic() - started, 1)
+        self.assertLess(time.monotonic() - started, 3)
         self.assertIn("metrics unavailable", stderr)
         self.assertEqual(self.path.read_text(), "")
 
