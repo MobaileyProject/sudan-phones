@@ -4,6 +4,7 @@ from core.common.domain import require
 from core.listings.services import listing_data
 from core.media.storage import storage
 from core.catalog.models import Brand
+from core.common.public_cache import cached
 from .queries import visible_listings, visible_stores, filter_terms
 
 
@@ -116,12 +117,24 @@ def featured(query):
     ]
 
 
+def home_section(name, ordering):
+    def candidates():
+        return list(visible_listings().order_by(ordering, "pk").values_list("pk", flat=True)[:8])
+
+    ids = cached("home:" + name, candidates)
+    # Cached IDs are ranking hints only. Never serve cached eligibility or fields.
+    rows = list(visible_listings().filter(pk__in=ids).order_by(ordering, "pk"))
+    if len(rows) < len(ids):
+        # Refill immediately when an item disappears, without waiting for the TTL.
+        rows = list(visible_listings().order_by(ordering, "pk")[:8])
+    return [public_listing(listing) for listing in rows]
+
+
 def home():
-    latest = visible_listings().order_by("-created_at", "pk")[:8]
-    deals = visible_listings().order_by("price", "pk")[:8]
     return {
-        "brands": list(Brand.objects.order_by("name").values("id", "name")[:20]),
-        "latest": [public_listing(l) for l in latest],
-        "top_deals": [public_listing(l) for l in deals],
+        "brands": cached("home:brands", lambda: list(
+            Brand.objects.order_by("name").values("id", "name")[:20])),
+        "latest": home_section("latest", "-created_at"),
+        "top_deals": home_section("deals", "price"),
         "stores": featured({"limit": 8, "offset": 0}),
     }

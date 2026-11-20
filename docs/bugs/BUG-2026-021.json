@@ -1,0 +1,17 @@
+{
+  "id": "BUG-2026-021",
+  "category": "performance",
+  "severity": "low",
+  "status": "resolved",
+  "affected_files": [
+    "backend/core/media/storage.py"
+  ],
+  "affected_endpoints": [
+    "GET /api/v1/listings",
+    "GET /api/v1/home",
+    "GET /api/v1/listings/{id}"
+  ],
+  "root_cause": "R2Storage constructor required upload credentials and built an S3 client even for public CDN URL serialization.",
+  "fix_summary": "Initialize authenticated S3 client lazily; public URL construction validates public prefix and CDN domain only.",
+  "regression_test": "backend/core/tests/test_public_performance.py::PublicPerformanceTests.test_public_cdn_urls_work_without_s3_credentials_or_client_construction"
+}

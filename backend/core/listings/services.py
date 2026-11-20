@@ -34,13 +34,20 @@ FIELDS = (
 )
 
 
+def ordered_media(listing):
+    links = getattr(listing, "_prefetched_objects_cache", {}).get("media_links")
+    if links is None:
+        return list(listing.media_links.select_related("asset").order_by("position"))
+    return sorted(links, key=lambda link: link.position)
+
+
 def listing_data(listing):
     return {
         **{key: getattr(listing, key) for key in FIELDS},
         "currency": "SDG",
         "media_status": [
             {"id": link.asset_id, "kind": link.asset.kind, "status": link.asset.status}
-            for link in listing.media_links.select_related("asset").order_by("position")
+            for link in ordered_media(listing)
         ],
     }
 
