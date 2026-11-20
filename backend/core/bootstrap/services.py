@@ -7,9 +7,9 @@ from django.conf import settings
 
 SUPPORTED_LOCALES = ('ar', 'en')
 _CITIES = (
-    ('port_sudan', 'بورتسودان', 'Port Sudan'),
-    ('khartoum', 'الخرطوم', 'Khartoum'),
-    ('omdurman', 'أم درمان', 'Omdurman'),
+    ('port_sudan', 'بورتسودان', 'Port Sudan', 19.6158, 37.2164, 45),
+    ('khartoum', 'الخرطوم', 'Khartoum', 15.5007, 32.5599, 35),
+    ('omdurman', 'أم درمان', 'Omdurman', 15.6500, 32.4833, 35),
 )
 
 
@@ -35,6 +35,15 @@ def get_public_config(locale: str) -> dict:
         'currency': {'code': 'SDG', 'decimal_places': 2},
         'default_locale': 'ar', 'supported_locales': list(SUPPORTED_LOCALES),
         'locale': locale, 'direction': 'rtl' if locale == 'ar' else 'ltr',
-        'cities': [{'id': city[0], 'name': city[1 if locale == 'ar' else 2]} for city in _CITIES],
+        'cities': [
+            {
+                'id': city[0],
+                'name': city[1 if locale == 'ar' else 2],
+                'lat': city[3],
+                'lon': city[4],
+                'radius_km': city[5],
+            }
+            for city in _CITIES
+        ],
         'features': {'customer_accounts': False, 'payments': False, 'paid_ads': False},
     }

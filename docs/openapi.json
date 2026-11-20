@@ -43,13 +43,28 @@
           "id": {
             "type": "string"
           },
+          "lat": {
+            "format": "double",
+            "type": "number"
+          },
+          "lon": {
+            "format": "double",
+            "type": "number"
+          },
           "name": {
             "type": "string"
+          },
+          "radius_km": {
+            "minimum": 1,
+            "type": "integer"
           }
         },
         "required": [
           "id",
-          "name"
+          "lat",
+          "lon",
+          "name",
+          "radius_km"
         ],
         "type": "object"
       },

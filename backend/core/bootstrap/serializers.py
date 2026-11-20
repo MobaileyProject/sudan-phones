@@ -27,6 +27,9 @@ class CurrencySerializer(serializers.Serializer):
 class CitySerializer(serializers.Serializer):
     id = serializers.CharField()
     name = serializers.CharField()
+    lat = serializers.FloatField()
+    lon = serializers.FloatField()
+    radius_km = serializers.IntegerField(min_value=1)
 
 
 class FeaturesSerializer(serializers.Serializer):
