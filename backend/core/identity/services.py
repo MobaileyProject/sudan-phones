@@ -32,13 +32,14 @@ def session_data(actor):
         if assignment
         else []
     )
+    merchant = actor.is_authenticated and Membership.objects.filter(user=actor).exists()
     role = (
         "guest"
         if not actor.is_authenticated
         else "admin"
         if admin
         else "merchant"
-        if account and account.is_merchant
+        if merchant
         else "buyer"
     )
     return {
@@ -46,7 +47,7 @@ def session_data(actor):
         "role": role,
         "permissions": permissions,
         "user_id": actor.pk if actor.is_authenticated else None,
-        "merchant": bool(account and account.is_merchant),
+        "merchant": merchant,
         "phone_verified": bool(account and account.phone_verified),
         "email_verified": bool(account and account.email_verified),
     }
@@ -58,15 +59,16 @@ def issue_otp(user, purpose, channel):
     recent = OTPChallenge.objects.filter(
         user=user,
         purpose=purpose,
+        channel=channel,
         created_at__gt=timezone.now() - timedelta(seconds=60),
     )
     require(not recent.exists(), "THROTTLED", 429)
     destination = user.email if channel == "email" else user.account.phone
     require(bool(destination), "CONTACT_REQUIRED")
     code = f"{secrets.randbelow(1000000):06d}"
-    OTPChallenge.objects.filter(user=user, purpose=purpose, consumed=False).update(
-        consumed=True
-    )
+    OTPChallenge.objects.filter(
+        user=user, purpose=purpose, channel=channel, consumed=False
+    ).update(consumed=True)
     OTPChallenge.objects.create(
         user=user,
         purpose=purpose,
@@ -104,11 +106,19 @@ def consume_otp(user, purpose, channel, code):
 
 @transaction.atomic
 def register(data, merchant=False):
-    # Unique phone prevents assigning an existing identity to a new store.
+    # An unproved claim never reserves a phone or inherits another claimant's identity.
+    require(
+        not Account.objects.filter(phone=data["phone"], phone_verified=True).exists()
+        and not get_user_model()
+        .objects.filter(username=data["phone"], is_superuser=True)
+        .exists(),
+        "ACCOUNT_UNAVAILABLE",
+        409,
+    )
     try:
         with transaction.atomic():
             user = get_user_model().objects.create_user(
-                username=data["phone"],
+                username="pending-" + secrets.token_hex(16),
                 password=data["password"],
                 first_name=data["name"],
                 email=data.get("email", ""),
@@ -125,7 +135,26 @@ def register(data, merchant=False):
 
 
 def login_user(data):
-    user = authenticate(username=data["phone"], password=data["password"])
+    account = (
+        Account.objects.select_related("user")
+        .filter(phone=data["phone"], phone_verified=True)
+        .first()
+    )
+    founder = (
+        get_user_model()
+        .objects.filter(username=data["phone"], is_superuser=True, is_active=True)
+        .first()
+        if not account
+        else None
+    )
+    username = (
+        account.user.username
+        if account
+        else founder.username
+        if founder
+        else "unknown-" + secrets.token_hex(16)
+    )
+    user = authenticate(username=username, password=data["password"])
     require(user is not None, "INVALID_CREDENTIALS", 401)
     return user
 
@@ -145,7 +174,11 @@ def verify(actor, data):
                 data["channel"] == "whatsapp" and "phone_verified" or "email_verified",
                 True,
             )
-            account.save()
+            try:
+                with transaction.atomic():
+                    account.save()
+            except IntegrityError:
+                raise DomainError("ACCOUNT_UNAVAILABLE", 409) from None
             record(user, "identity.verified", user.pk, channel=data["channel"])
     require(
         valid, "INVALID_OTP"
@@ -153,9 +186,12 @@ def verify(actor, data):
 
 
 def recover(data):
-    user = (
-        get_user_model().objects.filter(username=data["phone"], is_active=True).first()
+    account = (
+        Account.objects.select_related("user")
+        .filter(phone=data["phone"], phone_verified=True, user__is_active=True)
+        .first()
     )
+    user = account.user if account else None
     if "code" not in data:
         if user:
             with transaction.atomic():

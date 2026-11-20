@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0006_auditevent_actor_ip'),
+        ("core", "0006_auditevent_actor_ip"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='verification',
-            name='profile',
+            model_name="verification",
+            name="profile",
             field=models.JSONField(default=dict),
         ),
     ]

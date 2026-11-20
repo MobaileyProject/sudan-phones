@@ -1,0 +1,16 @@
+{
+  "id": "BUG-2026-012",
+  "category": "logic",
+  "severity": "high",
+  "status": "resolved",
+  "affected_files": [
+    "backend/core/media/services.py",
+    "backend/core/media/tasks.py"
+  ],
+  "affected_endpoints": [
+    "POST /api/v1/media/uploads/{id}/complete"
+  ],
+  "root_cause": "The oldest unreadable queued objects remained eligible forever and monopolized every worker batch.",
+  "fix_summary": "Persist bounded attempts, retry timing and leases; terminate expired missing objects and select due work.",
+  "regression_test": "backend/core/tests/test_verification_media.py::VerificationMediaTests.test_missing_expired_uploads_cannot_starve_later_valid_media"
+}

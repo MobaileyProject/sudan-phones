@@ -1,0 +1,18 @@
+{
+  "id": "BUG-2026-019",
+  "category": "auth",
+  "severity": "high",
+  "status": "resolved",
+  "affected_files": [
+    "backend/core/operations/authorization.py",
+    "backend/core/listings/services.py",
+    "backend/core/verification/services.py"
+  ],
+  "affected_endpoints": [
+    "POST /api/v1/admin/listings/{id}/moderate",
+    "POST /api/v1/admin/verifications/{id}/decision"
+  ],
+  "root_cause": "Delegated admin permissions were checked before waiting for a store lock, allowing an operation to commit after its role permission was revoked.",
+  "fix_summary": "Recheck current role assignment after acquiring the store lock and lock role/assignment rows through the administrative mutation.",
+  "regression_test": "backend/core/tests/test_concurrency.py::InventoryConcurrencyTests.test_revoked_admin_permission_cannot_commit_after_store_lock_wait"
+}

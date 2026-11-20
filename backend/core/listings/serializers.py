@@ -99,19 +99,23 @@ class ListingData(serializers.Serializer):
     version = serializers.IntegerField()
 
 
+class MerchantListingData(ListingData):
+    feedback = serializers.CharField(default="")
+
+
 class ListingResponse(serializers.Serializer):
-    data = ListingData()
+    data = MerchantListingData()
 
 
 class ListingListResponse(serializers.Serializer):
-    data = ListingData(many=True)
+    data = MerchantListingData(many=True)
 
 
 from core.operations.serializers import ApprovalData
 
 
 class ModerationData(serializers.Serializer):
-    listing = ListingData()
+    listing = MerchantListingData()
     approval = ApprovalData(allow_null=True)
 
 

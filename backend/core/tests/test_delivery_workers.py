@@ -100,3 +100,24 @@ class DeliveryTests(TestCase):
             )
         self.assertEqual(first.status_code, 401)
         self.assertEqual(second.status_code, 429)
+
+    def test_untrusted_forwarding_headers_do_not_change_throttle_identity(self):
+        from core.identity.views import AuthThrottle
+
+        with patch.object(AuthThrottle, "rate", "1/min"):
+            first = self.client.post(
+                "/api/v1/auth/login",
+                {"phone": "+249912345678", "password": "wrong"},
+                format="json",
+                HTTP_X_FORWARDED_FOR="198.51.100.1",
+                REMOTE_ADDR="192.0.2.1",
+            )
+            second = self.client.post(
+                "/api/v1/auth/login",
+                {"phone": "+249912345678", "password": "wrong"},
+                format="json",
+                HTTP_X_FORWARDED_FOR="198.51.100.2",
+                REMOTE_ADDR="192.0.2.1",
+            )
+        self.assertEqual(first.status_code, 401)
+        self.assertEqual(second.status_code, 429)

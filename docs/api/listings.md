@@ -49,7 +49,10 @@ Foreign/private/reused/failed media IDs are denied. Suspended/rejected merchants
 cannot operate inventory; direct foreign listing IDs return 404 or an earlier 403.
 
 Moderation body: `{"action":"remove","version":1,"reason":"Wrong device"}`.
-Approve clears the live queue; flag retains visibility and marks flagged; remove
+Approve clears the live queue and merchant feedback; flag retains visibility and
+marks flagged. Flag/remove reasons are returned only in merchant/admin feedback;
+guest responses omit them. A merchant amendment to a flagged listing returns it to
+pending review while retaining the correction reason. Remove
 hides immediately; restore requires verified store and ready media. Non-approve
 actions require reason. Moderator cannot act on their own store. Response contains
 `data: {listing,approval}`. suspend_store requests a distinct-founder approval;

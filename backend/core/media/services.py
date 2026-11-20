@@ -7,6 +7,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from PIL import Image, ImageOps
+from botocore.exceptions import ClientError, BotoCoreError
 from core.common.domain import DomainError, require
 from core.stores.services import member_store
 from .models import MediaAsset
@@ -83,12 +84,45 @@ def decoded_image(data, content_type):
         return ImageOps.exif_transpose(image).convert("RGB")
 
 
+@transaction.atomic
+def claim_asset(asset_id):
+    from core.stores.models import Store
+
+    candidate = MediaAsset.objects.filter(pk=asset_id).first()
+    if not candidate:
+        return None
+    Store.objects.select_for_update().get(pk=candidate.store_id)
+    asset = MediaAsset.objects.select_for_update().get(pk=asset_id)
+    now = timezone.now()
+    if asset.status != "queued" or asset.next_attempt_at > now:
+        return None
+    if asset.attempts >= 5:
+        asset.status = "failed"
+        asset.save(update_fields=["status"])
+        return None
+    asset.attempts += 1
+    asset.next_attempt_at = now + timedelta(minutes=6)
+    asset.save(update_fields=["attempts", "next_attempt_at"])
+    return asset
+
+
+@transaction.atomic
+def retry_asset(asset, permanent=False):
+    MediaAsset.objects.filter(
+        pk=asset.pk, status="queued", attempts=asset.attempts
+    ).update(
+        status="failed" if permanent or asset.attempts >= 5 else "queued",
+        next_attempt_at=timezone.now()
+        + timedelta(seconds=30 * 2 ** (asset.attempts - 1)),
+    )
+
+
 def process_asset(asset_id):
-    asset = MediaAsset.objects.filter(pk=asset_id).first()
-    if not asset or asset.status != "queued":
+    asset = claim_asset(asset_id)
+    if not asset:
         return
-    provider = storage()
     try:
+        provider = storage()
         data = provider.read(asset.upload_key, asset.size)
         require(
             len(data) == asset.size
@@ -109,14 +143,27 @@ def process_asset(asset_id):
             image.save(thumbnail, "JPEG", quality=80)
             thumb_key = f"public/{asset.store_id}/{asset.pk}-thumb.jpg"
             provider.write(thumb_key, thumbnail.getvalue(), "image/jpeg")
+    except ClientError as error:
+        missing = error.response.get("Error", {}).get("Code") in [
+            "NoSuchKey",
+            "404",
+            "NotFound",
+        ]
+        retry_asset(asset, permanent=missing and asset.expires_at <= timezone.now())
+        return
+    except (BotoCoreError, TimeoutError, ConnectionError):
+        retry_asset(asset)
+        return
+    except DomainError as error:
+        retry_asset(asset, permanent=error.status < 500)
+        return
     except (
-        DomainError,
         OSError,
         ValueError,
         Image.DecompressionBombError,
         Image.DecompressionBombWarning,
     ):
-        MediaAsset.objects.filter(pk=asset.pk, status="queued").update(status="failed")
+        retry_asset(asset, permanent=True)
         return
     # Store then asset lock order matches listing mutations/publication. Repeat delivery is harmless.
     from core.stores.models import Store
@@ -124,7 +171,7 @@ def process_asset(asset_id):
     with transaction.atomic():
         store = Store.objects.select_for_update().get(pk=asset.store_id)
         locked = MediaAsset.objects.select_for_update().get(pk=asset.pk)
-        if locked.status != "queued":
+        if locked.status != "queued" or locked.attempts != asset.attempts:
             return
         locked.status, locked.processed_key, locked.thumbnail_key = (
             "ready",

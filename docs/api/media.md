@@ -29,8 +29,11 @@ committed work. A manual process_media command runs a bounded batch too.
 The worker checks byte count, SHA-256, actual image format, full decode, frames,
 pixels and truncation. It applies EXIF orientation, copies pixel content into
 metadata-free JPEG, bounds images to 1600x1600 and creates 320x320 thumbnails for
-listings. Malformed images become failed; provider failures remain queued for
-retry. API-034 exposes media_status; API-038 can replace failed photos with fresh
+listings. Malformed images become failed. Transient provider failures back off from 30
+seconds and terminate after five attempts; expired missing objects fail terminally.
+Only due work is polled, and a six-minute durable lease prevents duplicate worker
+claims. A crashed worker's lease expires, preserving recovery without monopolizing
+later jobs. Attempt generations prevent stale workers from replacing newer results. API-034 exposes media_status; API-038 can replace failed photos with fresh
 same-store uploads. Required images and verified store eligibility are rechecked
 before automatic publication. Removed listings never republish due to late jobs.
 

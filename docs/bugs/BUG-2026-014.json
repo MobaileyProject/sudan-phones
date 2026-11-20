@@ -1,0 +1,17 @@
+{
+  "id": "BUG-2026-014",
+  "category": "auth",
+  "severity": "high",
+  "status": "resolved",
+  "affected_files": [
+    "backend/core/identity/services.py",
+    "backend/core/identity/models.py"
+  ],
+  "affected_endpoints": [
+    "POST /api/v1/merchant/auth/register",
+    "POST /api/v1/auth/login"
+  ],
+  "root_cause": "Registration uniquely reserved an unproved phone while recovery required prior phone verification, excluding the true phone holder.",
+  "fix_summary": "Keep unproved claims provisional and uniquely bind/login a phone only after WhatsApp possession proof; keep email proof separate.",
+  "regression_test": "backend/core/tests/test_identity_stores.py::IdentityStoreTests.test_unverified_phone_claim_cannot_reserve_another_persons_identity"
+}

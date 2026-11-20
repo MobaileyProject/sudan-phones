@@ -58,6 +58,7 @@ Configure these values privately; never put credentials in commands, PR text or 
 | Email OTP | EMAIL_HOST, EMAIL_PORT (587 default), EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, DEFAULT_FROM_EMAIL; TLS enabled |
 | R2 | R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_PRIVATE_BUCKET, R2_PUBLIC_BUCKET, R2_PUBLIC_DOMAIN |
 | Workers/cache | CELERY_BROKER_URL (Redis), REDIS_CACHE_URL for shared throttling |
+| Trusted ingress | TRUSTED_PROXY_COUNT (0 default); only configure behind exclusively trusted proxies |
 | Contact links | PUBLIC_LISTING_BASE_URL, the real client listing URL prefix |
 
 WhatsApp requires a Meta-approved authentication template with code body and
@@ -87,10 +88,17 @@ a broker restart cannot discard those rows. Set container memory/CPU limits in
 addition to image bounds and task time limits. Manual bounded recovery command,
 from repository root: `.venv/bin/python backend/manage.py process_media`.
 
-Migrations core.0001..0007 add new domain tables, append-only audit triggers and a
-nullable administrative actor IP column and submitted verification profile snapshots. Apply before starting new API/worker code.
+Migrations core.0001..0011 add new domain tables, append-only audit triggers and a
+nullable administrative actor IP column and submitted verification profile snapshots.
+Review fixes add conditional verified-phone uniqueness, merchant-only moderation
+feedback, bounded media retry scheduling, and pg_trgm brand/model search indexes.
+The migration account needs CREATE privilege to install pg_trgm, or an operator
+must preinstall the extension. PostgreSQL-specific indexes are skipped only for
+the documented development SQLite fallback. Apply before starting new API/worker code.
 Existing Django auth/session tables are retained; no destructive backfill runs.
-Core rollback drops newly introduced data and is not a production recovery strategy
+Restoring the old globally unique phone constraint after provisional duplicate
+claims exist is not a safe automatic rollback; use forward fixes or a reviewed
+backup restore rather than deleting identities. Core rollback drops newly introduced data and is not a production recovery strategy
 once onboarding starts. Prefer forward fixes/backups. Tests use disposable PG16
 and do not manipulate an existing deployment.
 

@@ -1,17 +1,19 @@
 from django.db import transaction
-from django.db.models import Q, F
+from django.db.models import F
 from core.common.domain import require
 from core.listings.services import listing_data
 from core.media.storage import storage
 from core.catalog.models import Brand
-from .queries import visible_listings, visible_stores
+from .queries import visible_listings, visible_stores, filter_terms
 
 
 def public_listing(listing):
     provider = storage()
     variant = listing.variant
+    public_data = listing_data(listing)
+    public_data.pop("feedback", None)
     return {
-        **listing_data(listing),
+        **public_data,
         "brand": variant.model.brand.name,
         "model": variant.model.name,
         "storage_gb": variant.storage_gb,
@@ -67,10 +69,7 @@ def search(query, store_id=None, variant_id=None, related_id=None, count_search=
         if key in query:
             listings = listings.filter(**{field: query[key]})
     if "q" in query:
-        listings = listings.filter(
-            Q(variant__model__name__icontains=query["q"])
-            | Q(variant__model__brand__name__icontains=query["q"])
-        )
+        listings = filter_terms(listings, query["q"])
     ordering = {"latest": "-created_at", "price_asc": "price", "price_desc": "-price"}[
         query.get("sort", "latest")
     ]

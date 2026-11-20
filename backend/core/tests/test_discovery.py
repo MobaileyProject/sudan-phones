@@ -93,3 +93,17 @@ class DiscoveryTests(InventoryFixture, TestCase):
         response = self.guest.get("/api/v1/listings", {"q": "no such phone"})
         self.assertEqual(response.data["data"], [])
         self.assertEqual(response.data["meta"]["count"], 0)
+
+    def test_search_matches_combined_brand_model_terms_in_any_order(self):
+        for query in ["Apple iPhone 13", "13 Apple iPhone", "apple iph 13"]:
+            response = self.guest.get(
+                "/api/v1/listings",
+                {"q": query, "condition": "used", "city": "khartoum"},
+            )
+            self.assertEqual(response.status_code, 200, response.content)
+            self.assertEqual(response.data["meta"]["count"], 1, query)
+            self.assertEqual(response.data["data"][0]["id"], self.listing["id"])
+        self.assertEqual(
+            self.guest.get("/api/v1/listings", {"q": "Apple nonexistent"}).data["data"],
+            [],
+        )

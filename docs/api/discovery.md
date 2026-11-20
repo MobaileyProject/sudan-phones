@@ -19,7 +19,7 @@ listings yield 404 or are absent from lists. Public store profiles also require
 verified active stores. Private evidence keys/URLs, staff and reviewer fields are
 not public. Public media points only to sanitized listing derivatives.
 
-Search parameters: q (model/brand substring, <=120 characters), brand_id, model_id,
+Search parameters: q (all whitespace-separated terms across brand/model, any order, <=120 characters), brand_id, model_id,
 condition=new/used, city=port_sudan/khartoum/omdurman, min_price/max_price SDG decimals,
 storage_gb, sort=latest/price_asc/price_desc, limit=1..100 (default 20), offset=0..10000
 (default 0). Inverted price ranges, repeated/unknown keys, invalid sort/city/limits
@@ -37,7 +37,11 @@ aggregate listing views. HEAD requests do not increment. These are request count
 not unique people. No guest identity is stored. APIs are no-store through Step 6,
 so every request rechecks eligibility; heavy cache work is deferred to Step 7.
 Indexed status/condition/price, store/status and variant/status paths support
-filtering. Production <500ms and high-volume query plans need staging dataset
+filtering. PostgreSQL pg_trgm GIN indexes on uppercased brand/model names support
+partial-word searches, so "Apple iPhone 13", "13 Apple iPhone" and "apple iph 13"
+match the same device. The extension needs CREATE privilege during migration, or
+an operator may install it beforehand. A vendor-aware migration skips these
+PostgreSQL-only indexes in the lightweight SQLite fallback. Production <500ms and high-volume query plans need staging dataset
 benchmarks; local functional tests alone do not certify that acceptance target.
 
 Validation: core.tests.test_discovery and operations metric checks.

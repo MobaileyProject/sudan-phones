@@ -273,6 +273,9 @@ def build_spec_from_openapi(api_id, method, path, phase, openapi, blueprint_mani
     public = not security or {} in security
     auth_req = "Public — no authentication required." if public else "Authenticated session; scoped domain authorization applies."
 
+    if op.get('x-authorization'):
+        auth_req += ' Authorization: '+op['x-authorization']
+
     inputs_lines = [
         "Input formula:",
         f"Method: {method.upper()}",

@@ -29,6 +29,7 @@ FIELDS = (
     "has_original_box",
     "status",
     "moderation",
+    "feedback",
     "version",
 )
 
@@ -280,6 +281,8 @@ def update_listing(actor, listing_id, data, key, operation):
     for name, value in data.items():
         if name not in ["version", "media"]:
             setattr(listing, name, value)
+    if listing.moderation == "flagged":
+        listing.moderation = "pending"
     listing.version += 1
     listing.save()
     publish_ready(store)
@@ -323,6 +326,7 @@ def moderate(actor, listing_id, data, actor_ip=None):
     target = Listing.objects.filter(pk=listing_id).first()
     require(target is not None, "NOT_FOUND", 404)
     store = Store.objects.select_for_update().get(pk=target.store_id)
+    require_admin(actor, "moderate_listings", lock=True)
     listing = Listing.objects.select_for_update().get(pk=listing_id)
     require(store.owner_id != actor.pk, "SELF_REVIEW_FORBIDDEN", 403)
     require(listing.version == data["version"], "STALE_VERSION", 409)
@@ -349,6 +353,7 @@ def moderate(actor, listing_id, data, actor_ip=None):
         listing.moderation = "flagged"
     else:
         require(False, "INVALID_ACTION")
+    listing.feedback = data["reason"] if action in ["flag", "remove"] else ""
     listing.version += 1
     listing.save()
     record(

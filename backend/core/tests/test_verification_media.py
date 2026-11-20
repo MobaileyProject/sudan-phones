@@ -220,3 +220,122 @@ class VerificationMediaTests(TestCase):
         )
         event = AuditEvent.objects.get(action="verification.decided")
         self.assertEqual(getattr(event, "actor_ip", None), "192.0.2.10")
+
+    def test_missing_expired_uploads_cannot_starve_later_valid_media(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from core.models import MediaAsset
+        from core.media.tasks import process_pending
+
+        content = photo()
+        for _ in range(50):
+            MediaAsset.objects.create(
+                store=self.store,
+                purpose="verification",
+                kind="id_front",
+                status="queued",
+                size=len(content),
+                content_type="image/jpeg",
+                sha256=hashlib.sha256(content).hexdigest(),
+                upload_key=str(__import__("uuid").uuid4()),
+                expires_at=timezone.now() - timedelta(days=2),
+            )
+        valid = MediaAsset.objects.create(
+            store=self.store,
+            purpose="verification",
+            kind="id_back",
+            status="queued",
+            size=len(content),
+            content_type="image/jpeg",
+            sha256=hashlib.sha256(content).hexdigest(),
+            upload_key="later-valid",
+            expires_at=timezone.now() + timedelta(minutes=15),
+        )
+        MemoryStorage.objects[valid.upload_key] = content
+        with override_settings(
+            MEDIA_STORAGE_BACKEND="core.tests.test_verification_media.MissingObjectStorage"
+        ):
+            process_pending()
+            process_pending()
+        valid.refresh_from_db()
+        self.assertEqual(valid.status, "ready")
+        self.assertEqual(MediaAsset.objects.filter(status="failed").count(), 50)
+
+    def test_delegated_verifier_cannot_download_identity_documents(self):
+        from core.models import AdminRole, RoleAssignment
+        from core.verification.services import documents
+        from core.common.domain import DomainError
+
+        assets = [self.upload(kind) for kind in ["id_front", "id_back", "signboard"]]
+        response = self.client.post(
+            "/api/v1/stores/me/verification/submit",
+            {"documents": [str(asset.pk) for asset in assets]},
+            format="json",
+        )
+        application_id = response.data["data"]["id"]
+        delegate = get_user_model().objects.create_user("delegated-verifier")
+        role = AdminRole.objects.create(name="Verifier", permissions=["verify_stores"])
+        RoleAssignment.objects.create(user=delegate, role=role)
+        self.client.force_authenticate(delegate)
+        self.assertEqual(
+            self.client.get("/api/v1/admin/verifications").status_code, 200
+        )
+        self.assertEqual(
+            self.client.get(
+                f"/api/v1/admin/verifications/{application_id}/documents"
+            ).status_code,
+            403,
+        )
+        with self.assertRaises(DomainError) as denied:
+            documents(delegate, application_id)
+        self.assertEqual(denied.exception.status, 403)
+
+    def test_transient_storage_retries_back_off_and_end_after_five_attempts(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from core.models import MediaAsset
+        from core.media.tasks import process_pending
+
+        asset = MediaAsset.objects.create(
+            store=self.store,
+            purpose="verification",
+            kind="id_front",
+            status="queued",
+            size=10,
+            content_type="image/jpeg",
+            sha256="a" * 64,
+            upload_key="transient",
+            expires_at=timezone.now() + timedelta(minutes=15),
+        )
+        with override_settings(
+            MEDIA_STORAGE_BACKEND="core.tests.test_verification_media.UnavailableStorage"
+        ):
+            process_pending()
+            process_pending()
+            asset.refresh_from_db()
+            self.assertEqual(asset.attempts, 1)
+            self.assertEqual(asset.status, "queued")
+            for _ in range(4):
+                MediaAsset.objects.filter(pk=asset.pk).update(
+                    next_attempt_at=timezone.now() - timedelta(seconds=1)
+                )
+                process_pending()
+        asset.refresh_from_db()
+        self.assertEqual(asset.attempts, 5)
+        self.assertEqual(asset.status, "failed")
+
+
+class MissingObjectStorage(MemoryStorage):
+    def read(self, key, limit):
+        from botocore.exceptions import ClientError
+
+        if key not in self.objects:
+            raise ClientError({"Error": {"Code": "NoSuchKey"}}, "GetObject")
+        return super().read(key, limit)
+
+
+class UnavailableStorage(MemoryStorage):
+    def read(self, key, limit):
+        from botocore.exceptions import EndpointConnectionError
+
+        raise EndpointConnectionError(endpoint_url="https://storage.invalid")

@@ -165,3 +165,107 @@ class IdentityStoreTests(TestCase):
         self.assertEqual(response.data["data"]["permissions"], [])
         self.assertEqual(response["Cache-Control"], "no-store")
         self.assertNotIn("email", response.data["data"])
+
+    def test_unverified_phone_claim_cannot_reserve_another_persons_identity(self):
+        attacker = self.client
+        first = attacker.post(
+            "/api/v1/merchant/auth/register",
+            {**self.payload, "email": "unrelated@example.com", "channel": "email"},
+            format="json",
+        )
+        self.assertEqual(first.status_code, 201, first.content)
+        attacker_code = sent[-1][1]
+        self.assertEqual(
+            attacker.post(
+                "/api/v1/merchant/auth/verify",
+                {"channel": "email", "code": attacker_code},
+                format="json",
+            ).status_code,
+            200,
+        )
+        actual_holder = APIClient()
+        actual_data = {
+            **self.payload,
+            "password": "Actual-Holder-Pass42",
+            "name": "Actual holder",
+        }
+        second = actual_holder.post(
+            "/api/v1/merchant/auth/register", actual_data, format="json"
+        )
+        self.assertEqual(second.status_code, 201, second.content)
+        self.assertNotEqual(
+            first.data["data"]["user_id"], second.data["data"]["user_id"]
+        )
+        self.assertEqual(
+            actual_holder.post(
+                "/api/v1/merchant/auth/verify", {"code": sent[-1][1]}, format="json"
+            ).status_code,
+            200,
+        )
+        guest = APIClient()
+        self.assertEqual(
+            guest.post("/api/v1/auth/login", self.payload, format="json").status_code,
+            401,
+        )
+        self.assertEqual(
+            guest.post("/api/v1/auth/login", actual_data, format="json").status_code,
+            200,
+        )
+        verified_id = guest.get("/api/v1/auth/session").data["data"]["user_id"]
+        self.assertEqual(verified_id, second.data["data"]["user_id"])
+        from core.models import Account
+
+        holder = Account.objects.get(user_id=verified_id)
+        self.assertTrue(holder.phone_verified)
+        self.assertFalse(holder.email_verified)
+        self.assertEqual(holder.user.email, "")
+
+    def test_staff_bootstrap_follows_current_membership(self):
+        self.verify()
+        staff = get_user_model().objects.create_user("staff-bootstrap")
+        staff_client = APIClient()
+        staff_client.force_authenticate(staff)
+        before = staff_client.get("/api/v1/auth/session").data["data"]
+        self.assertEqual(before["role"], "buyer")
+        added = self.client.post(
+            "/api/v1/stores/me/staff", {"user_id": staff.pk}, format="json"
+        )
+        after = staff_client.get("/api/v1/auth/session").data["data"]
+        self.assertEqual(after["role"], "merchant")
+        self.assertTrue(after["merchant"])
+        self.client.delete(f"/api/v1/stores/me/staff/{added.data['data']['id']}")
+        removed = staff_client.get("/api/v1/auth/session").data["data"]
+        self.assertEqual(removed["role"], "buyer")
+        self.assertFalse(removed["merchant"])
+
+    def test_password_recovery_invalidates_both_existing_cookie_jars(self):
+        self.verify()
+        other = APIClient()
+        self.assertEqual(
+            other.post("/api/v1/auth/login", self.payload, format="json").status_code,
+            200,
+        )
+        recovery = APIClient()
+        self.assertEqual(
+            recovery.post(
+                "/api/v1/auth/recover", {"phone": self.payload["phone"]}, format="json"
+            ).status_code,
+            200,
+        )
+        code = sent[-1][1]
+        self.assertEqual(
+            recovery.post(
+                "/api/v1/auth/recover",
+                {
+                    "phone": self.payload["phone"],
+                    "code": code,
+                    "password": "Recovered-Password42",
+                },
+                format="json",
+            ).status_code,
+            200,
+        )
+        for cookie_jar in [self.client, other]:
+            response = cookie_jar.get("/api/v1/auth/session")
+            self.assertEqual(response.status_code, 200, response.content)
+            self.assertFalse(response.data["data"]["authenticated"])
