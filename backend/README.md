@@ -36,14 +36,72 @@ Set DJANGO_DEBUG=False and DJANGO_ALLOWED_HOSTS explicitly for a hosted environm
 this PR does not deploy a production service. MINIMUM_APP_VERSION controls the
 public config minimum client version (default 1.0.0).
 
-R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET_NAME and
-R2_PUBLIC_DOMAIN are existing configuration placeholders. No R2 client, upload
-pipeline or live bucket connectivity is claimed in P2. Redis/Celery processing and
-listing/verification models arrive in their scoped phases. No new migration is
-needed for read-only config/localization.
+Backend through Step 6 implements the merchant verification, catalog, inventory,
+public discovery and operations domains. See
+[acceptance and coverage](../docs/plans/BACKEND_THROUGH_STEP6_ACCEPTANCE.md) and
+[API catalog](../docs/api/CATALOG.md). No frontend changes or full joint gates are
+claimed by backend tests.
 
-Code is split by domain: `core/bootstrap/services.py` owns public metadata and
-translation resources; serializers define the boundary; views handle HTTP;
-`core/errors.py` and middleware implement shared conventions. Existing model/domain
-transaction helpers remain available for later persistent features. See
-[API contracts](../docs/api/bootstrap.md) and [P2 acceptance](../docs/plans/P2_ACCEPTANCE.md).
+Authentication uses Django server-side sessions and CSRF. Start with
+GET /api/v1/auth/session, preserve cookies and send X-CSRFToken on unsafe requests;
+login/registration rotate the CSRF token. Founder accounts are provisioned with
+`backend/manage.py createsuperuser` (use a normalized phone as username for API
+login). A staff flag alone does not grant marketplace privileges. Catalog brands,
+models/specifications and variants are maintained in Django admin by authorized
+founders; no fabricated production device dataset is bundled.
+
+Configure these values privately; never put credentials in commands, PR text or chat:
+
+| Purpose | Configuration |
+| --- | --- |
+| WhatsApp OTP | WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_API_VERSION, WHATSAPP_OTP_TEMPLATE, WHATSAPP_TEMPLATE_LANGUAGE (ar default) |
+| Email OTP | EMAIL_HOST, EMAIL_PORT (587 default), EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, DEFAULT_FROM_EMAIL; TLS enabled |
+| R2 | R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_PRIVATE_BUCKET, R2_PUBLIC_BUCKET, R2_PUBLIC_DOMAIN |
+| Workers/cache | CELERY_BROKER_URL (Redis), REDIS_CACHE_URL for shared throttling |
+| Contact links | PUBLIC_LISTING_BASE_URL, the real client listing URL prefix |
+
+WhatsApp requires a Meta-approved authentication template with code body and
+copy-code URL button, and an operator-selected supported Graph API version. Email
+uses SMTP; no console OTP backend or SMS is enabled. Account registration fails
+closed if its provider fails. Email and phone verifications are independent.
+OTP_DELIVERY_BACKEND is an explicit adapter hook for integration/test environments;
+tests never deliver real customer messages.
+
+Use separate private and public R2 buckets. Disable public access to the private
+bucket; quarantine and verification originals/processed evidence belong there.
+Only sanitized listing derivatives go to the public CDN. Configure upload CORS for
+trusted client origins and private-bucket lifecycle expiry for quarantine objects
+(one day). Uploads require matching content type/length and a server-validated
+SHA-256. Size/image policies and retention are in [media contracts](../docs/api/media.md).
+
+Start one Celery beat scheduler and workers from backend/ with the same environment:
+
+```sh
+cd backend
+../.venv/bin/celery -A config worker --loglevel=WARNING --concurrency=1 --max-memory-per-child=512000
+../.venv/bin/celery -A config beat --loglevel=WARNING
+```
+
+Run these as separate managed processes. Tasks poll committed queued media rows;
+a broker restart cannot discard those rows. Set container memory/CPU limits in
+addition to image bounds and task time limits. Manual bounded recovery command,
+from repository root: `.venv/bin/python backend/manage.py process_media`.
+
+Migrations core.0001..0007 add new domain tables, append-only audit triggers and a
+nullable administrative actor IP column and submitted verification profile snapshots. Apply before starting new API/worker code.
+Existing Django auth/session tables are retained; no destructive backfill runs.
+Core rollback drops newly introduced data and is not a production recovery strategy
+once onboarding starts. Prefer forward fixes/backups. Tests use disposable PG16
+and do not manipulate an existing deployment.
+
+Before enabling external onboarding: smoke-test both OTP channels, exact signed
+PUT, private founder GET expiry, CDN output, real R2 private-bucket policy and CORS.
+Configure real public links and shared Redis throttling for multiple API workers.
+Local doubles do not certify provider delivery, staging latency or client rendering.
+
+API changes require make openapi, API docs and live Slack contract synchronization.
+Use scripts/sync_slack_api_contracts.py --sync; --prune explicitly removes unused
+API proposals from the current contract List after preserving their planning docs.
+Check with --check (or make api-check). Use an approved private --config path when
+needed; never copy a token into the repository. GitHub/CI supplies supported PR and
+CI Slack notifications; standalone notices need the Slack MCP connector.

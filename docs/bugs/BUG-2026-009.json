@@ -1,0 +1,14 @@
+{
+  "id": "BUG-2026-009",
+  "category": "schema",
+  "severity": "medium",
+  "status": "resolved",
+  "affected_files": [
+    "scripts/sync_slack_api_contracts.py",
+    "scripts/export_api_catalog.py"
+  ],
+  "affected_endpoints": [],
+  "root_cause": "OpenAPI contract synthesis emitted only component names and status labels, dropping body validation rules, JSON envelopes and CSRF/session instructions; explicit empty security lists were also labeled authenticated.",
+  "fix_summary": "Resolve local schema references with cycle protection, include request/response schema formulas, derive effective security and add session/CSRF and retry usage guidance. Preserve optional-session authentication in the generated repository catalog.",
+  "regression_test": "tests/test_sync_slack_api_contracts.py::TestSyncSlackApiContracts.test_synthesis_includes_actual_schema_constraints_envelopes_and_session_usage; tests/test_api_catalog.py::ApiCatalogTest.test_optional_session_is_not_reported_as_required_authentication"
+}

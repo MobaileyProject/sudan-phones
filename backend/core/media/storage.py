@@ -1,0 +1,110 @@
+"""R2 adapter: quarantine/evidence private; only sanitized listing derivatives public."""
+
+from django.conf import settings
+from django.utils.module_loading import import_string
+from core.common.domain import require
+
+
+def storage():
+    return import_string(settings.MEDIA_STORAGE_BACKEND)()
+
+
+class R2Storage:
+    def __init__(self):
+        import boto3
+        from botocore.config import Config
+
+        require(
+            all(
+                [
+                    settings.R2_ACCOUNT_ID,
+                    settings.R2_ACCESS_KEY_ID,
+                    settings.R2_SECRET_ACCESS_KEY,
+                    settings.R2_PRIVATE_BUCKET,
+                    settings.R2_PUBLIC_BUCKET,
+                    settings.R2_PUBLIC_DOMAIN,
+                ]
+            ),
+            "STORAGE_UNAVAILABLE",
+            503,
+        )
+        require(
+            settings.R2_PRIVATE_BUCKET != settings.R2_PUBLIC_BUCKET,
+            "STORAGE_UNAVAILABLE",
+            503,
+        )
+        self.client = boto3.client(
+            "s3",
+            endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+            aws_access_key_id=settings.R2_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
+            region_name="auto",
+            config=Config(
+                signature_version="s3v4",
+                connect_timeout=5,
+                read_timeout=15,
+                retries={"max_attempts": 2},
+            ),
+        )
+
+    def bucket(self, key):
+        return (
+            settings.R2_PUBLIC_BUCKET
+            if key.startswith("public/")
+            else settings.R2_PRIVATE_BUCKET
+        )
+
+    def upload_url(self, key, content_type, size):
+        url = self.client.generate_presigned_url(
+            "put_object",
+            Params={
+                "Bucket": settings.R2_PRIVATE_BUCKET,
+                "Key": key,
+                "ContentType": content_type,
+                "ContentLength": size,
+            },
+            ExpiresIn=600,
+        )
+        return {
+            "url": url,
+            "headers": {"Content-Type": content_type, "Content-Length": str(size)},
+        }
+
+    def read(self, key, limit):
+        response = self.client.get_object(Bucket=self.bucket(key), Key=key)
+        try:
+            require(response["ContentLength"] <= limit, "INVALID_MEDIA")
+            return response["Body"].read(limit + 1)
+        finally:
+            response["Body"].close()
+
+    def write(self, key, data, content_type):
+        self.client.put_object(
+            Bucket=self.bucket(key),
+            Key=key,
+            Body=data,
+            ContentType=content_type,
+            CacheControl="public, max-age=3600"
+            if key.startswith("public/")
+            else "no-store",
+        )
+
+    def private_url(self, key, seconds):
+        require(not key.startswith("public/"), "INVALID_MEDIA")
+        return self.client.generate_presigned_url(
+            "get_object",
+            Params={
+                "Bucket": settings.R2_PRIVATE_BUCKET,
+                "Key": key,
+                "ResponseContentDisposition": "attachment",
+                "ResponseCacheControl": "no-store",
+            },
+            ExpiresIn=min(seconds, 900),
+        )
+
+    def public_url(self, key):
+        require(key.startswith("public/"), "INVALID_MEDIA")
+        return settings.R2_PUBLIC_DOMAIN.rstrip("/") + "/" + key
+
+    def delete(self, key):
+        self.client.delete_object(Bucket=self.bucket(key), Key=key)

@@ -238,6 +238,22 @@ KNOWN_SPECS = {
 IMPLEMENTED_APIS = list(KNOWN_SPECS.values())
 
 
+def schema_formula(schema, openapi, visited=()):
+    """Resolve local schema references without losing constraints or recursing forever."""
+    if isinstance(schema, list):
+        return [schema_formula(item, openapi, visited) for item in schema]
+    if not isinstance(schema, dict):
+        return schema
+    reference = schema.get('$ref')
+    if reference and reference.startswith('#/') and reference not in visited:
+        target = openapi
+        for token in reference[2:].split('/'):
+            target = target.get(token.replace('~1','/').replace('~0','~'), {})
+        if target:
+            return schema_formula({**target, **{k:v for k,v in schema.items() if k != '$ref'}}, openapi, (*visited,reference))
+    return {key:schema_formula(value,openapi,visited) for key,value in schema.items()}
+
+
 def build_spec_from_openapi(api_id, method, path, phase, openapi, blueprint_manifest=None):
     """Automatically synthesize a 10-field API contract spec directly from OpenAPI."""
     op = openapi.get("paths", {}).get(path, {}).get(method.lower(), {})
@@ -253,7 +269,9 @@ def build_spec_from_openapi(api_id, method, path, phase, openapi, blueprint_mani
                 break
 
     screens = ", ".join(blueprint_api.get("screen_consumers", [])) or "All clients"
-    auth_req = "Public — no authentication required." if op.get("security") is None else "Authenticated endpoint."
+    security = op.get('security', openapi.get('security', []))
+    public = not security or {} in security
+    auth_req = "Public — no authentication required." if public else "Authenticated session; scoped domain authorization applies."
 
     inputs_lines = [
         "Input formula:",
@@ -289,6 +307,7 @@ def build_spec_from_openapi(api_id, method, path, phase, openapi, blueprint_mani
         content = op["requestBody"].get("content", {}).get("application/json", {})
         schema_ref = content.get("schema", {}).get("$ref", "")
         inputs_lines.append(f"Request body: JSON ({schema_ref.split('/')[-1] if schema_ref else 'object'})")
+        inputs_lines.append(json.dumps(schema_formula(content.get('schema',{}),openapi),ensure_ascii=False,separators=(',',':')))
     else:
         inputs_lines.append("Request body: None")
 
@@ -299,6 +318,10 @@ def build_spec_from_openapi(api_id, method, path, phase, openapi, blueprint_mani
         schema_ref = content.get("schema", {}).get("$ref", "")
         ref_name = f" ({schema_ref.split('/')[-1]})" if schema_ref else ""
         resp_lines.append(f"Status {code}: {desc or 'Response'}{ref_name}")
+        if content.get('schema'):
+            formula = json.dumps(schema_formula(content['schema'],openapi),ensure_ascii=False,separators=(',',':'))
+            if formula not in resp_lines:
+                resp_lines.append(formula)
 
     resp_headers = []
     for code, resp in op.get("responses", {}).items():
@@ -316,7 +339,15 @@ def build_spec_from_openapi(api_id, method, path, phase, openapi, blueprint_mani
         f"curl -i -X {method.upper()} 'http://127.0.0.1:8000{path}'"
     )
 
-    stage_str = f"Step {phase} ({phase})" if phase else "Backend"
+    if not public or path.startswith('/api/v1/auth/') or path.startswith('/api/v1/merchant/auth/'):
+        how_to_use += ("\nFirst GET /api/v1/auth/session with a cookie jar to obtain csrftoken. "
+                       "Use the same session cookie jar, send X-CSRFToken on unsafe requests, "
+                       "and refresh the CSRF token after login rotates it.")
+    if 'requestBody' in op:
+        how_to_use += "\nSend Content-Type: application/json and a JSON body satisfying the full input schema above."
+    if any(p.get('name') == 'Idempotency-Key' for p in op.get('parameters',[])):
+        how_to_use += "\nRetain Idempotency-Key and the exact body across retries; stale versions or changed payloads return 409."
+    stage_str = f"Step {phase.removeprefix('P')} ({phase})" if phase else "Backend"
 
     return {
         "api_id": api_id,
@@ -415,7 +446,7 @@ def encode_item_fields(spec, row_id=None):
     return fields
 
 
-def sync_contracts(slack, list_id=LIST_ID, dry_run=False, specs=None):
+def sync_contracts(slack, list_id=LIST_ID, dry_run=False, specs=None, prune=False):
     """Synchronize implemented API contracts to Slack List F0CHJB5C939."""
     if specs is None:
         specs = get_implemented_apis()
@@ -433,7 +464,7 @@ def sync_contracts(slack, list_id=LIST_ID, dry_run=False, specs=None):
                 if part.startswith("API-"):
                     id_to_row[part.rstrip(":")] = row
 
-    summary = {"updated": [], "created": [], "unchanged": []}
+    summary = {"updated": [], "created": [], "unchanged": [], "removed": []}
 
     for spec in specs:
         api_id = spec["api_id"]
@@ -454,6 +485,17 @@ def sync_contracts(slack, list_id=LIST_ID, dry_run=False, specs=None):
             else:
                 new_id = "dry-run-new"
             summary["created"].append({"api_id": api_id, "row_id": new_id, "title": title})
+
+    if prune:
+        wanted = {spec['api_id'] for spec in specs}
+        for row in rows:
+            fields = {field.get('column_id'):field for field in row.get('fields',[])}
+            title = fields.get(COLUMNS['title'],{}).get('text','')
+            api_id = next((part.rstrip(':') for part in title.split() if part.startswith('API-')),None)
+            if api_id and (api_id not in wanted or row['id'] != id_to_row[api_id]['id']):
+                if not dry_run:
+                    slack.call('slackLists.items.delete',list_id=list_id,id=row['id'])
+                summary['removed'].append({'api_id':api_id,'row_id':row['id']})
 
     return summary
 
@@ -485,8 +527,11 @@ def check_contracts(slack, list_id=LIST_ID, specs=None):
         if status_val != "Backend ready":
             not_ready.append({"api_id": api_id, "status": status_val, "expected": "Backend ready"})
 
-    if missing or not_ready:
+    extra = sorted(set(id_to_row)-{spec['api_id'] for spec in specs})
+    if missing or not_ready or extra:
         errors = []
+        if extra:
+            errors.append(f'Unimplemented APIs in Slack List: {extra}')
         if missing:
             errors.append(f"Missing APIs in Slack List: {missing}")
         if not_ready:
@@ -499,6 +544,7 @@ def check_contracts(slack, list_id=LIST_ID, specs=None):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--sync", action="store_true", help="Sync implemented API contracts to Slack list")
+    parser.add_argument("--prune", action="store_true", help="Remove unused/duplicate API rows only; proposals remain in docs/plans")
     parser.add_argument("--check", action="store_true", help="Verify implemented APIs are synced in Slack list")
     parser.add_argument("--dry-run", action="store_true", help="Perform dry run without calling Slack write APIs")
     parser.add_argument("--allow-skip-no-token", action="store_true", help="Exit 0 if Slack token is not available")
@@ -526,11 +572,11 @@ def main():
             print("OK: All implemented API contracts are synced and marked 'Backend ready' in Slack.")
             return 0
 
-        summary = sync_contracts(slack, list_id=args.list_id, dry_run=args.dry_run)
+        summary = sync_contracts(slack, list_id=args.list_id, dry_run=args.dry_run, prune=args.prune)
         if args.json:
             print(json.dumps(summary, indent=2))
         else:
-            print(f"Sync completed: {len(summary['updated'])} updated, {len(summary['created'])} created.")
+            print(f"Sync completed: {len(summary['updated'])} updated, {len(summary['created'])} created, {len(summary['removed'])} removed.")
             for item in summary["updated"]:
                 print(f"  - Updated {item['api_id']} ({item['title']}) -> row {item['row_id']}")
             for item in summary["created"]:

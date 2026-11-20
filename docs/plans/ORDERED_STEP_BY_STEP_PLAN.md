@@ -303,15 +303,20 @@ stateDiagram-v2
 
 #### Step 2 Work Checklist:
 
+Backend continuation through Step 6 is tracked in
+[backend acceptance and coverage](BACKEND_THROUGH_STEP6_ACCEPTANCE.md).
+New backend checkboxes remain unchecked until their PR is reviewed and merged;
+frontend and joint release gates require separate evidence.
+
 Backend status: BE-01 was delivered in merged PR #17. BE-02 and backend INT-02
-checks are implemented for review; see [P2 acceptance](P2_ACCEPTANCE.md). Full
+checks were delivered in merged PR #19; see [P2 acceptance](P2_ACCEPTANCE.md). Full
 INT-02/GATE-02 remains pending frontend and external-service evidence.
-- [ ] `[BE]` **BE-01: Django 5 + DRF Project Baseline & CI** (Slack: `Rec0CHJBWSUKZ`)
+- [x] `[BE]` **BE-01: Django 5 + DRF Project Baseline & CI** (Slack: `Rec0CHJBWSUKZ`)
   - Initialize clean Django REST Framework project structure.
   - Configure PostgreSQL 16 database connection and initial migration baseline.
   - Set up Cloudflare R2 / S3 storage credentials & bucket connection.
   - Configure GitHub Actions CI for linting, secret scanning, and automated tests.
-- [ ] `[BE]` **BE-02: Configuration, Localization & Shared API Conventions** (Slack: `Rec0CHZGWCSW1`)
+- [x] `[BE]` **BE-02: Configuration, Localization & Shared API Conventions** (Slack: `Rec0CHZGWCSW1`)
   - Implement shared JSON error envelope `{"error": {"code": "...", "message": "...", "details": [...]}}`.
   - Implement **API-019**: `GET /api/v1/config` (App version, supported cities with reverse-geocoding aliases, currency settings).
   - Implement **API-021**: `GET /api/v1/i18n/bundle` (Arabic & English localization strings).

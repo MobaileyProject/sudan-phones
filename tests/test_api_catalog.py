@@ -39,3 +39,9 @@ class ApiCatalogTest(unittest.TestCase):
         spec.loader.exec_module(module)
         with self.assertRaisesRegex(ValueError, 'API ID'):
             module.operations({'paths': {'/a': {'get': {}}, '/b': {'get': {}}}})
+
+    def test_optional_session_is_not_reported_as_required_authentication(self):
+        from scripts.export_api_catalog import operations
+        operation={'operationId':'session','x-api-id':'API-062','security':[{'cookieAuth':[]},{}]}
+        rows=operations({'paths':{'/api/v1/auth/session':{'get':operation}}})
+        self.assertEqual(rows[0]['authentication'],'optional')

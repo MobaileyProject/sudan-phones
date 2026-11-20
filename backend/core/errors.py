@@ -40,6 +40,11 @@ def error_payload(status: int, locale: str, validation=None) -> dict:
 def api_exception_handler(exc, context):
     request = context.get('request')
     locale = getattr(request, 'api_locale', 'ar')
+    from core.common.domain import DomainError
+    if isinstance(exc, DomainError):
+        payload = error_payload(exc.status, locale)
+        payload['error']['code'] = exc.code
+        return Response(payload, status=exc.status)
     response = exception_handler(exc, context)
     if response is None:
         logging.getLogger(__name__).error('Unhandled API exception (%s), request_id=%s',
