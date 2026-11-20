@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.utils import timezone
 from core.stores.models import Store
 
 
@@ -15,6 +16,17 @@ class MediaAsset(models.Model):
     processed_key = models.CharField(max_length=200, blank=True)
     thumbnail_key = models.CharField(max_length=200, blank=True)
     status = models.CharField(max_length=16, default="awaiting", db_index=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    next_attempt_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["status", "next_attempt_at", "created_at"],
+                name="media_due_work",
+            )
+        ]
+
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
 

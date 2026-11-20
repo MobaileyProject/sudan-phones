@@ -17,20 +17,26 @@ use `data`; errors use `error: {code,message,details}`. Arabic is the default;
 Registration requires `phone` (normalized +249 plus nine digits), `name`, validated
 `password`; optional `email` and `channel` (`whatsapp`, default; or `email`). Email
 channel requires email. Client-supplied roles and unknown fields return 400.
-Successful registration returns 201 and signs in the unverified user; sending
-failure returns 503 and rolls back identity/store/challenge creation. Duplicate
-phone returns 409 ACCOUNT_UNAVAILABLE. No OTP is returned or logged.
+Successful registration returns 201 and signs in a provisional unverified user; sending
+failure returns 503 and rolls back identity/store/challenge creation. A phone is provisionally claimed until WhatsApp verification; unverified claims
+never reserve the number against its actual holder. Only a verified phone binding
+is unique. An already verified phone returns 409 ACCOUNT_UNAVAILABLE. No OTP is returned or logged.
 
 OTP codes have six digits, expire after five minutes, allow five failed attempts,
 and are consumed once. Challenge attempts commit even on invalid-code responses.
-Issuance is limited to one challenge per user/purpose per minute. Verification
+Issuance is limited to one challenge per user/purpose/channel per minute. Verification
 consumes `{ "code":"123456", "channel":"whatsapp" }`; omitting code requests
 another challenge. Email verification never verifies the phone. Recovery first
 accepts `{ "phone":"+249912345678", "channel":"email" }`; response is always
 `{ "data": { "accepted": true } }` for existing/unknown contacts and delivery
 failures. Recovery requires a previously verified channel. Supply `code` and
 `password` together to reset; invalid/expired/consumed OTP returns 400 INVALID_OTP.
-Changing the password invalidates old Django sessions on their next request.
+Phone/password login and recovery resolve the proved identity only; email-only
+provisional sessions must complete WhatsApp proof before phone login. An unrelated
+claimant retains only their separate provisional account and recovery address,
+without inheriting or recovering the proved identity. Concurrent phone proofs can
+bind only one account. Changing the password invalidates old Django sessions on
+their next request; a two-cookie-jar HTTP test verifies this.
 
 All unsafe auth requests, including login/registration, require CSRF. First GET
 API-062 into a cookie jar; send that jar and its csrftoken as X-CSRFToken. After
@@ -41,7 +47,10 @@ membership/permissions. A Django staff flag alone grants no marketplace powers.
 
 Auth traffic is throttled for anonymous and signed-in clients. Resend/attempt
 limits are database-backed; HTTP throttling uses Django cache. Configure a shared
-cache for multiple API processes. Session cookies are HttpOnly, SameSite=Lax and
+cache for multiple API processes. Throttle identity uses the connection address by
+default and ignores untrusted forwarding headers. TRUSTED_PROXY_COUNT must only be
+set when the API is reachable exclusively through a configured trusted ingress
+chain that strips/appends forwarding headers correctly. Session cookies are HttpOnly, SameSite=Lax and
 Secure when DEBUG=False. No guest browsing endpoint creates a session cookie.
 
 WhatsApp uses a configured Meta authentication template (copy-code URL button),

@@ -70,3 +70,140 @@ class InventoryConcurrencyTests(InventoryFixture, TransactionTestCase):
         stored = Listing.objects.get(pk=listing["id"])
         self.assertEqual(stored.version, 2)
         self.assertEqual(stored.quantity, next(r[1] for r in results if r[0] == "ok"))
+
+    def test_revoked_staff_cannot_write_after_waiting_for_store_lock(self):
+        from threading import Event
+        from django.db import transaction
+        from core.models import Store, Membership, Listing
+        from core.stores.services import remove_staff
+        from core.listings.services import update_listing
+        from core.common.domain import DomainError
+
+        listing = self.create_listing()
+        staff = get_user_model().objects.create_user("revoked-staff")
+        membership = Membership.objects.create(
+            store=self.store, user=staff, role="staff"
+        )
+        waiting = Event()
+
+        def writer():
+            close_old_connections()
+
+            def observe(execute, sql, params, many, context):
+                if "core_store" in sql and "FOR UPDATE" in sql:
+                    waiting.set()
+                return execute(sql, params, many, context)
+
+            try:
+                actor = get_user_model().objects.get(pk=staff.pk)
+                with connection.execute_wrapper(observe):
+                    try:
+                        update_listing(
+                            actor,
+                            listing["id"],
+                            {"version": 1, "quantity": 0},
+                            str(uuid.uuid4()),
+                            "stock",
+                        )
+                        return "committed"
+                    except DomainError as error:
+                        return error.status
+            finally:
+                close_old_connections()
+
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            with transaction.atomic():
+                Store.objects.select_for_update().get(pk=self.store.pk)
+                future = pool.submit(writer)
+                self.assertTrue(
+                    waiting.wait(timeout=10), "writer did not reach the store lock"
+                )
+                remove_staff(self.owner, membership.pk)
+            self.assertEqual(future.result(timeout=10), 403)
+        self.assertEqual(Listing.objects.get(pk=listing["id"]).quantity, 3)
+
+    def test_simultaneous_phone_proofs_bind_only_one_identity(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from django.contrib.auth.hashers import make_password
+        from core.models import Account, OTPChallenge
+        from core.identity.services import verify
+        from core.common.domain import DomainError
+
+        identities = []
+        phone = "+249911111111"
+        for index in range(2):
+            user = get_user_model().objects.create_user(f"pending-proof-{index}")
+            Account.objects.create(user=user, phone=phone)
+            OTPChallenge.objects.create(
+                user=user,
+                purpose="verify",
+                channel="whatsapp",
+                digest=make_password("123456"),
+                expires_at=timezone.now() + timedelta(minutes=5),
+            )
+            identities.append(user.pk)
+
+        def prove(actor, index):
+            user = get_user_model().objects.get(pk=identities[index])
+            try:
+                verify(user, {"channel": "whatsapp", "code": "123456"})
+                return 200
+            except DomainError as error:
+                return error.status
+
+        self.assertEqual(sorted(self.concurrent(prove)), [200, 409])
+        self.assertEqual(
+            Account.objects.filter(phone=phone, phone_verified=True).count(), 1
+        )
+
+    def test_revoked_admin_permission_cannot_commit_after_store_lock_wait(self):
+        from threading import Event
+        from django.db import transaction
+        from core.models import Store, AdminRole, RoleAssignment, Listing
+        from core.operations.services import save_role
+        from core.listings.services import moderate
+        from core.common.domain import DomainError
+
+        listing = self.create_listing()
+        moderator = get_user_model().objects.create_user("revoked-moderator")
+        role = AdminRole.objects.create(
+            name="Temporary moderator", permissions=["moderate_listings"]
+        )
+        RoleAssignment.objects.create(user=moderator, role=role)
+        waiting = Event()
+
+        def writer():
+            close_old_connections()
+
+            def observe(execute, sql, params, many, context):
+                if "core_store" in sql and "FOR UPDATE" in sql:
+                    waiting.set()
+                return execute(sql, params, many, context)
+
+            try:
+                actor = get_user_model().objects.get(pk=moderator.pk)
+                with connection.execute_wrapper(observe):
+                    try:
+                        moderate(
+                            actor,
+                            listing["id"],
+                            {"action": "remove", "reason": "Policy", "version": 1},
+                        )
+                        return "committed"
+                    except DomainError as error:
+                        return error.status
+            finally:
+                close_old_connections()
+
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            with transaction.atomic():
+                Store.objects.select_for_update().get(pk=self.store.pk)
+                future = pool.submit(writer)
+                self.assertTrue(waiting.wait(timeout=10))
+                save_role(
+                    self.founder,
+                    {"id": role.pk, "version": 1, "name": role.name, "permissions": []},
+                )
+            self.assertEqual(future.result(timeout=10), 403)
+        self.assertEqual(Listing.objects.get(pk=listing["id"]).status, "published")

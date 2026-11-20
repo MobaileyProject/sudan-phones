@@ -4,6 +4,7 @@ import uuid
 from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
+from rest_framework.test import APIClient
 from .factories import InventoryFixture
 
 
@@ -168,3 +169,22 @@ class ListingTests(InventoryFixture, TestCase):
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual(response.data["data"]["status"], "published")
         self.assertEqual(Listing.objects.get(pk=listing["id"]).version, 2)
+
+    def test_flag_feedback_reaches_merchant_and_amendment_returns_to_review(self):
+        listing = self.create_listing()
+        self.client.force_authenticate(self.founder)
+        response = self.client.post(
+            f"/api/v1/admin/listings/{listing['id']}/moderate",
+            {"action": "flag", "reason": "Correct the warranty term", "version": 1},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.client.force_authenticate(self.owner)
+        status = self.client.get(f"/api/v1/stores/me/listings/{listing['id']}/status")
+        self.assertEqual(status.data["data"]["feedback"], "Correct the warranty term")
+        amended = self.patch(listing, "", {"version": 2, "warranty_months": 24})
+        self.assertEqual(amended.status_code, 200, amended.content)
+        self.assertEqual(amended.data["data"]["moderation"], "pending")
+        guest = APIClient()
+        public = guest.get(f"/api/v1/listings/{listing['id']}")
+        self.assertNotIn("feedback", public.data["data"])

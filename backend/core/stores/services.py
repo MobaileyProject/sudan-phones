@@ -11,6 +11,9 @@ def member_store(actor, owner=False, verified=False, lock=False):
     require(member is not None, "FORBIDDEN", 403)
     stores = Store.objects.select_for_update() if lock else Store.objects
     store = stores.get(pk=member.store_id)
+    if lock:
+        member = Membership.objects.filter(user=actor, store=store).first()
+        require(member is not None, "FORBIDDEN", 403)
     require(store.status not in ["suspended", "rejected"], "FORBIDDEN", 403)
     require(not owner or member.role == "owner", "FORBIDDEN", 403)
     require(not verified or store.status == "verified", "STORE_NOT_VERIFIED", 403)

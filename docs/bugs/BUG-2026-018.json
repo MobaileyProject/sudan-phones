@@ -1,0 +1,16 @@
+{
+  "id": "BUG-2026-018",
+  "category": "auth",
+  "severity": "high",
+  "status": "resolved",
+  "affected_files": [
+    "backend/core/identity/views.py",
+    "backend/config/settings.py"
+  ],
+  "affected_endpoints": [
+    "POST /api/v1/auth/login"
+  ],
+  "root_cause": "Default DRF throttle identification trusted caller-controlled X-Forwarded-For when NUM_PROXIES was unset.",
+  "fix_summary": "Use the connection address by default and permit forwarding topology only via explicit trusted ingress configuration.",
+  "regression_test": "backend/core/tests/test_delivery_workers.py::DeliveryTests.test_untrusted_forwarding_headers_do_not_change_throttle_identity"
+}

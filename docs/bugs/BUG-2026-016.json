@@ -1,0 +1,18 @@
+{
+  "id": "BUG-2026-016",
+  "category": "logic",
+  "severity": "medium",
+  "status": "resolved",
+  "affected_files": [
+    "backend/core/listings/services.py",
+    "backend/core/listings/models.py",
+    "backend/core/listings/serializers.py"
+  ],
+  "affected_endpoints": [
+    "POST /api/v1/admin/listings/{id}/moderate",
+    "GET /api/v1/stores/me/listings/{id}/status"
+  ],
+  "root_cause": "Moderation reasons existed only in administrative audit and could not guide merchant corrections.",
+  "fix_summary": "Persist merchant feedback, expose it only on private merchant/admin results, and return amended flagged listings to review.",
+  "regression_test": "backend/core/tests/test_listings.py::ListingTests.test_flag_feedback_reaches_merchant_and_amendment_returns_to_review"
+}

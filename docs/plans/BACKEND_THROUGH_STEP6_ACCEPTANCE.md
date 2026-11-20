@@ -74,3 +74,29 @@ standalone milestone messages cannot use Slack MCP in this session. The existing
 GitHub Slack app/CI handles supported PR/CI events. Remaining provider/client and
 standalone-notification work is captured in HND-4e1d8bff30a0edbb. No existing context
 records are closed, edited or deleted by this PR.
+
+## Independent review fixes
+
+The read-only review of 63da7d7 identified eight issues, reproduced by named
+regressions in BUG-2026-011..018. A follow-up authorization audit reproduced and
+fixed the analogous delegated-role revocation race in BUG-2026-019. Corrections enforce founder-only private document
+links; prevent missing uploads from starving the worker; recheck membership after
+store-lock waits; keep unproved phone claims provisional; reflect current staff
+membership in sessions; deliver merchant-only moderation feedback; match combined
+brand/model terms with PostgreSQL trigram index support; and ignore untrusted
+forwarding headers for login throttling. Supplemental tests cover two existing
+session jars after recovery, competing phone proofs and transient retry exhaustion.
+
+Deferred minor performance work: avoid per-listing R2 client construction for CDN
+URLs and redundant media queries on public listing serialization. The current
+implementation remains functionally correct; those optimizations and realistic
+latency measurements belong to Step 7. No <500ms production claim is made.
+
+Final local verification after review corrections: `make check` passed 140 tool
+and 76 backend tests on Python 3.13/PostgreSQL 16, with no backend skips. All nine
+authorization/logic regressions were observed failing before their corrections
+and passing afterward. OpenAPI validation/drift, migration upgrade through 0011,
+no pending models, staged secret scanning and bug JSON validation passed. A
+separate temporary SQLite database applied the development fallback migrations.
+A forced-index compatibility EXPLAIN uses brand_name_trgm; this is not a latency
+benchmark. Header/authorization schema metadata was validated again after the suite.

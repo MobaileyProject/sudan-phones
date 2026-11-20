@@ -4,10 +4,19 @@ from django.db import models
 
 class Account(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    phone = models.CharField(max_length=16, unique=True)
+    phone = models.CharField(max_length=16, db_index=True)
     phone_verified = models.BooleanField(default=False)
     email_verified = models.BooleanField(default=False)
     is_merchant = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["phone"],
+                condition=models.Q(phone_verified=True),
+                name="unique_verified_phone",
+            )
+        ]
 
 
 class OTPChallenge(models.Model):

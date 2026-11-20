@@ -12,7 +12,7 @@
 | API-035 | GET /api/v1/stores/me/verification | Latest application or data:null |
 | API-011 | GET /api/v1/admin/verifications | verify_stores permission; pending queue |
 | API-012 | GET /api/v1/admin/verifications/{id} | verify_stores permission; application details |
-| API-013 | GET /api/v1/admin/verifications/{id}/documents | verify_stores; private signed evidence links |
+| API-013 | GET /api/v1/admin/verifications/{id}/documents | Active founder only; private signed evidence links |
 | API-046 | POST /api/v1/admin/verifications/{id}/decision | verify_stores; optimistic application decision |
 
 All protected requests use session auth and CSRF on mutations. Guest/foreign-store,
@@ -48,7 +48,7 @@ identity data is never present in public discovery responses.
 
 All queues use limit (1..100, default 20), offset (0..10000, default 0), stable ID
 ordering. Responses use data; exact fields, 400/401/403/404/409/503 envelopes are in
-[OpenAPI](../openapi.json). API-013 links expire in 900 seconds and accesses are
-audited; links are never issued to merchants/guests. Sensitive responses are no-store.
+[OpenAPI](../openapi.json). API-013 requires an active superuser founder, independently of any assigned
+verify_stores permission. Links expire in 900 seconds and accesses are audited; links are never issued to merchants/guests. Sensitive responses are no-store.
 
 Validation: `core.tests.test_identity_stores`, `core.tests.test_verification_media`.

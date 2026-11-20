@@ -1,0 +1,16 @@
+{
+  "id": "BUG-2026-017",
+  "category": "logic",
+  "severity": "medium",
+  "status": "resolved",
+  "affected_files": [
+    "backend/core/discovery/services.py",
+    "backend/core/discovery/queries.py"
+  ],
+  "affected_endpoints": [
+    "GET /api/v1/listings"
+  ],
+  "root_cause": "The entire query had to match either the brand or model field, excluding normal combined brand/model searches.",
+  "fix_summary": "Match all terms across indexed brand/model catalog searches, preserving composite filters and partial terms.",
+  "regression_test": "backend/core/tests/test_discovery.py::DiscoveryTests.test_search_matches_combined_brand_model_terms_in_any_order"
+}

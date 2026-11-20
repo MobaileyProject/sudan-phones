@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',
     # Third-party
     'rest_framework',
     'drf_spectacular',
@@ -196,3 +197,6 @@ CELERY_BEAT_SCHEDULE = {'process-durable-media':{'task':'core.media.tasks.proces
 if os.environ.get('REDIS_CACHE_URL'):
     CACHES = {'default': {'BACKEND': 'django.core.cache.backends.redis.RedisCache',
                           'LOCATION': os.environ['REDIS_CACHE_URL']}}
+
+# Forwarding headers are trusted only when the operator declares a trusted ingress chain.
+REST_FRAMEWORK['NUM_PROXIES'] = max(0, int(os.environ.get('TRUSTED_PROXY_COUNT', '0')))

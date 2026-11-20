@@ -21,6 +21,7 @@ class Listing(models.Model):
     has_original_box = models.BooleanField(default=False)
     status = models.CharField(max_length=16, default="processing")
     moderation = models.CharField(max_length=16, default="pending")
+    feedback = models.CharField(max_length=1000, blank=True)
     version = models.PositiveIntegerField(default=1)
     views = models.PositiveBigIntegerField(default=0)
     contact_leads = models.PositiveBigIntegerField(default=0)

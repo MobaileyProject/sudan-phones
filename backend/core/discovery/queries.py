@@ -24,3 +24,16 @@ def visible_listings():
 
 def visible_stores():
     return Store.objects.filter(status="verified", owner__is_active=True)
+
+
+def filter_terms(listings, text):
+    from django.db.models import Q
+    from core.catalog.models import Brand, PhoneModel
+
+    for term in dict.fromkeys(text.split()):
+        models = PhoneModel.objects.filter(name__icontains=term).values("pk")
+        brands = Brand.objects.filter(name__icontains=term).values("pk")
+        listings = listings.filter(
+            Q(variant__model_id__in=models) | Q(variant__model__brand_id__in=brands)
+        )
+    return listings

@@ -1,0 +1,15 @@
+{
+  "id": "BUG-2026-015",
+  "category": "logic",
+  "severity": "medium",
+  "status": "resolved",
+  "affected_files": [
+    "backend/core/identity/services.py"
+  ],
+  "affected_endpoints": [
+    "GET /api/v1/auth/session"
+  ],
+  "root_cause": "Session merchant capability used the initial registration flag rather than current store membership.",
+  "fix_summary": "Derive merchant capability and role from trusted current membership, including addition/removal.",
+  "regression_test": "backend/core/tests/test_identity_stores.py::IdentityStoreTests.test_staff_bootstrap_follows_current_membership"
+}

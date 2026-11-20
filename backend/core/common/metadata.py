@@ -54,3 +54,69 @@ SUMMARIES = {
     "API-064": "Record a retry-safe anonymous seller contact intent",
     "API-065": "List pending destructive operations for founder confirmation",
 }
+
+
+AUTHORIZATION = {}
+for codes, policy in [
+    (
+        "014 018 020 022 023 024 025 027 029 036 037 064",
+        "Public guest access; listing/store resources must pass current public eligibility.",
+    ),
+    (
+        "049 051 047 048",
+        "Public entry point with CSRF; phone login/recovery resolves proved phone ownership only.",
+    ),
+    ("062", "Optional authenticated session; guest CSRF bootstrap is allowed."),
+    (
+        "002",
+        "Current session or guest CSRF cookie; clears the current session idempotently.",
+    ),
+    ("052", "Authenticated account; OTP is bound to its user, purpose and channel."),
+    (
+        "030 033 034 035",
+        "Current store owner/staff membership; suspended/rejected store access denied; no foreign resources.",
+    ),
+    (
+        "059 055 004",
+        "Current store owner only; suspended/rejected store access denied.",
+    ),
+    (
+        "060",
+        "Store owner with verified phone; business identity editable only in draft/changes_requested.",
+    ),
+    (
+        "056 057",
+        "Store owner; editable store state, same-store private evidence and verified contact on submission.",
+    ),
+    (
+        "015 016 017 050 054 038 039 040 032",
+        "Current member of a verified store; mutable resources must belong to that store.",
+    ),
+    (
+        "063",
+        "Current same-store asset/member binding; completion never grants readiness or publication.",
+    ),
+    (
+        "011 012 046",
+        "Active founder or current verify_stores role; decisions forbid reviewing own store.",
+    ),
+    (
+        "013",
+        "Active founder (superuser) only; delegated verify_stores permission never grants private document links.",
+    ),
+    (
+        "008 044",
+        "Active founder or current moderate_listings role; no own-store moderation; suspension proposals require founder.",
+    ),
+    ("009", "Active founder or current view_metrics role."),
+    ("006", "Active founder or current view_audit role."),
+    (
+        "010 045 001 065",
+        "Active founder (superuser) only; custom roles cannot grant founder powers.",
+    ),
+    (
+        "043",
+        "Distinct active founder, current proposal/target version, no self-approval or own-store suspension.",
+    ),
+]:
+    AUTHORIZATION.update({"API-" + code: policy for code in codes.split()})

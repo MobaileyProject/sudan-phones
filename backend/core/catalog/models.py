@@ -1,8 +1,17 @@
 from django.db import models
+from django.db.models.functions import Upper
+from django.contrib.postgres.indexes import GinIndex, OpClass
 
 
 class Brand(models.Model):
     name = models.CharField(max_length=80, unique=True)
+
+    class Meta:
+        indexes = [
+            GinIndex(
+                OpClass(Upper("name"), name="gin_trgm_ops"), name="brand_name_trgm"
+            )
+        ]
 
 
 class PhoneModel(models.Model):
@@ -11,6 +20,11 @@ class PhoneModel(models.Model):
     specifications = models.JSONField(default=dict)
 
     class Meta:
+        indexes = [
+            GinIndex(
+                OpClass(Upper("name"), name="gin_trgm_ops"), name="model_name_trgm"
+            )
+        ]
         constraints = [
             models.UniqueConstraint(fields=["brand", "name"], name="unique_brand_model")
         ]

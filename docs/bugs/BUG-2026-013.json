@@ -1,0 +1,16 @@
+{
+  "id": "BUG-2026-013",
+  "category": "auth",
+  "severity": "high",
+  "status": "resolved",
+  "affected_files": [
+    "backend/core/stores/services.py"
+  ],
+  "affected_endpoints": [
+    "PATCH /api/v1/stores/me/listings/{id}/stock",
+    "POST /api/v1/media/uploads"
+  ],
+  "root_cause": "Mutation authorization trusted a membership read before waiting for the store lock, allowing a revoked member to commit afterward.",
+  "fix_summary": "Re-read current membership and role after acquiring the store lock.",
+  "regression_test": "backend/core/tests/test_concurrency.py::InventoryConcurrencyTests.test_revoked_staff_cannot_write_after_waiting_for_store_lock"
+}

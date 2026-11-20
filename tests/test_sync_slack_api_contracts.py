@@ -154,6 +154,9 @@ class TestSyncSlackApiContracts(unittest.TestCase):
         schema['paths']['/api/v1/stock']['patch']['security'] = []
         public = build_spec_from_openapi('API-040','PATCH','/api/v1/stock','P4',schema)
         self.assertIn('no authentication',public['auth'])
+        operation['x-authorization']='Active founder only'
+        specific=build_spec_from_openapi('API-013','PATCH','/api/v1/stock','P4',schema)
+        self.assertIn('Active founder only',specific['auth'])
 
     def test_get_implemented_apis_returns_specs(self):
         apis = get_implemented_apis()

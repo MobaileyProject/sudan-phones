@@ -1,0 +1,15 @@
+{
+  "id": "BUG-2026-011",
+  "category": "auth",
+  "severity": "critical",
+  "status": "resolved",
+  "affected_files": [
+    "backend/core/verification/services.py"
+  ],
+  "affected_endpoints": [
+    "GET /api/v1/admin/verifications/{id}/documents"
+  ],
+  "root_cause": "Assignable verify_stores roles could obtain founder-only private identity document links.",
+  "fix_summary": "Enforce an active founder at the document-link service boundary independently of delegated metadata/review permissions.",
+  "regression_test": "backend/core/tests/test_verification_media.py::VerificationMediaTests.test_delegated_verifier_cannot_download_identity_documents"
+}

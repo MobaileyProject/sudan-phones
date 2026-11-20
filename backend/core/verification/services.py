@@ -69,6 +69,9 @@ def detail(actor, verification_id):
 
 
 def documents(actor, verification_id):
+    from core.operations.services import require_founder
+
+    require_founder(actor)
     verification = detail(actor, verification_id)
     provider = storage()
     record(actor, "verification.documents_accessed", verification.pk)
@@ -88,6 +91,7 @@ def decide(actor, verification_id, data, actor_ip=None):
     require_admin(actor, "verify_stores")
     target = detail(actor, verification_id)
     store = Store.objects.select_for_update().get(pk=target.store_id)
+    require_admin(actor, "verify_stores", lock=True)
     verification = Verification.objects.select_for_update().get(pk=verification_id)
     require(store.owner_id != actor.pk, "SELF_REVIEW_FORBIDDEN", 403)
     require(
