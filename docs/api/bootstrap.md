@@ -34,7 +34,7 @@ for these read-only operations.
 Input: only optional locale. Authentication: none; authorization: public.
 Response 200: API/minimum supported app version, SDG currency precision, Arabic
 default and supported locales/direction, three pilot city IDs/localized labels with
-geographic coordinates (`lat`, `lon`) and auto-detection coverage radius (`radius_km`),
+reverse-geocoding administrative name `aliases` (for zero-math native device city identification),
 and disabled customer-account/payment/paid-ad flags. A flag reports the agreed MVP
 boundary; it does not imply the underlying feature is implemented.
 
@@ -43,7 +43,7 @@ curl -i 'http://127.0.0.1:8000/api/v1/config?locale=en'
 ```
 
 ```json
-{"data":{"api_version":"1.0.0","minimum_app_version":"1.0.0","currency":{"code":"SDG","decimal_places":2},"default_locale":"ar","supported_locales":["ar","en"],"locale":"en","direction":"ltr","cities":[{"id":"port_sudan","name":"Port Sudan","lat":19.6158,"lon":37.2164,"radius_km":45},{"id":"khartoum","name":"Khartoum","lat":15.5007,"lon":32.5599,"radius_km":35},{"id":"omdurman","name":"Omdurman","lat":15.65,"lon":32.4833,"radius_km":35}],"features":{"customer_accounts":false,"payments":false,"paid_ads":false}}}
+{"data":{"api_version":"1.0.0","minimum_app_version":"1.0.0","currency":{"code":"SDG","decimal_places":2},"default_locale":"ar","supported_locales":["ar","en"],"locale":"en","direction":"ltr","cities":[{"id":"port_sudan","name":"Port Sudan","aliases":["port sudan","portsudan","بورتسودان","red sea","البحر الأحمر","البحر الاحمر"]},{"id":"khartoum","name":"Khartoum","aliases":["khartoum","الخرطوم","khartoum state","ولاية الخرطوم"]},{"id":"omdurman","name":"Omdurman","aliases":["omdurman","أم درمان","ام درمان","امدرمان","أمدرمان"]}],"features":{"customer_accounts":false,"payments":false,"paid_ads":false}}}
 ```
 
 MINIMUM_APP_VERSION defaults to `1.0.0` and can be configured by environment.

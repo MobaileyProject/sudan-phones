@@ -7,9 +7,15 @@ from django.conf import settings
 
 SUPPORTED_LOCALES = ('ar', 'en')
 _CITIES = (
-    ('port_sudan', 'بورتسودان', 'Port Sudan', 19.6158, 37.2164, 45),
-    ('khartoum', 'الخرطوم', 'Khartoum', 15.5007, 32.5599, 35),
-    ('omdurman', 'أم درمان', 'Omdurman', 15.6500, 32.4833, 35),
+    ('port_sudan', 'بورتسودان', 'Port Sudan', (
+        'port sudan', 'portsudan', 'بورتسودان', 'red sea', 'البحر الأحمر', 'البحر الاحمر',
+    )),
+    ('khartoum', 'الخرطوم', 'Khartoum', (
+        'khartoum', 'الخرطوم', 'khartoum state', 'ولاية الخرطوم',
+    )),
+    ('omdurman', 'أم درمان', 'Omdurman', (
+        'omdurman', 'أم درمان', 'ام درمان', 'امدرمان', 'أمدرمان',
+    )),
 )
 
 
@@ -39,9 +45,7 @@ def get_public_config(locale: str) -> dict:
             {
                 'id': city[0],
                 'name': city[1 if locale == 'ar' else 2],
-                'lat': city[3],
-                'lon': city[4],
-                'radius_km': city[5],
+                'aliases': list(city[3]),
             }
             for city in _CITIES
         ],

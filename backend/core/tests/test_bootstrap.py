@@ -16,13 +16,10 @@ class BootstrapContractTest(SimpleTestCase):
         data = response.json()['data']
         self.assertEqual(data['currency'], {'code': 'SDG', 'decimal_places': 2})
         self.assertEqual([c['id'] for c in data['cities']], ['port_sudan', 'khartoum', 'omdurman'])
-        self.assertEqual(data['cities'][0], {
-            'id': 'port_sudan',
-            'name': 'بورتسودان',
-            'lat': 19.6158,
-            'lon': 37.2164,
-            'radius_km': 45,
-        })
+        self.assertEqual(data['cities'][0]['id'], 'port_sudan')
+        self.assertEqual(data['cities'][0]['name'], 'بورتسودان')
+        self.assertIn('port sudan', data['cities'][0]['aliases'])
+        self.assertIn('بورتسودان', data['cities'][0]['aliases'])
         self.assertEqual(data['default_locale'], 'ar')
         self.assertEqual(data['locale'], 'ar')
         self.assertEqual(data['direction'], 'rtl')
@@ -36,9 +33,7 @@ class BootstrapContractTest(SimpleTestCase):
         self.assertEqual(response.json()['data']['minimum_app_version'], '2.3.4')
         self.assertNotIn('private-fixture', response.content.decode())
         self.assertEqual(response.json()['data']['cities'][0]['name'], 'Port Sudan')
-        self.assertEqual(response.json()['data']['cities'][0]['lat'], 19.6158)
-        self.assertEqual(response.json()['data']['cities'][0]['lon'], 37.2164)
-        self.assertEqual(response.json()['data']['cities'][0]['radius_km'], 45)
+        self.assertIn('port sudan', response.json()['data']['cities'][0]['aliases'])
 
     def test_locale_precedence_region_tags_and_default(self):
         for query, header, locale in [('', '', 'ar'), ('', 'en-US,en;q=0.8', 'en'),

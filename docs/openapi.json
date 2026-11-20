@@ -40,31 +40,23 @@
       },
       "City": {
         "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "id": {
             "type": "string"
           },
-          "lat": {
-            "format": "double",
-            "type": "number"
-          },
-          "lon": {
-            "format": "double",
-            "type": "number"
-          },
           "name": {
             "type": "string"
-          },
-          "radius_km": {
-            "minimum": 1,
-            "type": "integer"
           }
         },
         "required": [
+          "aliases",
           "id",
-          "lat",
-          "lon",
-          "name",
-          "radius_km"
+          "name"
         ],
         "type": "object"
       },
