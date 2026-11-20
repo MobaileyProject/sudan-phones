@@ -8,8 +8,7 @@ from rest_framework.test import APIClient
 class P2BackendAcceptanceTest(SimpleTestCase):
     def test_guest_bootstrap_journey_in_both_client_locales_matches_openapi(self):
         schema = SchemaGenerator().get_schema(request=None, public=True)
-        self.assertEqual(set(schema['paths']), {
-            '/api/v1/config', '/api/v1/i18n/bundle', '/api/v1/health'})
+        self.assertTrue({'/api/v1/config', '/api/v1/i18n/bundle', '/api/v1/health'}.issubset(schema['paths']))
         client = APIClient()
         for locale in ['ar', 'en']:
             config = client.get('/api/v1/config', {'locale': locale})

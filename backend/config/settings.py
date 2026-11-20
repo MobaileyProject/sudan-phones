@@ -155,3 +155,44 @@ R2_ACCESS_KEY_ID = os.environ.get('R2_ACCESS_KEY_ID', '')
 R2_SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY', '')
 R2_BUCKET_NAME = os.environ.get('R2_BUCKET_NAME', 'sudan-phones-media')
 R2_PUBLIC_DOMAIN = os.environ.get('R2_PUBLIC_DOMAIN', '')
+
+# Phone and email OTP delivery is explicitly configured; no SMS or console secrets.
+OTP_DELIVERY_BACKEND = os.environ.get('OTP_DELIVERY_BACKEND', 'core.identity.delivery.deliver_otp')
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
+
+MEDIA_STORAGE_BACKEND = 'core.media.storage.R2Storage'
+MEDIA_PHOTO_MAX_BYTES = 8 * 1024 * 1024
+MEDIA_DOCUMENT_MAX_BYTES = 10 * 1024 * 1024
+MEDIA_MAX_PIXELS = 24_000_000
+R2_PRIVATE_BUCKET = os.environ.get('R2_PRIVATE_BUCKET', '')
+R2_PUBLIC_BUCKET = os.environ.get('R2_PUBLIC_BUCKET', '')
+
+PUBLIC_LISTING_BASE_URL = os.environ.get('PUBLIC_LISTING_BASE_URL', 'https://souqphone.example/listings')
+
+WHATSAPP_ACCESS_TOKEN = os.environ.get('WHATSAPP_ACCESS_TOKEN','')
+WHATSAPP_PHONE_NUMBER_ID = os.environ.get('WHATSAPP_PHONE_NUMBER_ID','')
+WHATSAPP_API_VERSION = os.environ.get('WHATSAPP_API_VERSION','')
+WHATSAPP_OTP_TEMPLATE = os.environ.get('WHATSAPP_OTP_TEMPLATE','')
+WHATSAPP_TEMPLATE_LANGUAGE = os.environ.get('WHATSAPP_TEMPLATE_LANGUAGE','ar')
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST','localhost')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT','587'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER','')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD','')
+EMAIL_USE_TLS = True
+EMAIL_TIMEOUT = 10
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL','noreply@localhost')
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL','redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_BEAT_SCHEDULE = {'process-durable-media':{'task':'core.media.tasks.process_pending','schedule':30.0}}
+
+# Shared throttling cache for multi-process deployments; local memory remains dev-only.
+if os.environ.get('REDIS_CACHE_URL'):
+    CACHES = {'default': {'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+                          'LOCATION': os.environ['REDIS_CACHE_URL']}}

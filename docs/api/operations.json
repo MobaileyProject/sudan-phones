@@ -1,5 +1,189 @@
 [
   {
+    "api_id": "API-006",
+    "method": "GET",
+    "path": "/api/v1/admin/audit-events",
+    "phase": "P6",
+    "operation_id": "api_006",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-065",
+    "method": "GET",
+    "path": "/api/v1/admin/dual-approvals",
+    "phase": "P6",
+    "operation_id": "api_065",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-043",
+    "method": "POST",
+    "path": "/api/v1/admin/dual-approvals/{id}/decision",
+    "phase": "P6",
+    "operation_id": "api_043",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-044",
+    "method": "POST",
+    "path": "/api/v1/admin/listings/{id}/moderate",
+    "phase": "P4",
+    "operation_id": "api_044",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-008",
+    "method": "GET",
+    "path": "/api/v1/admin/moderation/queue",
+    "phase": "P4",
+    "operation_id": "api_008",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-009",
+    "method": "GET",
+    "path": "/api/v1/admin/overview",
+    "phase": "P6",
+    "operation_id": "api_009",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-010",
+    "method": "GET",
+    "path": "/api/v1/admin/roles",
+    "phase": "P6",
+    "operation_id": "api_010",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-045",
+    "method": "POST",
+    "path": "/api/v1/admin/roles",
+    "phase": "P6",
+    "operation_id": "api_045",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-001",
+    "method": "DELETE",
+    "path": "/api/v1/admin/roles/{id}",
+    "phase": "P6",
+    "operation_id": "api_001",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-011",
+    "method": "GET",
+    "path": "/api/v1/admin/verifications",
+    "phase": "P3",
+    "operation_id": "api_011",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-012",
+    "method": "GET",
+    "path": "/api/v1/admin/verifications/{id}",
+    "phase": "P3",
+    "operation_id": "api_012",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-046",
+    "method": "POST",
+    "path": "/api/v1/admin/verifications/{id}/decision",
+    "phase": "P3",
+    "operation_id": "api_046",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-013",
+    "method": "GET",
+    "path": "/api/v1/admin/verifications/{id}/documents",
+    "phase": "P3",
+    "operation_id": "api_013",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-047",
+    "method": "POST",
+    "path": "/api/v1/auth/login",
+    "phase": "P3",
+    "operation_id": "api_047",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-048",
+    "method": "POST",
+    "path": "/api/v1/auth/recover",
+    "phase": "P3",
+    "operation_id": "api_048",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-049",
+    "method": "POST",
+    "path": "/api/v1/auth/register",
+    "phase": "P3",
+    "operation_id": "api_049",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-002",
+    "method": "DELETE",
+    "path": "/api/v1/auth/session",
+    "phase": "P3",
+    "operation_id": "api_002",
+    "authentication": "optional"
+  },
+  {
+    "api_id": "API-062",
+    "method": "GET",
+    "path": "/api/v1/auth/session",
+    "phase": "P3",
+    "operation_id": "api_062",
+    "authentication": "optional"
+  },
+  {
+    "api_id": "API-014",
+    "method": "GET",
+    "path": "/api/v1/brands",
+    "phase": "P4",
+    "operation_id": "api_014",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-015",
+    "method": "GET",
+    "path": "/api/v1/catalog/brands",
+    "phase": "P4",
+    "operation_id": "api_015",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-016",
+    "method": "GET",
+    "path": "/api/v1/catalog/models",
+    "phase": "P4",
+    "operation_id": "api_016",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-017",
+    "method": "GET",
+    "path": "/api/v1/catalog/variants",
+    "phase": "P4",
+    "operation_id": "api_017",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-018",
+    "method": "GET",
+    "path": "/api/v1/categories",
+    "phase": "P4",
+    "operation_id": "api_018",
+    "authentication": "public"
+  },
+  {
     "api_id": "API-019",
     "method": "GET",
     "path": "/api/v1/config",
@@ -16,11 +200,243 @@
     "authentication": "public"
   },
   {
+    "api_id": "API-020",
+    "method": "GET",
+    "path": "/api/v1/home",
+    "phase": "P5",
+    "operation_id": "api_020",
+    "authentication": "public"
+  },
+  {
     "api_id": "API-021",
     "method": "GET",
     "path": "/api/v1/i18n/bundle",
     "phase": "P2",
     "operation_id": "localization_bundle",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-022",
+    "method": "GET",
+    "path": "/api/v1/listings",
+    "phase": "P5",
+    "operation_id": "api_022",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-023",
+    "method": "GET",
+    "path": "/api/v1/listings/{id}",
+    "phase": "P5",
+    "operation_id": "api_023",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-064",
+    "method": "POST",
+    "path": "/api/v1/listings/{id}/contact-events",
+    "phase": "P6",
+    "operation_id": "api_064",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-024",
+    "method": "GET",
+    "path": "/api/v1/listings/{id}/contact-methods",
+    "phase": "P6",
+    "operation_id": "api_024",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-025",
+    "method": "GET",
+    "path": "/api/v1/listings/{id}/related",
+    "phase": "P5",
+    "operation_id": "api_025",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-050",
+    "method": "POST",
+    "path": "/api/v1/media/uploads",
+    "phase": "P4",
+    "operation_id": "api_050",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-063",
+    "method": "POST",
+    "path": "/api/v1/media/uploads/{id}/complete",
+    "phase": "P4",
+    "operation_id": "api_063",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-051",
+    "method": "POST",
+    "path": "/api/v1/merchant/auth/register",
+    "phase": "P3",
+    "operation_id": "api_051",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-052",
+    "method": "POST",
+    "path": "/api/v1/merchant/auth/verify",
+    "phase": "P3",
+    "operation_id": "api_052",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-027",
+    "method": "GET",
+    "path": "/api/v1/product-variants/{id}/listings",
+    "phase": "P5",
+    "operation_id": "api_027",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-029",
+    "method": "GET",
+    "path": "/api/v1/stores/featured",
+    "phase": "P5",
+    "operation_id": "api_029",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-030",
+    "method": "GET",
+    "path": "/api/v1/stores/me",
+    "phase": "P3",
+    "operation_id": "api_030",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-059",
+    "method": "PUT",
+    "path": "/api/v1/stores/me",
+    "phase": "P3",
+    "operation_id": "api_059",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-032",
+    "method": "GET",
+    "path": "/api/v1/stores/me/dashboard",
+    "phase": "P6",
+    "operation_id": "api_032",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-033",
+    "method": "GET",
+    "path": "/api/v1/stores/me/listings",
+    "phase": "P4",
+    "operation_id": "api_033",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-054",
+    "method": "POST",
+    "path": "/api/v1/stores/me/listings",
+    "phase": "P4",
+    "operation_id": "api_054",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-038",
+    "method": "PATCH",
+    "path": "/api/v1/stores/me/listings/{id}",
+    "phase": "P4",
+    "operation_id": "api_038",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-039",
+    "method": "PATCH",
+    "path": "/api/v1/stores/me/listings/{id}/price",
+    "phase": "P4",
+    "operation_id": "api_039",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-034",
+    "method": "GET",
+    "path": "/api/v1/stores/me/listings/{id}/status",
+    "phase": "P4",
+    "operation_id": "api_034",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-040",
+    "method": "PATCH",
+    "path": "/api/v1/stores/me/listings/{id}/stock",
+    "phase": "P4",
+    "operation_id": "api_040",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-060",
+    "method": "PUT",
+    "path": "/api/v1/stores/me/profile",
+    "phase": "P3",
+    "operation_id": "api_060",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-055",
+    "method": "POST",
+    "path": "/api/v1/stores/me/staff",
+    "phase": "P3",
+    "operation_id": "api_055",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-004",
+    "method": "DELETE",
+    "path": "/api/v1/stores/me/staff/{id}",
+    "phase": "P3",
+    "operation_id": "api_004",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-035",
+    "method": "GET",
+    "path": "/api/v1/stores/me/verification",
+    "phase": "P3",
+    "operation_id": "api_035",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-056",
+    "method": "POST",
+    "path": "/api/v1/stores/me/verification/documents",
+    "phase": "P3",
+    "operation_id": "api_056",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-057",
+    "method": "POST",
+    "path": "/api/v1/stores/me/verification/submit",
+    "phase": "P3",
+    "operation_id": "api_057",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-036",
+    "method": "GET",
+    "path": "/api/v1/stores/{id}",
+    "phase": "P5",
+    "operation_id": "api_036",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-037",
+    "method": "GET",
+    "path": "/api/v1/stores/{id}/listings",
+    "phase": "P5",
+    "operation_id": "api_037",
     "authentication": "public"
   }
 ]

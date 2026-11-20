@@ -1,0 +1,13 @@
+{
+  "id": "BUG-2026-010",
+  "category": "schema",
+  "severity": "medium",
+  "status": "resolved",
+  "affected_files": [
+    "scripts/sync_slack_api_contracts.py"
+  ],
+  "affected_endpoints": [],
+  "root_cause": "Slack synchronization only updated/created implemented rows and its checker ignored extra proposed operations, allowing the current catalog to diverge from implemented APIs.",
+  "fix_summary": "Detect unimplemented rows during parity checking and add explicit --prune synchronization for unused/duplicate API rows, preserving unrelated notes and planning requirements in docs/plans.",
+  "regression_test": "tests/test_sync_slack_api_contracts.py::ContractParityTest.test_unimplemented_rows_are_detected_and_removed_without_touching_notes"
+}

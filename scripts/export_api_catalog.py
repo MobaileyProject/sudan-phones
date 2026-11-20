@@ -20,7 +20,7 @@ def operations(schema):
             rows.append({'api_id': api_id, 'method': method.upper(), 'path': path,
                          'phase': operation.get('x-phase', ''),
                          'operation_id': operation['operationId'],
-                         'authentication': 'required' if operation.get('security', schema.get('security')) else 'public'})
+                         'authentication': ('optional' if {} in operation.get('security', schema.get('security', [])) else 'required') if operation.get('security', schema.get('security')) else 'public'})
     return rows
 
 
