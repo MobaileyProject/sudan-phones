@@ -40,6 +40,12 @@
       },
       "City": {
         "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "id": {
             "type": "string"
           },
@@ -48,6 +54,7 @@
           }
         },
         "required": [
+          "aliases",
           "id",
           "name"
         ],

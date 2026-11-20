@@ -273,7 +273,7 @@ stateDiagram-v2
 #### Step 1 Work Checklist:
 - [x] `[JOINT]` **SCOPE-01 — Resolve Core Business Invariants & Decisions** (Slack: `Rec0CHT7ACRJ9` | Ref: `docs/plans/MVP_SCOPE_AND_INVARIANTS.md`)
   - Confirm single currency: **Sudanese Pound (SDG)** across all pricing and offers.
-  - Settle pilot launch region: **Port Sudan / Khartoum / Omdurman**.
+  - Settle pilot launch region: **Port Sudan / Khartoum / Omdurman** with native OS reverse-geocoded city identification and manual fallback.
   - Agree on inventory distinction:
     - **New phones:** Tracked by stock quantity (`quantity >= 1`), warranty terms, and sealed box flag.
     - **Used phones:** Tracked as distinct individual units with battery health %, physical condition grade, and explicit defects notes.
@@ -313,7 +313,7 @@ INT-02/GATE-02 remains pending frontend and external-service evidence.
   - Configure GitHub Actions CI for linting, secret scanning, and automated tests.
 - [ ] `[BE]` **BE-02: Configuration, Localization & Shared API Conventions** (Slack: `Rec0CHZGWCSW1`)
   - Implement shared JSON error envelope `{"error": {"code": "...", "message": "...", "details": [...]}}`.
-  - Implement **API-019**: `GET /api/v1/config` (App version, supported cities, currency settings).
+  - Implement **API-019**: `GET /api/v1/config` (App version, supported cities with reverse-geocoding aliases, currency settings).
   - Implement **API-021**: `GET /api/v1/i18n/bundle` (Arabic & English localization strings).
 - [ ] `[FE]` **FE-00: Dual Client Foundation & Design System** (Slack: `Rec0CHJBZ8K28`)
   - Scaffold Flutter mobile customer app with Riverpod/Bloc and RTL support.

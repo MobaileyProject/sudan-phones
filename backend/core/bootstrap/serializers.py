@@ -27,6 +27,7 @@ class CurrencySerializer(serializers.Serializer):
 class CitySerializer(serializers.Serializer):
     id = serializers.CharField()
     name = serializers.CharField()
+    aliases = serializers.ListField(child=serializers.CharField())
 
 
 class FeaturesSerializer(serializers.Serializer):

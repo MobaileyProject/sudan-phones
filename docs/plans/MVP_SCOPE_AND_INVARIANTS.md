@@ -65,12 +65,18 @@ Following explicit user and founder direction:
 - **Single Currency:** **Sudanese Pound (`SDG`)** across all listings, pricing comparisons, and configuration.
 - **Precision:** Prices are stored as decimal numbers with 2 decimal places (or integer minor units where applicable). No multi-currency conversion or dynamic forex rates in MVP.
 
-### 4.2 Pilot Launch Regions
+### 4.2 Pilot Launch Regions & Geolocation Detection
 - Initial pilot launch is restricted to physical stores located in:
   1. **Port Sudan** (بورتسودان — Red Sea State)
   2. **Khartoum** (الخرطوم)
   3. **Omdurman** (أم درمان)
 - Pilot merchants must maintain an operational, verifiable physical storefront in one of these pilot cities.
+- **Native Geolocation City Identification with Manual Fallback (Option 1):**
+  - `GET /api/v1/config` (API-019) provides normalized administrative `aliases` (in both Arabic and English) for each supported city.
+  - Client applications use native device reverse-geocoding (e.g. `Location.reverseGeocodeAsync` in React Native) to resolve coordinates directly to the device's administrative city/region name with zero distance math.
+  - If the resolved city or region name matches any of the city's `aliases`, that city is auto-selected as default.
+  - If the device location is outside supported pilot regions, or if location permission is denied/unavailable, the app gracefully prompts the user to manually select their preferred market.
+  - Users can manually override and switch their selected city at any time via the UI city selector.
 
 ### 4.3 Customer Contact & Guest Privacy
 - Customers interact with merchants directly off-platform:
