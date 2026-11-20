@@ -1,0 +1,17 @@
+[Unit]
+Description=Sudan Phones daily PostgreSQL backup
+# Configure an OnFailure alert unit on the actual host before production.
+
+[Service]
+Type=oneshot
+User=sudan-backup
+Group=sudan-backup
+EnvironmentFile=/etc/sudan-phones/backup.env
+WorkingDirectory=/opt/sudan-phones
+UMask=0077
+ExecStart=/usr/bin/python3 /opt/sudan-phones/scripts/scheduled_backend_backup.py
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/backups/sudan-phones

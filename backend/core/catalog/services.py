@@ -1,4 +1,5 @@
 from core.stores.services import member_store
+from core.common.public_cache import cached
 from .models import Brand, PhoneModel, Variant
 
 
@@ -7,6 +8,10 @@ def choices(actor, kind, query, public=False):
         member_store(actor, verified=True)
     if kind == "categories":
         return [{"id": "phones", "name": "Phones"}]
+    if public and kind == "brands":
+        return cached(f"brands:{query['offset']}:{query['limit']}", lambda: list(
+            Brand.objects.order_by("pk").values("id", "name")[
+                query["offset"]:query["offset"] + query["limit"]]))
     queryset = {"brands": Brand, "models": PhoneModel, "variants": Variant}[
         kind
     ].objects.order_by("pk")
