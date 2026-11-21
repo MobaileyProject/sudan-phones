@@ -1,0 +1,17 @@
+{
+  "id": "BUG-2026-020",
+  "category": "performance",
+  "severity": "low",
+  "status": "resolved",
+  "affected_files": [
+    "backend/core/listings/services.py"
+  ],
+  "affected_endpoints": [
+    "GET /api/v1/listings",
+    "GET /api/v1/home",
+    "GET /api/v1/listings/{id}"
+  ],
+  "root_cause": "Public listing_data ordered/select_related media again despite visible_listings prefetch, adding one query per listing.",
+  "fix_summary": "Reuse prefetched media and preserve position ordering; non-prefetched merchant serialization retains eager asset loading.",
+  "regression_test": "backend/core/tests/test_public_performance.py::PublicPerformanceTests.test_search_media_query_count_does_not_grow_with_page_size"
+}

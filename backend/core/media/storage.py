@@ -11,6 +11,12 @@ def storage():
 
 class R2Storage:
     def __init__(self):
+        self._client = None
+
+    @property
+    def client(self):
+        if self._client is not None:
+            return self._client
         import boto3
         from botocore.config import Config
 
@@ -33,7 +39,7 @@ class R2Storage:
             "STORAGE_UNAVAILABLE",
             503,
         )
-        self.client = boto3.client(
+        self._client = boto3.client(
             "s3",
             endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
             aws_access_key_id=settings.R2_ACCESS_KEY_ID,
@@ -46,6 +52,8 @@ class R2Storage:
                 retries={"max_attempts": 2},
             ),
         )
+
+        return self._client
 
     def bucket(self, key):
         return (
@@ -103,6 +111,7 @@ class R2Storage:
         )
 
     def public_url(self, key):
+        require(bool(settings.R2_PUBLIC_DOMAIN), "STORAGE_UNAVAILABLE", 503)
         require(key.startswith("public/"), "INVALID_MEDIA")
         return settings.R2_PUBLIC_DOMAIN.rstrip("/") + "/" + key
 
