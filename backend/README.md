@@ -46,9 +46,16 @@ Authentication uses Django server-side sessions and CSRF. Start with
 GET /api/v1/auth/session, preserve cookies and send X-CSRFToken on unsafe requests;
 login/registration rotate the CSRF token. Founder accounts are provisioned with
 `backend/manage.py createsuperuser` (use a normalized phone as username for API
-login). A staff flag alone does not grant marketplace privileges. Catalog brands,
-models/specifications and variants are maintained in Django admin by authorized
-founders; no fabricated production device dataset is bundled.
+login). A staff flag alone does not grant marketplace privileges. Catalog brands, models/specifications and variants are synced from official
+specification providers (no hand-authored device specs are bundled). Configure
+`TECHSPECS_API_ID` and `TECHSPECS_API_KEY` privately in your environment, then
+run `.venv/bin/python backend/manage.py sync_catalog --provider techspecs --seed`
+to fetch normalized specs and RAM/storage/color variants for the 14 Sudan target
+brands into `backend/core/catalog/data/*.json` and seed PostgreSQL idempotently.
+Existing validated JSON files can be re-seeded offline with
+`.venv/bin/python backend/manage.py seed_catalog` (supports `--dry-run` and
+repeatable `--brand <name>`), and authorized founders can maintain entries in
+Django admin.
 
 Configure these values privately; never put credentials in commands, PR text or chat:
 
