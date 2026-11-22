@@ -15,6 +15,10 @@ from rest_framework.test import APIClient
 
 from core.catalog.models import Brand, PhoneModel, Variant
 from core.catalog.providers.google_play import parse_google_play_csv
+from core.catalog.providers.mobileapi import (
+    MobileAPIClient,
+    normalize_mobileapi_device,
+)
 from core.catalog.providers.sudan_brands import (
     SUDAN_BRANDS,
     parse_colors,
@@ -340,3 +344,66 @@ class CatalogSeedAndSyncCommandTests(TestCase):
             self.assertEqual(Brand.objects.filter(name="Xiaomi").count(), 1)
             self.assertEqual(PhoneModel.objects.filter(name="Redmi Note 13 Pro 5G").count(), 1)
             self.assertEqual(Variant.objects.count(), 12)
+
+    def test_mobileapi_normalizer_and_sync_command_end_to_end(self):
+        sample_mobileapi = {
+            "id": 9001,
+            "manufacturer": "Samsung",
+            "name": "Samsung Galaxy A15 4G",
+            "type": "Smartphone",
+            "release_date": "2023-12-16",
+            "display": "Super AMOLED, 90Hz",
+            "screen_size": "6.5 inches",
+            "screen_resolution": "1080x2340",
+            "hardware": "MediaTek Helio G99",
+            "os": "Android 14",
+            "storage": "128GB 4GB RAM, 128GB 6GB RAM, 256GB 8GB RAM",
+            "camera": "50MP (wide) + 5MP (ultrawide) + 2MP (macro)",
+            "selfie_camera": "13MP",
+            "battery_capacity": "5000 mAh",
+            "charging": "25W wired",
+            "network": "4G LTE",
+            "colors": "Brave Black, Optimistic Blue",
+            "card_slot": "microSDXC",
+            "nfc": "Yes",
+            "headphone_jack": "Yes",
+        }
+        brand, entry = normalize_mobileapi_device(
+            sample_mobileapi, fetched_at="2026-11-22T04:00:00+00:00"
+        )
+        self.assertEqual(brand, "Samsung")
+        self.assertEqual(entry["name"], "Galaxy A15 4G")
+        self.assertEqual(entry["specifications"]["source"]["provider"], "mobileapi_dev")
+        self.assertEqual(len(entry["configs"]), 3)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with (
+                mock.patch.dict(os.environ, {"MOBILEAPI_KEY": "test-mobile-key"}),
+                mock.patch.object(
+                    MobileAPIClient,
+                    "search_devices",
+                    return_value=[{"id": 9001}],
+                ),
+                mock.patch.object(
+                    MobileAPIClient,
+                    "get_device",
+                    return_value=sample_mobileapi,
+                ),
+            ):
+                out = io.StringIO()
+                call_command(
+                    "sync_catalog",
+                    "--provider",
+                    "mobileapi",
+                    "--brand",
+                    "Samsung",
+                    "--output-dir",
+                    tmp,
+                    "--seed",
+                    stdout=out,
+                )
+
+            self.assertIn("from mobileapi", out.getvalue())
+            self.assertEqual(Brand.objects.filter(name="Samsung").count(), 1)
+            self.assertEqual(PhoneModel.objects.filter(name="Galaxy A15 4G").count(), 1)
+            self.assertEqual(Variant.objects.count(), 6)

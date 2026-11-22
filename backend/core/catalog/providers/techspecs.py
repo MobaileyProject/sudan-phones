@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -89,18 +90,36 @@ class TechSpecsClient:
             url,
             headers={
                 "accept": "application/json",
+                "User-Agent": "sudan-phones-catalog-sync/1.0",
                 "x-api-id": self.api_id,
                 "x-api-key": self.api_key,
             },
             method="GET",
         )
-        try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                return json.loads(resp.read().decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            raise TechSpecsError(f"TechSpecs API HTTP {exc.code} on {path}") from exc
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-            raise TechSpecsError(f"TechSpecs API request failed on {path}: {exc}") from exc
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                    return json.loads(resp.read().decode("utf-8"))
+            except urllib.error.HTTPError as exc:
+                if exc.code in (429, 502, 503, 504) and attempt < 2:
+                    time.sleep(1.5 * (attempt + 1))
+                    continue
+                detail_msg = ""
+                try:
+                    body = exc.read().decode("utf-8", errors="replace").strip()
+                    if body:
+                        detail_msg = f": {body[:300]}"
+                except Exception:
+                    pass
+                raise TechSpecsError(
+                    f"TechSpecs API HTTP {exc.code} on {path}{detail_msg}"
+                ) from exc
+            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+                if attempt < 2:
+                    time.sleep(1.5 * (attempt + 1))
+                    continue
+                raise TechSpecsError(f"TechSpecs API request failed on {path}: {exc}") from exc
+        raise TechSpecsError(f"TechSpecs API request exhausted retries on {path}")
 
     def search_products(self, query: str, page: int = 0, size: int = 25) -> list[dict]:
         payload = self._request_json(

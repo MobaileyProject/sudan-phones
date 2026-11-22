@@ -4,6 +4,11 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 
+from core.catalog.providers.mobileapi import (
+    MobileAPIClient,
+    MobileAPIError,
+    sync_from_mobileapi,
+)
 from core.catalog.providers.sudan_brands import SUDAN_BRANDS
 from core.catalog.providers.techspecs import (
     TechSpecsClient,
@@ -26,9 +31,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             "--provider",
-            choices=["techspecs"],
+            choices=["techspecs", "mobileapi"],
             default="techspecs",
-            help="Official specification provider to fetch from (default: techspecs).",
+            help="Official specification provider to fetch from (techspecs or mobileapi).",
         )
         parser.add_argument(
             "--brand",
@@ -67,15 +72,25 @@ class Command(BaseCommand):
         output_dir = Path(options["output_dir"])
 
         try:
-            client = TechSpecsClient()
-            summary = sync_from_techspecs(
-                client=client,
-                brands=brands,
-                output_dir=output_dir,
-                min_year=options["min_year"],
-                limit_per_brand=options["limit_per_brand"],
-            )
-        except TechSpecsError as exc:
+            if options["provider"] == "mobileapi":
+                client = MobileAPIClient()
+                summary = sync_from_mobileapi(
+                    client=client,
+                    brands=brands,
+                    output_dir=output_dir,
+                    min_year=options["min_year"],
+                    limit_per_brand=options["limit_per_brand"],
+                )
+            else:
+                client = TechSpecsClient()
+                summary = sync_from_techspecs(
+                    client=client,
+                    brands=brands,
+                    output_dir=output_dir,
+                    min_year=options["min_year"],
+                    limit_per_brand=options["limit_per_brand"],
+                )
+        except (TechSpecsError, MobileAPIError) as exc:
             raise CommandError(str(exc)) from exc
 
         total_fetched = sum(summary.values())
