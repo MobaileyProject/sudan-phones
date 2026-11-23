@@ -11,6 +11,7 @@ import {
   KeyRound,
   LogIn,
   MapPin,
+  Moon,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -18,13 +19,13 @@ import {
   Smartphone,
   Sparkles,
   Store as StoreIcon,
+  Sun,
   UserRound,
   WifiOff,
   X,
 } from 'lucide-react';
 import { BrandId, Listing, Store } from '../../types';
 import {
-  BRANDS,
   formatCity,
   formatCondition,
   formatListingTitle,
@@ -32,9 +33,8 @@ import {
   formatUsedGrade,
   tText,
 } from '../../i18n/translations';
-import { CATALOG_MODELS } from '../../data/mockData';
 import { usePrototype } from '../../store/PrototypeContext';
-import { hasStoredSessionToken } from '../../api/client';
+import { api, hasStoredSessionToken } from '../../api/client';
 import {
   BrandLogo,
   OfflineBanner,
@@ -92,7 +92,10 @@ const DEFAULT_FILTERS: CustomerFilterState = {
 export function CustomerApp() {
   const {
     lang,
+    theme,
+    toggleTheme,
     selectedCity,
+    brands,
     stores,
     publicListings,
     cachedPublicListings,
@@ -145,7 +148,7 @@ export function CustomerApp() {
   const [entryScreen, setEntryScreen] = useState<MobileEntryScreen | null>(() =>
     session.authenticated || hasStoredSessionToken() ? null : 'welcome'
   );
-  const [authTheme, setAuthTheme] = useState<AuthThemeMode>('light');
+  const authTheme: AuthThemeMode = theme;
   const [signedInUser, setSignedInUser] = useState<{ name: string; phone: string } | null>(() =>
     session.authenticated && me
       ? {
@@ -178,6 +181,40 @@ export function CustomerApp() {
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [citySheetOpen, setCitySheetOpen] = useState(false);
   const [brandSearch, setBrandSearch] = useState('');
+  const [brandModelSearch, setBrandModelSearch] = useState('');
+  const [liveBrandModels, setLiveBrandModels] = useState<any[]>([]);
+  const [loadingBrandModels, setLoadingBrandModels] = useState(false);
+
+  useEffect(() => {
+    if (subScreen.kind !== 'brand_models') return;
+    let active = true;
+    const matchedBrand = brands.find(
+      (b) => (b.slug || b.name.toLowerCase()) === subScreen.brandId
+    );
+    const timer = window.setTimeout(() => {
+      setLoadingBrandModels(true);
+      api
+        .getPublicModels({
+          brand_id: matchedBrand?.id,
+          brand: matchedBrand ? undefined : subScreen.brandId,
+          q: brandModelSearch.trim() || undefined,
+          limit: 100,
+        })
+        .then((res) => {
+          if (active) setLiveBrandModels(res.data || []);
+        })
+        .catch(() => {
+          if (active) setLiveBrandModels([]);
+        })
+        .finally(() => {
+          if (active) setLoadingBrandModels(false);
+        });
+    }, brandModelSearch.trim() ? 220 : 0);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [subScreen, brands, brandModelSearch]);
   const [rateModelTarget, setRateModelTarget] = useState<{
     brand: BrandId;
     model: string;
@@ -529,7 +566,7 @@ export function CustomerApp() {
         <MobileAppAuthScreens
           screen={entryScreen}
           authTheme={authTheme}
-          onToggleTheme={() => setAuthTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
+          onToggleTheme={toggleTheme}
           onNavigate={(next) => setEntryScreen(next)}
           onEnterAppAsGuest={() => {
             setSignedInUser(null);
@@ -628,16 +665,26 @@ export function CustomerApp() {
     }
 
     if (subScreen.kind === 'brand_models') {
-      const brandObj = BRANDS.find((b) => b.id === subScreen.brandId)!;
-      const models = CATALOG_MODELS.filter((m) => m.brand === subScreen.brandId);
-      const brandLabel = lang === 'ar' ? brandObj.arLabel : brandObj.label;
+      const brandObj = brands.find(
+        (b) => (b.slug || b.name.toLowerCase()) === subScreen.brandId
+      );
+      const brandSlug = brandObj?.slug || subScreen.brandId;
+      const brandLabel = brandObj
+        ? lang === 'ar' && brandObj.name_ar
+          ? brandObj.name_ar
+          : brandObj.name
+        : subScreen.brandId;
+      const arPrefix = brandObj?.name_ar || brandObj?.name || subScreen.brandId;
 
       return (
         <div className="store-clay flex flex-col h-full relative">
           <div className="sticky top-0 z-20 flex items-center gap-3 h-[60px] px-4 clay-topbar shrink-0">
             <button
               type="button"
-              onClick={goBack}
+              onClick={() => {
+                setBrandModelSearch('');
+                goBack();
+              }}
               aria-label={lang === 'ar' ? 'رجوع' : 'Back'}
               className="clay-pill clay-focus-ring w-11 h-11 rounded-full flex items-center justify-center text-[#172B20] shrink-0"
             >
@@ -646,8 +693,8 @@ export function CustomerApp() {
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-10 h-10 rounded-[14px] clay-pill-active flex items-center justify-center text-[#1E4F34] shrink-0 px-1.5">
                 <BrandLogo
-                  brandId={brandObj.id}
-                  className={brandObj.id === 'samsung' || brandObj.id === 'tecno' ? 'w-8 h-5' : 'w-5 h-5'}
+                  brandId={brandSlug}
+                  className={brandSlug === 'samsung' || brandSlug === 'tecno' ? 'w-8 h-5' : 'w-5 h-5'}
                 />
               </div>
               <div className="min-w-0">
@@ -663,84 +710,132 @@ export function CustomerApp() {
             </div>
           </div>
 
+          <div className="px-4 pt-2 pb-1 shrink-0">
+            <div className="relative">
+              <Search className="w-4 h-4 text-[#6B8276] absolute start-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={brandModelSearch}
+                onChange={(e) => setBrandModelSearch(e.target.value)}
+                placeholder={lang === 'ar' ? `ابحث في موديلات ${brandLabel}...` : `Search ${brandLabel} models...`}
+                className="w-full h-10 ps-10 pe-4 rounded-[18px] clay-inset text-xs text-[#172B20] placeholder:text-[#7A9084] focus:outline-none"
+              />
+            </div>
+          </div>
+
           <div className="flex-1 overflow-y-auto thin-scroll px-4 pt-2 pb-8 space-y-3">
-            {models.map((m) => {
-              const matching = publicListings.filter(
-                (l) => l.brand === m.brand && l.model === m.model
-              );
-              const lowest = matching.length > 0 ? Math.min(...matching.map((x) => x.priceSdg)) : null;
-              const modelRating = getPhoneModelRatingSummary(m.brand, m.model);
-              return (
-                <div
-                  key={m.model}
-                  onClick={() => openSearchWith({ brand: m.brand }, m.model)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      openSearchWith({ brand: m.brand }, m.model);
-                    }
-                  }}
-                  className="w-full clay-card-interactive clay-focus-ring rounded-[24px] p-3 flex items-center justify-between gap-3 text-start cursor-pointer"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <SafeImage
-                      clay
-                      src={m.defaultImage}
-                      alt={m.model}
-                      aspectClass="w-14 h-14 rounded-[16px] shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-bold text-[#172B20] truncate">
-                        {formatListingTitle(m.arabicBrandPrefix, m.model, lang)}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <CompactStarRating
-                          average={modelRating.average}
-                          count={modelRating.count}
-                          size="xs"
+            {loadingBrandModels ? (
+              <div className="clay-card rounded-[24px] p-6 text-center text-xs text-[#5E7669] flex items-center justify-center gap-2">
+                <RefreshCw className="w-4 h-4 animate-spin text-[#1E4F34]" />
+                {lang === 'ar' ? 'جاري تحميل الموديلات...' : 'Loading models...'}
+              </div>
+            ) : liveBrandModels.length === 0 ? (
+              <div className="clay-card rounded-[24px] p-6 text-center text-xs text-[#5E7669]">
+                {lang === 'ar' ? 'لا توجد موديلات مطابقة للبحث.' : 'No matching models found.'}
+              </div>
+            ) : (
+              liveBrandModels.map((m) => {
+                const matching = publicListings.filter(
+                  (l) =>
+                    l.brand.toLowerCase() === brandSlug.toLowerCase() &&
+                    l.model.toLowerCase() === String(m.name).toLowerCase()
+                );
+                const liveCount = Number(m.listing_count || matching.length || 0);
+                const lowest = m.min_price
+                  ? Number(m.min_price)
+                  : matching.length > 0
+                    ? Math.min(...matching.map((x) => x.priceSdg))
+                    : null;
+                const modelRating =
+                  m.rating_count > 0
+                    ? { average: Number(m.rating_average || 0), count: Number(m.rating_count || 0) }
+                    : getPhoneModelRatingSummary(brandSlug, m.name);
+                const yr = m.specifications?.release_year;
+                const bat = m.specifications?.battery?.capacity_mah;
+                const photoUrl = matching[0]?.photos?.[0]?.url || '';
+                return (
+                  <div
+                    key={m.id}
+                    onClick={() => openSearchWith({ brand: brandSlug }, m.name)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        openSearchWith({ brand: brandSlug }, m.name);
+                      }
+                    }}
+                    className="w-full clay-card-interactive clay-focus-ring rounded-[24px] p-3 flex items-center justify-between gap-3 text-start cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {photoUrl ? (
+                        <SafeImage
+                          clay
+                          src={photoUrl}
+                          alt={m.name}
+                          aspectClass="w-14 h-14 rounded-[16px] shrink-0"
                         />
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setRateModelTarget({
-                              brand: m.brand,
-                              model: m.model,
-                              arabicBrandPrefix: m.arabicBrandPrefix,
-                            });
-                          }}
-                          className="clay-pill-active px-2 py-0.5 rounded-full text-[10px] font-bold text-[#17462C]"
-                        >
-                          {lang === 'ar' ? 'قيّم' : 'Rate'}
-                        </button>
-                      </div>
-                      <p className="text-[11px] text-[#5D7568] mt-1">
-                        {matching.length > 0 ? (
-                          <>
-                            <span className="font-mono-num text-[#245A3D] font-bold">
-                              {matching.length}
-                            </span>{' '}
-                            {lang === 'ar' ? 'عروض · يبدأ من ' : 'available · from '}
-                            <span className="font-mono-num text-[#172B20] font-semibold">
-                              {formatSdg(lowest!, lang)}
-                            </span>
-                          </>
-                        ) : lang === 'ar' ? (
-                          'لا توجد عروض متاحة حالياً'
-                        ) : (
-                          'No active listings currently'
+                      ) : (
+                        <div className="w-14 h-14 rounded-[16px] clay-pill-active flex items-center justify-center text-[#1E4F34] shrink-0">
+                          <Smartphone className="w-6 h-6" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-bold text-[#172B20] truncate" dir="ltr">
+                          {m.name}
+                        </p>
+                        {(yr || bat) && (
+                          <p className="text-[10px] text-[#667D71] mt-0.5" dir="ltr">
+                            {[yr ? String(yr) : '', bat ? `${bat}mAh` : ''].filter(Boolean).join(' · ')}
+                          </p>
                         )}
-                      </p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <CompactStarRating
+                            average={modelRating.average}
+                            count={modelRating.count}
+                            size="xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRateModelTarget({
+                                brand: brandSlug,
+                                model: m.name,
+                                arabicBrandPrefix: arPrefix,
+                              });
+                            }}
+                            className="clay-pill-active px-2 py-0.5 rounded-full text-[10px] font-bold text-[#17462C]"
+                          >
+                            {lang === 'ar' ? 'قيّم' : 'Rate'}
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-[#5D7568] mt-1">
+                          {liveCount > 0 && lowest ? (
+                            <>
+                              <span className="font-mono-num text-[#245A3D] font-bold">
+                                {liveCount}
+                              </span>{' '}
+                              {lang === 'ar' ? 'عروض · يبدأ من ' : 'available · from '}
+                              <span className="font-mono-num text-[#172B20] font-semibold">
+                                {formatSdg(lowest, lang)}
+                              </span>
+                            </>
+                          ) : lang === 'ar' ? (
+                            'لا توجد عروض متاحة حالياً'
+                          ) : (
+                            'No active listings currently'
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="w-8 h-8 rounded-full clay-inset flex items-center justify-center text-[#5A7265] shrink-0">
+                      <ForwardChevron className="w-4 h-4" />
                     </div>
                   </div>
-                  <div className="w-8 h-8 rounded-full clay-inset flex items-center justify-center text-[#5A7265] shrink-0">
-                    <ForwardChevron className="w-4 h-4" />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
 
           {(() => {
@@ -815,6 +910,35 @@ export function CustomerApp() {
               </button>
 
               <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  aria-label={
+                    theme === 'dark'
+                      ? lang === 'ar'
+                        ? 'الوضع الفاتح'
+                        : 'Light Mode'
+                      : lang === 'ar'
+                        ? 'الوضع الداكن'
+                        : 'Dark Mode'
+                  }
+                  title={
+                    theme === 'dark'
+                      ? lang === 'ar'
+                        ? 'الوضع الفاتح'
+                        : 'Light Mode'
+                      : lang === 'ar'
+                        ? 'الوضع الداكن'
+                        : 'Dark Mode'
+                  }
+                  className="clay-pill clay-focus-ring w-10 h-10 rounded-full flex items-center justify-center text-[#172B20] shrink-0"
+                >
+                  {theme === 'dark' ? (
+                    <Sun className="w-4 h-4 text-amber-400" />
+                  ) : (
+                    <Moon className="w-4 h-4 text-[#2D6145]" />
+                  )}
+                </button>
                 <button
                   type="button"
                   onClick={() => setCitySheetOpen(true)}
@@ -906,24 +1030,27 @@ export function CustomerApp() {
                   </button>
                 </div>
                 <div className="flex items-center gap-2.5 overflow-x-auto py-1 px-0.5 thin-scroll">
-                  {BRANDS.map((b) => (
-                    <button
-                      key={b.id}
-                      type="button"
-                      onClick={() => navigateTo({ kind: 'brand_models', brandId: b.id })}
-                      className="clay-pill clay-focus-ring h-10 px-3.5 rounded-full text-xs font-semibold text-[#1E3629] inline-flex items-center gap-2 whitespace-nowrap shrink-0"
-                    >
-                      <BrandLogo
-                        brandId={b.id}
-                        className={
-                          b.id === 'samsung' || b.id === 'tecno'
-                            ? 'w-7 h-4 text-[#23573A] shrink-0'
-                            : 'w-4 h-4 text-[#23573A] shrink-0'
-                        }
-                      />
-                      <span>{lang === 'ar' ? b.arLabel : b.label}</span>
-                    </button>
-                  ))}
+                  {brands.map((b) => {
+                    const slug = (b.slug || b.name.toLowerCase()) as BrandId;
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => navigateTo({ kind: 'brand_models', brandId: slug })}
+                        className="clay-pill clay-focus-ring h-10 px-3.5 rounded-full text-xs font-semibold text-[#1E3629] inline-flex items-center gap-2 whitespace-nowrap shrink-0"
+                      >
+                        <BrandLogo
+                          brandId={slug}
+                          className={
+                            slug === 'samsung' || slug === 'tecno'
+                              ? 'w-7 h-4 text-[#23573A] shrink-0'
+                              : 'w-4 h-4 text-[#23573A] shrink-0'
+                          }
+                        />
+                        <span>{lang === 'ar' && b.name_ar ? b.name_ar : b.name}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </motion.div>
 
@@ -1252,11 +1379,14 @@ export function CustomerApp() {
 
             <div className="flex-1 overflow-y-auto thin-scroll px-4 pt-2 pb-24">
               {(() => {
-                const filteredBrands = BRANDS.filter((b) => {
+                const filteredBrands = brands.filter((b) => {
                   if (!brandSearch.trim()) return true;
                   const q = brandSearch.toLowerCase();
-                  return b.label.toLowerCase().includes(q) || b.arLabel.includes(brandSearch.trim());
-                }).sort((a, b) => a.label.localeCompare(b.label));
+                  return (
+                    b.name.toLowerCase().includes(q) ||
+                    (b.name_ar || '').includes(brandSearch.trim())
+                  );
+                }).sort((a, b) => a.name.localeCompare(b.name));
 
                 if (filteredBrands.length === 0) {
                   return (
@@ -1271,21 +1401,24 @@ export function CustomerApp() {
                 return (
                   <div className="grid grid-cols-2 gap-3.5">
                     {filteredBrands.map((brand) => {
-                      const brandListings = publicListings.filter((l) => l.brand === brand.id);
-                      const modelCount = CATALOG_MODELS.filter((m) => m.brand === brand.id).length;
+                      const slug = (brand.slug || brand.name.toLowerCase()) as BrandId;
+                      const brandListings = publicListings.filter(
+                        (l) => l.brand.toLowerCase() === slug.toLowerCase()
+                      );
+                      const modelCount = brand.model_count ?? 0;
                       return (
                         <button
                           key={brand.id}
                           type="button"
-                          onClick={() => navigateTo({ kind: 'brand_models', brandId: brand.id })}
+                          onClick={() => navigateTo({ kind: 'brand_models', brandId: slug })}
                           className="clay-card-interactive clay-focus-ring rounded-[26px] p-4 min-h-[148px] flex flex-col justify-between text-start"
                         >
                           <div className="flex items-start justify-between gap-2 w-full">
                             <div className="w-13 h-13 rounded-[18px] clay-pill-active flex items-center justify-center text-[#1E4F34] shrink-0 px-1.5">
                               <BrandLogo
-                                brandId={brand.id}
+                                brandId={slug}
                                 className={
-                                  brand.id === 'samsung' || brand.id === 'tecno'
+                                  slug === 'samsung' || slug === 'tecno'
                                     ? 'w-10 h-6'
                                     : 'w-6 h-6'
                                 }
@@ -1298,11 +1431,11 @@ export function CustomerApp() {
 
                           <div className="pt-3 w-full">
                             <p className="text-[15px] font-bold text-[#172B20] leading-snug truncate">
-                              {lang === 'ar' ? brand.arLabel : brand.label}
+                              {lang === 'ar' && brand.name_ar ? brand.name_ar : brand.name}
                             </p>
                             {lang === 'ar' && (
                               <p className="text-[11px] font-medium text-[#70877B] truncate mt-0.5" dir="ltr">
-                                {brand.label}
+                                {brand.name}
                               </p>
                             )}
                             <p className="text-[11px] text-[#637B6E] mt-2 truncate">

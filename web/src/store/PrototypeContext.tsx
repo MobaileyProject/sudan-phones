@@ -25,6 +25,7 @@ import {
 import { computeRatingSummary, getPhoneModelRatingKey } from '../data/ratingsData';
 import {
   api,
+  ApiBrand,
   ApiError,
   ApiMe,
   ApiSession,
@@ -106,6 +107,9 @@ const FALLBACK_ADMIN: AdminUser = {
 interface PrototypeContextValue {
   lang: Language;
   setLang: (lang: Language) => void;
+  theme: 'light' | 'dark';
+  setTheme: (theme: 'light' | 'dark') => void;
+  toggleTheme: () => void;
   portal: PortalMode;
   setPortal: (portal: PortalMode) => void;
   selectedCity: CityId | 'all';
@@ -127,6 +131,7 @@ interface PrototypeContextValue {
   fetchContactMethods: (listingId: string) => Promise<{ phone_url: string; whatsapp_url: string }>;
 
   // Entities
+  brands: ApiBrand[];
   stores: Store[];
   listings: Listing[];
   adminRoles: AdminRole[];
@@ -239,6 +244,33 @@ function detectInitialPortal(): PortalMode {
 
 export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLang] = useState<Language>('ar');
+  const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
+    try {
+      return window.localStorage.getItem('sp_theme_v1') === 'dark' ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('dark', theme === 'dark');
+    root.dataset.theme = theme;
+    try {
+      window.localStorage.setItem('sp_theme_v1', theme);
+    } catch {
+      // ignore storage errors
+    }
+  }, [theme]);
+
+  const setTheme = useCallback((next: 'light' | 'dark') => {
+    setThemeState(next);
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  }, []);
+
   const [portal, setPortalState] = useState<PortalMode>(detectInitialPortal);
   const [selectedCity, setSelectedCity] = useState<CityId | 'all'>('all');
   const [hasCompletedCitySelection, setHasCompletedCitySelection] = useState<boolean>(true);
@@ -259,6 +291,14 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<ApiMe | null>(() => initialCachedAuth?.me ?? null);
   const [isLoadingLive, setIsLoadingLive] = useState<boolean>(true);
 
+  const [brands, setBrands] = useState<ApiBrand[]>(() => {
+    try {
+      const raw = window.localStorage.getItem('sp_cached_brands');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
   const [stores, setStores] = useState<Store[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [merchantStore, setMerchantStore] = useState<Store>(FALLBACK_STORE);
@@ -313,15 +353,23 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
 
   const refreshPublicData = useCallback(async () => {
     try {
-      const [listingsRes, storesRes, modelsRes] = await Promise.all([
+      const [listingsRes, storesRes, modelsRes, brandsRes] = await Promise.all([
         api.searchListings({ limit: 100 }),
         api.getFeaturedStores(),
         api.getPublicModels({ limit: 100 }),
+        api.getBrands(),
       ]);
       const mappedListings = (listingsRes.data || []).map(mapListing);
       const mappedStores = (storesRes.data || []).map((s: any) => mapStore(s));
+      const loadedBrands = brandsRes.data || [];
       setListings(mappedListings);
       setStores(mappedStores);
+      setBrands(loadedBrands);
+      try {
+        window.localStorage.setItem('sp_cached_brands', JSON.stringify(loadedBrands));
+      } catch {
+        // ignore storage quota
+      }
 
       const mMap: Record<string, number> = {};
       for (const m of modelsRes.data || []) {
@@ -1003,6 +1051,9 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       value={{
         lang,
         setLang,
+        theme,
+        setTheme,
+        toggleTheme,
         portal,
         setPortal,
         selectedCity,
@@ -1020,6 +1071,7 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         refreshMerchantData,
         refreshAdminData,
         fetchContactMethods,
+        brands,
         stores,
         listings: allListings,
         adminRoles,

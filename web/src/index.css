@@ -503,5 +503,195 @@
   outline-offset: 2px;
 }
 
+/* ============================================================================
+ * Global Dark Mode Theme (Matches Forest-Emerald Auth Dark Palette)
+ * Activated via html.dark / html[data-theme="dark"]
+ * ============================================================================ */
+html.dark,
+html.dark body,
+html.dark #root {
+  background-color: #0C1511;
+  color: #EAF4EE;
+}
+
+html.dark .store-clay {
+  --clay-canvas: #0C1511;
+  --clay-canvas-deep: #09110D;
+  --clay-surface: #13201A;
+  --clay-surface-pure: #172720;
+  --clay-tint: #1B3328;
+  --clay-tint-strong: #214031;
+  --clay-inset: #101C16;
+  --clay-ink: #EAF4EE;
+  --clay-ink-secondary: #A6BAB0;
+  --clay-ink-muted: #7F968B;
+  --clay-accent: #58B886;
+  --clay-accent-deep: #3D8B62;
+  --clay-accent-soft: #6EC99A;
+
+  background-color: #0C1511;
+  background-image:
+    radial-gradient(circle at 86% 4%, rgba(56, 115, 84, 0.16) 0%, transparent 46%),
+    radial-gradient(circle at 12% 92%, rgba(28, 66, 46, 0.2) 0%, transparent 48%);
+  color: #EAF4EE;
+}
+
+html.dark .clay-card,
+html.dark .clay-card-interactive {
+  background: linear-gradient(160deg, #16261F 0%, #111E18 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 12px 26px -10px rgba(0, 0, 0, 0.55),
+    0 4px 10px -4px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.28);
+}
+
+html.dark .clay-card-interactive:hover {
+  box-shadow:
+    0 18px 32px -12px rgba(0, 0, 0, 0.65),
+    0 6px 14px -6px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+html.dark .clay-card-tint {
+  background: linear-gradient(155deg, #1A3327 0%, #14281F 100%);
+  border: 1px solid rgba(88, 184, 134, 0.2);
+  box-shadow:
+    0 12px 26px -10px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+html.dark .clay-inset {
+  background-color: #0F1B15;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 3px 7px rgba(0, 0, 0, 0.45),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.04);
+  color: #EAF4EE;
+}
+
+html.dark .clay-inset:focus-within,
+html.dark .clay-inset:focus {
+  background-color: #14231C;
+  box-shadow:
+    0 8px 18px -8px rgba(0, 0, 0, 0.5),
+    0 0 0 2.5px rgba(88, 184, 134, 0.28);
+}
+
+html.dark .clay-pill {
+  background: linear-gradient(170deg, #1A2D24 0%, #14221C 100%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #E2F0E8;
+  box-shadow:
+    0 7px 16px -6px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+html.dark .clay-pill-active {
+  background: linear-gradient(170deg, #234736 0%, #1B392B 100%);
+  border: 1px solid rgba(88, 184, 134, 0.35);
+  color: #9EE6BE;
+  box-shadow:
+    0 8px 16px -6px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+html.dark .clay-dock {
+  background: linear-gradient(180deg, rgba(20, 34, 27, 0.94) 0%, rgba(14, 24, 19, 0.97) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 16px 32px -10px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+html.dark .clay-topbar {
+  background: rgba(12, 21, 17, 0.88);
+  backdrop-filter: blur(18px);
+}
+
+html.dark .clay-sheet {
+  background: linear-gradient(180deg, #16261F 0%, #101D17 100%);
+  border-top: 1.5px solid rgba(255, 255, 255, 0.12);
+  color: #EAF4EE;
+  box-shadow:
+    0 -18px 42px -12px rgba(0, 0, 0, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Dark mode ink overrides for clay components using explicit light-theme hex classes */
+html.dark .store-clay [class*="text-[#172B20]"],
+html.dark .store-clay [class*="text-[#1E3629]"],
+html.dark .store-clay [class*="text-[#1B2E24]"],
+html.dark .store-clay .text-slate-900,
+html.dark .store-clay .text-slate-800 {
+  color: #EAF4EE !important;
+}
+
+html.dark .store-clay [class*="text-[#4E6659]"],
+html.dark .store-clay [class*="text-[#5B7366]"],
+html.dark .store-clay [class*="text-[#5D7568]"],
+html.dark .store-clay [class*="text-[#5E7669]"],
+html.dark .store-clay [class*="text-[#637B6E]"],
+html.dark .store-clay [class*="text-[#667D71]"],
+html.dark .store-clay [class*="text-[#6B8276]"],
+html.dark .store-clay [class*="text-[#6D8478]"],
+html.dark .store-clay [class*="text-[#70877B]"],
+html.dark .store-clay [class*="text-[#72887C]"],
+html.dark .store-clay .text-slate-600,
+html.dark .store-clay .text-slate-500 {
+  color: #A6BAB0 !important;
+}
+
+html.dark .store-clay [class*="text-[#1E4F34]"],
+html.dark .store-clay [class*="text-[#245A3D]"],
+html.dark .store-clay [class*="text-[#2A6043]"],
+html.dark .store-clay [class*="text-[#2D6145]"],
+html.dark .store-clay [class*="text-[#17462C]"],
+html.dark .store-clay [class*="text-[#23573A]"] {
+  color: #6CD49B !important;
+}
+
+html.dark .store-clay .bg-white,
+html.dark .store-clay [class*="bg-[#F7FAF8]"],
+html.dark .store-clay [class*="bg-[#EEF3F0]"] {
+  background-color: #16261F !important;
+}
+
+html.dark .store-clay input,
+html.dark .store-clay textarea,
+html.dark .store-clay select {
+  color: #EAF4EE;
+}
+
+/* Dark mode support for Merchant & Admin Portals */
+html.dark .bg-slate-50 {
+  background-color: #0C1511;
+}
+html.dark .bg-white {
+  background-color: #13201A;
+}
+html.dark .border-slate-200,
+html.dark .border-slate-100 {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+html.dark .text-slate-900,
+html.dark .text-slate-800 {
+  color: #EAF4EE;
+}
+html.dark .text-slate-700,
+html.dark .text-slate-600,
+html.dark .text-slate-500 {
+  color: #A6BAB0;
+}
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #16261F;
+  color: #EAF4EE;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+
 
 

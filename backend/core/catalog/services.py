@@ -13,17 +13,17 @@ def choices(actor, kind, query, public=False):
     if public and kind == "brands":
         term = (query.get("q") or "").strip()
         def _brands():
-            qs = Brand.objects.order_by("name", "pk")
+            qs = Brand.objects.annotate(model_count=Count("phonemodel")).order_by("name", "pk")
             if term:
                 qs = qs.filter(Q(name__icontains=term) | Q(name_ar__icontains=term))
-            rows = list(qs.values("id", "name", "slug", "name_ar")[
+            rows = list(qs.values("id", "name", "slug", "name_ar", "model_count")[
                 query["offset"]:query["offset"] + query["limit"]
             ])
             for row in rows:
                 if not row["slug"]:
                     row["slug"] = slugify(row["name"])
             return rows
-        return _brands() if term else cached(f"brands:{query['offset']}:{query['limit']}", _brands)
+        return _brands() if term else cached(f"brands_v2:{query['offset']}:{query['limit']}", _brands)
     term = (query.get("q") or "").strip()
     if kind == "brands":
         queryset = Brand.objects.order_by("name", "pk")

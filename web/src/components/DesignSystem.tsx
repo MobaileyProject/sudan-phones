@@ -149,6 +149,35 @@ export function BrandLogo({
           <path d="M19.8 5.2h-4.1L12 12l3.7 6.8h4.1L16.1 12l3.7-6.8z" opacity="0.82" />
         </svg>
       );
+
+    default: {
+      const initials = (brandId || '?').replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || '?';
+      return (
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+          <rect
+            x="2.2"
+            y="2.2"
+            width="19.6"
+            height="19.6"
+            rx="6"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            opacity="0.35"
+          />
+          <text
+            x="12"
+            y="15.3"
+            textAnchor="middle"
+            fill="currentColor"
+            fontSize="9.5"
+            fontWeight="800"
+            fontFamily="'Plus Jakarta Sans', system-ui, sans-serif"
+          >
+            {initials}
+          </text>
+        </svg>
+      );
+    }
   }
 }
 

@@ -12,6 +12,7 @@ import {
   Lock,
   Menu,
   MessageCircle,
+  Moon,
   Package,
   Plus,
   RefreshCw,
@@ -19,6 +20,7 @@ import {
   Settings,
   ShieldCheck,
   Store as StoreIcon,
+  Sun,
   Trash2,
   UserPlus,
   Users,
@@ -74,6 +76,8 @@ type MerchantSection =
 export function MerchantPortal() {
   const {
     lang,
+    theme,
+    toggleTheme,
     listings,
     session,
     me,
@@ -399,6 +403,15 @@ export function MerchantPortal() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? (lang === 'ar' ? 'الوضع الفاتح' : 'Light Mode') : (lang === 'ar' ? 'الوضع الداكن' : 'Dark Mode')}
+              title={theme === 'dark' ? (lang === 'ar' ? 'الوضع الفاتح' : 'Light Mode') : (lang === 'ar' ? 'الوضع الداكن' : 'Dark Mode')}
+              className="w-9 h-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center text-slate-700 hover:border-[#0F6B5D] transition-colors"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4" />}
+            </button>
             <button
               type="button"
               onClick={() => setSection('create_listing')}

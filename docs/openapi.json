@@ -269,6 +269,10 @@
           "id": {
             "type": "integer"
           },
+          "model_count": {
+            "default": 0,
+            "type": "integer"
+          },
           "name": {
             "type": "string"
           },

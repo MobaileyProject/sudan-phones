@@ -21,6 +21,7 @@ class BrandData(serializers.Serializer):
     name = serializers.CharField()
     slug = serializers.CharField(required=False, default="")
     name_ar = serializers.CharField(required=False, default="")
+    model_count = serializers.IntegerField(required=False, default=0)
 
 
 class BrandResponse(serializers.Serializer):

@@ -220,6 +220,7 @@ export interface ApiBrand {
   name: string;
   slug?: string;
   name_ar?: string;
+  model_count?: number;
 }
 
 export interface ApiCatalogModel {
@@ -437,7 +438,7 @@ export const api = {
   getConfig: () => apiRequest('/api/v1/config'),
   getHome: (city?: string) =>
     apiRequest('/api/v1/home', { query: city && city !== 'all' ? { city } : undefined }),
-  getBrands: () => apiRequest('/api/v1/brands', { query: { limit: 100, offset: 0 } }),
+  getBrands: () => apiRequest<{ data: ApiBrand[] }>('/api/v1/brands', { query: { limit: 100, offset: 0 } }),
   getPublicModels: (query?: { brand?: string; brand_id?: number; city?: string; q?: string; limit?: number }) =>
     apiRequest('/api/v1/models', { query: { limit: 100, ...query } }),
   searchListings: (query?: Record<string, string | number | undefined>) =>

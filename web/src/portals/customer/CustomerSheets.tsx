@@ -450,7 +450,7 @@ export function FilterBottomSheet({
   onReset: () => void;
   onClose: () => void;
 }) {
-  const { lang } = usePrototype();
+  const { lang, brands } = usePrototype();
   const [draft, setDraft] = useState<CustomerFilterState>(filters);
 
   React.useEffect(() => {
@@ -588,18 +588,21 @@ export function FilterBottomSheet({
               >
                 {lang === 'ar' ? 'الكل' : 'All'}
               </button>
-              {BRANDS.map((b) => (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => setDraft((d) => ({ ...d, brand: b.id }))}
-                  className={`h-9 px-3.5 rounded-full text-xs font-semibold ${
-                    draft.brand === b.id ? 'clay-pill-active' : 'clay-pill text-[#4E6659]'
-                  }`}
-                >
-                  {lang === 'ar' ? b.arLabel : b.label}
-                </button>
-              ))}
+              {brands.map((b) => {
+                const slug = (b.slug || b.name.toLowerCase()) as BrandId;
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => setDraft((d) => ({ ...d, brand: slug }))}
+                    className={`h-9 px-3.5 rounded-full text-xs font-semibold ${
+                      draft.brand === slug ? 'clay-pill-active' : 'clay-pill text-[#4E6659]'
+                    }`}
+                  >
+                    {lang === 'ar' && b.name_ar ? b.name_ar : b.name}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
