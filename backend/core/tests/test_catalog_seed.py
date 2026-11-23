@@ -14,6 +14,10 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from core.catalog.models import Brand, PhoneModel, Variant
+from core.catalog.providers.csv_importer import (
+    normalize_csv_row,
+    parse_csv_memory_configs,
+)
 from core.catalog.providers.google_play import parse_google_play_csv
 from core.catalog.providers.sudan_brands import (
     SUDAN_BRANDS,
@@ -340,3 +344,73 @@ class CatalogSeedAndSyncCommandTests(TestCase):
             self.assertEqual(Brand.objects.filter(name="Xiaomi").count(), 1)
             self.assertEqual(PhoneModel.objects.filter(name="Redmi Note 13 Pro 5G").count(), 1)
             self.assertEqual(Variant.objects.count(), 12)
+
+    def test_csv_importer_parses_variants_filters_non_smartphones_and_seeds_db(self):
+        self.assertEqual(
+            parse_csv_memory_configs("4GB 128GB, 6GB 128GB, 8GB 256GB", "4/6/8 GB", "128/256 GB"),
+            [
+                {"ram_gb": 4, "storage_gb": 128},
+                {"ram_gb": 6, "storage_gb": 128},
+                {"ram_gb": 8, "storage_gb": 256},
+            ],
+        )
+        self.assertEqual(
+            parse_csv_memory_configs("", "8 GB", "256/512 GB / 1TB NVMe"),
+            [
+                {"ram_gb": 8, "storage_gb": 1024},
+                {"ram_gb": 8, "storage_gb": 256},
+                {"ram_gb": 8, "storage_gb": 512},
+            ],
+        )
+
+        # Tablets are skipped automatically.
+        self.assertIsNone(
+            normalize_csv_row(
+                {
+                    "General_Device": "Tablets",
+                    "General_Brand": "Samsung",
+                    "General_Model": "Galaxy Tab S9",
+                    "Launch_Announced": "2023, July",
+                    "Memory_Variant": "8GB 128GB",
+                }
+            )
+        )
+
+        csv_content = (
+            "Name,General_Brand,General_Model,General_Device,Launch_Announced,Released,"
+            "Memory_Variant,Memory_RAM,Memory_Internal,More_Color,Display_Type,Display_Size,"
+            "Display_Resolution,Platform_Chipset,Platform_OS,Main camera_Triple,Main camera_Video,"
+            "Selfie camera_Single,Battery_Capacity,Battery_Charging,Network_Technology,Body_SIM,"
+            "Connectivity_NFC,Connectivity_USB,Sound_3.5mm jack,Memory_Card slot,Features_Sensors,"
+            "Body_Others,URL\n"
+            "Samsung Galaxy A15 5G,Samsung,Galaxy A15 5G,Smartphones,\"2023, December 11\",\"2023, December 16\","
+            "\"4GB 128GB, 6GB 128GB, 8GB 256GB\",4/6/8 GB,128/256 GB,\"Brave Black, Optimistic Blue\","
+            "\"Super AMOLED, 90Hz\",6.5 inches,1080 x 2340 pixels,Mediatek Dimensity 6100+,Android 14,"
+            "\"50 MP (wide) + 5 MP (ultrawide) + 2 MP (macro)\",1080p@30fps,13 MP,5000 mAh,25W wired,"
+            "GSM / HSPA / LTE / 5G,Dual SIM,Yes,USB Type-C 2.0,Yes,microSDXC,"
+            "\"Fingerprint (side-mounted)\",IP54,https://example.com/samsung-galaxy-a15-5g/\n"
+            "Samsung Galaxy Tab S9,Samsung,Galaxy Tab S9,Tablets,\"2023, July\",\"2023, August\","
+            "\"8GB 128GB\",8 GB,128 GB,Graphite,AMOLED,11.0 inches,1600 x 2560,Snapdragon 8 Gen 2,Android 13,"
+            "13 MP,4K,12 MP,8400 mAh,45W wired,5G,Nano-SIM,No,USB-C,No,microSDXC,Optical,IP68,https://example.com/tab/\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            csv_file = Path(tmp) / "phones.csv"
+            out_dir = Path(tmp) / "out"
+            csv_file.write_text(csv_content, encoding="utf-8")
+
+            out = io.StringIO()
+            call_command(
+                "import_catalog_csv",
+                str(csv_file),
+                "--output-dir",
+                str(out_dir),
+                "--seed",
+                stdout=out,
+            )
+
+            self.assertIn("Imported 1 smartphone models across 1 brand(s).", out.getvalue())
+            self.assertIn("Catalog seeded:", out.getvalue())
+            model = PhoneModel.objects.get(brand__name="Samsung", name="Galaxy A15 5G")
+            self.assertEqual(model.specifications["source"]["provider"], "kaggle_mobile_specs_2026")
+            self.assertEqual(model.specifications["camera"]["rear_main_mp"], 50)
+            self.assertEqual(Variant.objects.filter(model=model).count(), 6)
