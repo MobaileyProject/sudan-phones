@@ -363,7 +363,7 @@ class CatalogSeedAndSyncCommandTests(TestCase):
             ],
         )
 
-        # Tablets are skipped automatically.
+        # Tablets, cancelled/rumored phones, and regional editions are skipped by default.
         self.assertIsNone(
             normalize_csv_row(
                 {
@@ -372,6 +372,30 @@ class CatalogSeedAndSyncCommandTests(TestCase):
                     "General_Model": "Galaxy Tab S9",
                     "Launch_Announced": "2023, July",
                     "Memory_Variant": "8GB 128GB",
+                }
+            )
+        )
+        self.assertIsNone(
+            normalize_csv_row(
+                {
+                    "General_Device": "Smartphones",
+                    "General_Brand": "Samsung",
+                    "General_Model": "Galaxy X Rumor",
+                    "Launch_Status": "Rumored",
+                    "Launch_Announced": "2025, January",
+                    "Memory_Variant": "8GB 256GB",
+                }
+            )
+        )
+        self.assertIsNone(
+            normalize_csv_row(
+                {
+                    "General_Device": "Smartphones",
+                    "General_Brand": "Xiaomi",
+                    "General_Model": "Redmi Note 13 (India)",
+                    "Launch_Status": "Available. Released 2024, January",
+                    "Launch_Announced": "2024, January",
+                    "Memory_Variant": "6GB 128GB",
                 }
             )
         )

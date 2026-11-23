@@ -128,8 +128,8 @@ def _extract_rear_camera(row: dict) -> str:
     ):
         val = _clean_text(row.get(col))
         if val:
-            # Separate concatenated lenses like "AF5 MP" -> "AF + 5 MP"
-            val = re.sub(r"(?<=[A-Za-z)\"'])(\d+\s*MP)", r" + \1", val)
+            # Separate concatenated lenses like "AF5 MP" or "PDAF0.08 MP" -> "PDAF + 0.08 MP"
+            val = re.sub(r"(?<=[A-Za-z)\"'])(\d+(?:\.\d+)?\s*MP)", r" + \1", val)
             return val[:240]
     return "12MP"
 
@@ -143,7 +143,7 @@ def _extract_front_camera(row: dict) -> str:
     ):
         val = _clean_text(row.get(col))
         if val:
-            val = re.sub(r"(?<=[A-Za-z)\"'])(\d+\s*MP)", r" + \1", val)
+            val = re.sub(r"(?<=[A-Za-z)\"'])(\d+(?:\.\d+)?\s*MP)", r" + \1", val)
             return val[:160]
     return "8MP"
 
@@ -167,15 +167,28 @@ def _extract_ip_rating(row: dict) -> str:
     return match.group(1).upper() if match else "None"
 
 
+REGIONAL_MODEL_PATTERN = re.compile(
+    r"\((?:India|China|USA|US|Japan|Korea|Taiwan|Vietnam|Thailand|Brazil|Europe|LATAM)\)",
+    re.IGNORECASE,
+)
+
+
 def normalize_csv_row(
     row: dict,
     provider_name: str = "kaggle_mobile_specs_2026",
     fetched_at: str | None = None,
+    include_unreleased: bool = False,
+    include_regional: bool = False,
 ) -> tuple[str, dict] | None:
     """Normalize a single CSV row into (canonical_brand, model_entry) or None if skipped."""
     device_type = _clean_text(row.get("General_Device")).lower()
     if device_type and device_type not in ("smartphones", "smartphone", "mobiles"):
         return None
+
+    if not include_unreleased:
+        status_lower = _clean_text(row.get("Launch_Status")).lower()
+        if any(tag in status_lower for tag in ("cancelled", "canceled", "rumored")):
+            return None
 
     raw_brand = _clean_text(row.get("General_Brand"))
     brand_name = canonical_brand(raw_brand)
@@ -188,6 +201,9 @@ def normalize_csv_row(
     if model_name.lower().startswith(f"{brand_name.lower()} "):
         model_name = model_name[len(brand_name) :].strip()
     if not model_name:
+        return None
+
+    if not include_regional and REGIONAL_MODEL_PATTERN.search(model_name):
         return None
 
     release_year = _extract_year(row)
@@ -334,6 +350,8 @@ def import_catalog_from_csv(
     min_year: int = 2019,
     provider_name: str = "kaggle_mobile_specs_2026",
     write_json: bool = True,
+    include_unreleased: bool = False,
+    include_regional: bool = False,
 ) -> dict[str, int]:
     """Parse a CSV/ZIP smartphone dataset into normalized per-brand JSON files."""
     path = Path(csv_path)
@@ -348,7 +366,11 @@ def import_catalog_from_csv(
 
     for row in _iter_csv_rows(path):
         normalized = normalize_csv_row(
-            row, provider_name=provider_name, fetched_at=timestamp
+            row,
+            provider_name=provider_name,
+            fetched_at=timestamp,
+            include_unreleased=include_unreleased,
+            include_regional=include_regional,
         )
         if normalized is None:
             continue
