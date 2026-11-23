@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Geolocation } from '@capacitor/geolocation';
 import {
   AlertCircle,
   CheckCircle2,
@@ -258,23 +259,66 @@ export function CitySelectorSheet({
               <div className="grid grid-cols-1 gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-                      setLocStep('detecting');
-                      navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                          const { latitude, longitude } = pos.coords;
-                          const detected: CityId =
-                            longitude > 36 ? 'port_sudan' : latitude < 14.8 ? 'al_jazirah' : 'khartoum';
-                          setDetectedCity(detected);
-                          setLocStep('detected');
-                        },
-                        () => setLocStep('denied'),
-                        { timeout: 6000 }
-                      );
-                    } else {
-                      setDetectedCity('khartoum');
+                  onClick={async () => {
+                    setLocStep('detecting');
+                    const SUDAN_STATE_COORDS: { id: CityId; lat: number; lng: number }[] = [
+                      { id: 'khartoum', lat: 15.5007, lng: 32.5599 },
+                      { id: 'omdurman', lat: 15.6445, lng: 32.4777 },
+                      { id: 'port_sudan', lat: 19.6158, lng: 37.2164 },
+                      { id: 'al_jazirah', lat: 14.4012, lng: 33.5199 },
+                      { id: 'river_nile', lat: 17.7022, lng: 33.9864 },
+                      { id: 'northern', lat: 19.1698, lng: 30.4749 },
+                      { id: 'kassala', lat: 15.4510, lng: 36.3999 },
+                      { id: 'gedaref', lat: 14.0349, lng: 35.3834 },
+                      { id: 'sennar', lat: 13.5691, lng: 33.5672 },
+                      { id: 'white_nile', lat: 13.1629, lng: 32.6635 },
+                      { id: 'blue_nile', lat: 11.7891, lng: 34.3592 },
+                      { id: 'north_kordofan', lat: 13.1833, lng: 30.2167 },
+                      { id: 'south_kordofan', lat: 11.0111, lng: 29.7183 },
+                      { id: 'west_kordofan', lat: 11.7175, lng: 28.3400 },
+                      { id: 'north_darfur', lat: 13.6279, lng: 25.3494 },
+                      { id: 'south_darfur', lat: 12.0489, lng: 24.8807 },
+                      { id: 'west_darfur', lat: 13.4526, lng: 22.4472 },
+                      { id: 'central_darfur', lat: 12.9092, lng: 23.4741 },
+                      { id: 'east_darfur', lat: 11.4619, lng: 26.1258 },
+                    ];
+                    const matchNearest = (lat: number, lng: number): CityId => {
+                      let best: CityId = 'khartoum';
+                      let bestDist = Infinity;
+                      for (const st of SUDAN_STATE_COORDS) {
+                        const d = (lat - st.lat) ** 2 + (lng - st.lng) ** 2;
+                        if (d < bestDist) {
+                          bestDist = d;
+                          best = st.id;
+                        }
+                      }
+                      return best;
+                    };
+                    try {
+                      const perm = await Geolocation.requestPermissions().catch(() => null);
+                      if (perm && perm.location === 'denied' && perm.coarseLocation === 'denied') {
+                        setLocStep('denied');
+                        return;
+                      }
+                      const pos = await Geolocation.getCurrentPosition({
+                        enableHighAccuracy: false,
+                        timeout: 10000,
+                      });
+                      setDetectedCity(matchNearest(pos.coords.latitude, pos.coords.longitude));
                       setLocStep('detected');
+                    } catch {
+                      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            setDetectedCity(matchNearest(pos.coords.latitude, pos.coords.longitude));
+                            setLocStep('detected');
+                          },
+                          () => setLocStep('denied'),
+                          { timeout: 8000 }
+                        );
+                      } else {
+                        setLocStep('denied');
+                      }
                     }
                   }}
                   className="clay-primary-btn clay-focus-ring w-full h-11 rounded-full text-xs font-bold"
@@ -685,7 +729,11 @@ export function ContactSellerSheet({
       ? `السلام عليكم ${store.name.ar}، أرغب بالاستفسار عن الهواتف المتوفرة لديكم حالياً عبر سودان فونز.`
       : `Hello ${store.name.en}, I saw your verified store on Sudan Phones and would like to ask about available phones.`;
 
-  const triggerContact = (channel: 'whatsapp' | 'call') => {
+  const DEFAULT_TEST_PHONE = '+249100090181';
+  const resolvedPhone = (store.phone || DEFAULT_TEST_PHONE).replace(/\s+/g, '');
+  const resolvedWhatsapp = (store.whatsapp || store.phone || DEFAULT_TEST_PHONE).replace(/[^\d]/g, '');
+
+  const triggerContact = async (channel: 'whatsapp' | 'call') => {
     if (store.contactAvailable === false || (channel === 'whatsapp' && sim.submissionOutcome === 'failure')) {
       setHandoff('unavailable');
       return;
@@ -695,20 +743,36 @@ export function ContactSellerSheet({
       hasCountedRef.current = true;
     }
     setHandoff(channel);
-    if (channel === 'whatsapp' && liveContact?.whatsapp_url) {
-      window.open(liveContact.whatsapp_url, '_blank', 'noopener,noreferrer');
-    } else if (channel === 'call' && liveContact?.phone_url) {
-      window.location.href = liveContact.phone_url;
+    let contact = liveContact;
+    if (!contact && listing?.id) {
+      try {
+        contact = await fetchContactMethods(listing.id);
+        setLiveContact(contact);
+      } catch {
+        contact = null;
+      }
+    }
+    if (channel === 'whatsapp') {
+      const waUrl =
+        contact?.whatsapp_url ||
+        `https://wa.me/${resolvedWhatsapp}?text=${encodeURIComponent(prefilledInquiry)}`;
+      const opened = window.open(waUrl, '_blank', 'noopener,noreferrer');
+      if (!opened) {
+        window.location.href = waUrl;
+      }
+    } else if (channel === 'call') {
+      const telUrl = contact?.phone_url || `tel:${resolvedPhone}`;
+      window.location.href = telUrl;
     }
   };
 
   const handleCopyNumber = () => {
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(store.phone).catch(() => {});
+      navigator.clipboard.writeText(resolvedPhone).catch(() => {});
     }
     pushToast('info', {
-      ar: `تم نسخ رقم المتجر: ${store.phone}`,
-      en: `Copied store number: ${store.phone}`,
+      ar: `تم نسخ رقم المتجر: ${resolvedPhone}`,
+      en: `Copied store number: ${resolvedPhone}`,
     });
   };
 
