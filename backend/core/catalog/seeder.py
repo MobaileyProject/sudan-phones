@@ -7,8 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from django.db import transaction
+from django.utils.text import slugify
 
 from .models import Brand, PhoneModel, Variant
+from .providers.sudan_brands import brand_arabic_name
 
 DEFAULT_DATA_DIR = Path(__file__).resolve().parent / "data"
 
@@ -309,9 +311,25 @@ def seed_catalog(
 
     with transaction.atomic():
         for brand_entry in catalog:
-            brand_obj, created = Brand.objects.get_or_create(name=brand_entry["brand"])
+            b_name = brand_entry["brand"]
+            b_slug = slugify(b_name)
+            b_ar = brand_arabic_name(b_name)
+            brand_obj, created = Brand.objects.get_or_create(
+                name=b_name,
+                defaults={"slug": b_slug, "name_ar": b_ar},
+            )
             if created:
                 brands_created += 1
+            else:
+                updates = []
+                if not brand_obj.slug:
+                    brand_obj.slug = b_slug
+                    updates.append("slug")
+                if not brand_obj.name_ar and b_ar:
+                    brand_obj.name_ar = b_ar
+                    updates.append("name_ar")
+                if updates:
+                    brand_obj.save(update_fields=updates)
 
             for model_entry in brand_entry["models"]:
                 model_obj, created = PhoneModel.objects.get_or_create(

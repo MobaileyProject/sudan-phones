@@ -75,6 +75,9 @@ export function MerchantPortal() {
   const {
     lang,
     listings,
+    session,
+    me,
+    logoutSession,
     activeMerchantStore,
     activeMerchantRoleView,
     updateListingQuick,
@@ -85,21 +88,21 @@ export function MerchantPortal() {
     removeStoreStaff,
     setPortal,
     setCustomerDeepLinkListingId,
-    sim,
-    updateSim,
     pushToast,
   } = usePrototype();
 
-  const [section, setSection] = useState<MerchantSection>('dashboard');
+  const [section, setSection] = useState<MerchantSection>(() =>
+    session.authenticated ? 'dashboard' : 'auth'
+  );
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  // M-09 Inventory Filters
+  // Inventory Filters
   const [invSearch, setInvSearch] = useState('');
   const [invCondition, setInvCondition] = useState<'all' | DeviceCondition>('all');
   const [invStatus, setInvStatus] = useState<'all' | PublicationStatus>('all');
   const [invStockFilter, setInvStockFilter] = useState<'all' | 'in_stock' | 'out_of_stock'>('all');
 
-  // M-10 Quick Price & Stock Modal
+  // Quick Price & Stock Modal
   const [quickEditListing, setQuickEditListing] = useState<Listing | null>(null);
   const [qePrice, setQePrice] = useState('');
   const [qeStock, setQeStock] = useState('');
@@ -110,12 +113,7 @@ export function MerchantPortal() {
   const [reverifyOpen, setReverifyOpen] = useState(false);
   const [reverifyNote, setReverifyNote] = useState('');
 
-  // Session expiry quick re-auth input
-  const [reauthPassword, setReauthPassword] = useState('');
-
-  const isOffline = sim.offlineMode === 'offline_cached' || sim.offlineMode === 'offline_empty';
-
-  // M-11 Settings & Staff State
+  // Settings & Staff State
   const [settingsDirty, setSettingsDirty] = useState(false);
   const [sCity, setSCity] = useState<CityId>(activeMerchantStore.city);
   const [sAddressAr, setSAddressAr] = useState(activeMerchantStore.address.ar);
@@ -126,9 +124,17 @@ export function MerchantPortal() {
 
   const [addStaffOpen, setAddStaffOpen] = useState(false);
   const [newStaffName, setNewStaffName] = useState('');
-  const [newStaffPhone, setNewStaffPhone] = useState('+249 91 ');
+  const [newStaffPhone, setNewStaffPhone] = useState('');
   const [newStaffRole, setNewStaffRole] = useState<StoreStaffRole>('clerk');
   const [staffToRemove, setStaffToRemove] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!session.authenticated) {
+      setSection('auth');
+    } else if (section === 'auth') {
+      setSection('dashboard');
+    }
+  }, [session.authenticated]);
 
   React.useEffect(() => {
     setSCity(activeMerchantStore.city);
@@ -191,51 +197,28 @@ export function MerchantPortal() {
     setQeState('idle');
   };
 
-  const commitQuickEdit = (forceResolve = false) => {
+  const commitQuickEdit = async () => {
     if (!quickEditListing) return;
-    if (isOffline) {
-      setQeState('failed');
-      return;
-    }
     setQeState('saving');
-    window.setTimeout(() => {
-      if (!forceResolve && sim.submissionOutcome === 'conflict') {
-        setQeState('conflict');
-        return;
-      }
-      if (!forceResolve && sim.submissionOutcome === 'uncertain') {
-        setQeState('uncertain');
-        return;
-      }
-      if (!forceResolve && sim.submissionOutcome === 'failure') {
-        setQeState('failed');
-        return;
-      }
-      updateListingQuick(
+    try {
+      await updateListingQuick(
         quickEditListing.id,
         {
           priceSdg: Number(qePrice) || quickEditListing.priceSdg,
           stockQty: quickEditListing.condition === 'new' ? Math.max(0, Number(qeStock) || 0) : undefined,
           usedAvailability: quickEditListing.condition === 'used' ? qeUsedAv : undefined,
         },
-        activeMerchantRoleView === 'owner'
-          ? activeMerchantStore.applicantName
-          : { ar: 'هبة مجدي (موظفة)', en: 'Hiba Magdi (Clerk)' }
+        { ar: me?.name || activeMerchantStore.name.ar, en: me?.name || activeMerchantStore.name.en }
       );
       setQuickEditListing(null);
       setQeState('idle');
-    }, sim.offlineMode === 'slow' ? 950 : 400);
+    } catch {
+      setQeState('failed');
+    }
   };
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isOffline) {
-      pushToast('error', {
-        ar: 'الاتصال منقطع حالياً. تم الاحتفاظ بتعديلات الإعدادات — أعد الحفظ عند عودة الشبكة.',
-        en: 'You are currently offline. Your unsaved edits remain intact — retry when back online.',
-      });
-      return;
-    }
     if (!sAddressAr.trim() || sPhone.replace(/\D/g, '').length < 9) {
       pushToast('error', {
         ar: 'يرجى التحقق من العنوان ورقم الهاتف قبل الحفظ.',
@@ -263,18 +246,18 @@ export function MerchantPortal() {
       role: newStaffRole,
     });
     setNewStaffName('');
-    setNewStaffPhone('+249 91 ');
+    setNewStaffPhone('');
     setAddStaffOpen(false);
   };
 
   const navItems: { id: MerchantSection; ar: string; en: string; icon: React.ComponentType<{ className?: string }>; badge?: number }[] = [
-    { id: 'dashboard', ar: 'لوحة المتجر (M-05)', en: 'Dashboard (M-05)', icon: LayoutDashboard },
-    { id: 'inventory', ar: 'المخزون والإعلانات (M-09)', en: 'Inventory (M-09)', icon: Package, badge: storeListings.length },
-    { id: 'create_listing', ar: 'إضافة هاتف (M-06–08)', en: 'Add Phone (M-06–08)', icon: Plus },
-    { id: 'verification', ar: 'حالة التوثيق (M-04)', en: 'Verification (M-04)', icon: ShieldCheck },
-    { id: 'onboarding', ar: 'تسجيل متجر جديد (M-01–03)', en: 'Onboarding (M-01–03)', icon: StoreIcon },
-    { id: 'settings', ar: 'الإعدادات والفريق (M-11)', en: 'Settings & Staff (M-11)', icon: Settings },
-    { id: 'auth', ar: 'الدخول و OTP', en: 'Merchant Auth / OTP', icon: KeyRound },
+    { id: 'dashboard', ar: 'لوحة المتجر', en: 'Dashboard', icon: LayoutDashboard },
+    { id: 'inventory', ar: 'المخزون والإعلانات', en: 'Inventory', icon: Package, badge: storeListings.length },
+    { id: 'create_listing', ar: 'إضافة هاتف', en: 'Add Phone', icon: Plus },
+    { id: 'verification', ar: 'حالة التوثيق', en: 'Verification', icon: ShieldCheck },
+    { id: 'onboarding', ar: 'بيانات وتوثيق المتجر', en: 'Store Onboarding', icon: StoreIcon },
+    { id: 'settings', ar: 'الإعدادات والفريق', en: 'Settings & Staff', icon: Settings },
+    { id: 'auth', ar: 'الحساب والدخول', en: 'Account & Sign In', icon: KeyRound },
   ];
 
   const isOwner = activeMerchantRoleView === 'owner';
@@ -331,18 +314,29 @@ export function MerchantPortal() {
       </nav>
 
       {/* Store Scope Summary Footer */}
-      <div className="p-3.5 border-t border-slate-200 bg-slate-50 text-[11px] text-slate-600 space-y-1">
-        <p className="font-semibold text-slate-800 truncate">{tText(activeMerchantStore.name, lang)}</p>
-        <p className="truncate">
-          {formatCity(activeMerchantStore.city, lang)} ·{' '}
-          {isOwner
-            ? lang === 'ar'
-              ? 'مالك المتجر'
-              : 'Store Owner'
-            : lang === 'ar'
-              ? 'موظف مبيعات'
-              : 'Sales Clerk'}
-        </p>
+      <div className="p-3.5 border-t border-slate-200 bg-slate-50 text-[11px] text-slate-600 space-y-2">
+        <div>
+          <p className="font-semibold text-slate-800 truncate">{tText(activeMerchantStore.name, lang)}</p>
+          <p className="truncate">
+            {formatCity(activeMerchantStore.city, lang)} ·{' '}
+            {isOwner
+              ? lang === 'ar'
+                ? 'مالك المتجر'
+                : 'Store Owner'
+              : lang === 'ar'
+                ? 'موظف مبيعات'
+                : 'Sales Clerk'}
+          </p>
+        </div>
+        {session.authenticated && (
+          <button
+            type="button"
+            onClick={() => logoutSession()}
+            className="w-full h-8 rounded-lg border border-slate-200 bg-white hover:bg-red-50 hover:text-red-700 hover:border-red-200 text-slate-700 font-semibold transition-colors"
+          >
+            {lang === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -472,12 +466,12 @@ export function MerchantPortal() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">
-                    {lang === 'ar' ? 'ملخص نشاط المتجر (M-05)' : 'Store Activity Overview (M-05)'}
+                    {lang === 'ar' ? 'ملخص نشاط المتجر' : 'Store Activity Overview'}
                   </h2>
                   <p className="text-xs text-slate-500">
                     {lang === 'ar'
-                      ? 'إحصائيات التصفح ونقرات التواصل الإجمالية فقط — بدون بيانات شخصية للعملاء أو طلبات دفع.'
-                      : 'Aggregate listing views and contact clicks only — no customer identities, cart, or checkout metrics.'}
+                      ? 'إحصائيات التصفح ونقرات التواصل الإجمالية خلال آخر 7 أيام.'
+                      : 'Aggregate listing views and contact clicks over the last 7 days.'}
                   </p>
                 </div>
               </div>
@@ -492,8 +486,8 @@ export function MerchantPortal() {
                   </h3>
                   <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
                     {lang === 'ar'
-                      ? 'أضف أول هاتف جديد أو مستعمل ليبدأ العملاء في بورتسودان والخرطوم وأم درمان بمشاهدة عروضك والتواصل معك عبر واتساب.'
-                      : 'Publish your first new or inspected used phone so customers can discover your verified store and reach you on WhatsApp.'}
+                      ? 'أضف أول هاتف جديد أو مستعمل ليبدأ العملاء في جميع ولايات السودان بمشاهدة عروضك والتواصل معك.'
+                      : 'Publish your first new or inspected used phone so customers across Sudan can discover your store and reach you.'}
                   </p>
                   <button
                     type="button"
@@ -699,7 +693,7 @@ export function MerchantPortal() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">
-                    {lang === 'ar' ? 'إدارة المخزون والإعلانات (M-09 / M-13)' : 'Inventory & Publication Status (M-09 / M-13)'}
+                    {lang === 'ar' ? 'إدارة المخزون والإعلانات' : 'Inventory & Publication Status'}
                   </h2>
                   <p className="text-xs text-slate-500">
                     {lang === 'ar'
@@ -752,7 +746,7 @@ export function MerchantPortal() {
                   onChange={(e) => setInvStatus(e.target.value as 'all' | PublicationStatus)}
                   className="h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-medium"
                 >
-                  <option value="all">{lang === 'ar' ? 'كل حالات النشر (M-13)' : 'All Publication Statuses'}</option>
+                  <option value="all">{lang === 'ar' ? 'كل حالات النشر' : 'All Publication Statuses'}</option>
                   <option value="published">{formatPublicationStatus('published', lang)}</option>
                   <option value="processing">{formatPublicationStatus('processing', lang)}</option>
                   <option value="draft">{formatPublicationStatus('draft', lang)}</option>
@@ -764,9 +758,7 @@ export function MerchantPortal() {
 
               {/* Inventory List / Table */}
               <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-                {sim.skeletonLoading ? (
-                  <TableRowsSkeleton rows={5} cols={6} />
-                ) : storeListings.length === 0 ? (
+                {storeListings.length === 0 ? (
                   <div className="p-10 text-center space-y-3">
                     <p className="text-sm font-bold text-slate-900">
                       {lang === 'ar' ? 'لا توجد هواتف مسجلة لهذا المتجر بعد' : 'No listings in this store yet'}
@@ -808,7 +800,7 @@ export function MerchantPortal() {
                             <th className="py-3 px-3 text-start">{lang === 'ar' ? 'النوع' : 'Condition'}</th>
                             <th className="py-3 px-3 text-end">{lang === 'ar' ? 'السعر (ج.س)' : 'Price (SDG)'}</th>
                             <th className="py-3 px-3 text-start">{lang === 'ar' ? 'المخزون / القطعة' : 'Stock / Unit'}</th>
-                            <th className="py-3 px-3 text-start">{lang === 'ar' ? 'حالة النشر (M-13)' : 'Status (M-13)'}</th>
+                            <th className="py-3 px-3 text-start">{lang === 'ar' ? 'حالة النشر' : 'Status'}</th>
                             <th className="py-3 px-4 text-end">{lang === 'ar' ? 'إجراءات' : 'Actions'}</th>
                           </tr>
                         </thead>
@@ -985,7 +977,7 @@ export function MerchantPortal() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold text-slate-900">
-                    {lang === 'ar' ? 'إعدادات المتجر وفريق العمل (M-11)' : 'Store Settings & Staff (M-11)'}
+                    {lang === 'ar' ? 'إعدادات المتجر وفريق العمل' : 'Store Settings & Staff'}
                   </h2>
                   <p className="text-xs text-slate-500">
                     {lang === 'ar'
@@ -1290,7 +1282,7 @@ export function MerchantPortal() {
             <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">
-                  {lang === 'ar' ? 'تحديث سريع للسعر والمخزون (M-10)' : 'Quick Price & Stock Update (M-10)'}
+                  {lang === 'ar' ? 'تحديث سريع للسعر والمخزون' : 'Quick Price & Stock Update'}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   {formatListingTitle(quickEditListing.arabicBrandPrefix, quickEditListing.model, lang)} ·{' '}
@@ -1397,7 +1389,7 @@ export function MerchantPortal() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => commitQuickEdit(true)}
+                  onClick={() => commitQuickEdit()}
                   className="h-8 px-3 rounded-lg bg-red-700 text-white font-semibold"
                 >
                   {lang === 'ar' ? 'إعادة المحاولة' : 'Retry Save'}
@@ -1421,7 +1413,7 @@ export function MerchantPortal() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => commitQuickEdit(true)}
+                  onClick={() => commitQuickEdit()}
                   className="h-8 px-3 rounded-lg bg-orange-700 text-white font-semibold"
                 >
                   {lang === 'ar' ? 'اعتماد قيمتي الجديدة واستبدالها' : 'Confirm My Update'}
@@ -1445,7 +1437,7 @@ export function MerchantPortal() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => commitQuickEdit(true)}
+                  onClick={() => commitQuickEdit()}
                   className="h-8 px-3 rounded-lg bg-amber-800 text-white font-semibold"
                 >
                   {lang === 'ar' ? 'التحقق من الحالة وإكمال الحفظ' : 'Check Status & Finalize'}
@@ -1487,7 +1479,7 @@ export function MerchantPortal() {
               <button
                 type="button"
                 disabled={qeState === 'saving' || qeState === 'uncertain'}
-                onClick={() => commitQuickEdit(false)}
+                onClick={() => commitQuickEdit()}
                 className="h-10 px-5 rounded-xl bg-[#0F6B5D] hover:bg-[#0B5348] text-white text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"
               >
                 {qeState === 'saving' && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
@@ -1526,116 +1518,12 @@ export function MerchantPortal() {
           onChange={(e) => setReverifyNote(e.target.value)}
           placeholder={
             lang === 'ar'
-              ? 'مثال: تحديث اسم المتجر التجاري وفق السجل الجديد لعام 2026...'
-              : 'Example: Updating store trade name to match our 2026 commercial registration...'
+              ? 'مثال: تحديث اسم المتجر التجاري وفق السجل الجديد...'
+              : 'Example: Updating store trade name to match our commercial registration...'
           }
           className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#0F6B5D]"
         />
       </ConfirmDialog>
-
-      {/* Step 7B: Session Expired Overlay (Preserves All Unsaved Form State Underneath) */}
-      {sim.merchantSessionExpired && (
-        <div
-          className="fixed inset-0 z-[80] bg-slate-950/65 backdrop-blur-[2px] flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              updateSim({ merchantSessionExpired: false });
-              setReauthPassword('');
-              pushToast('success', {
-                ar: 'تم تجديد جلستك بنجاح مع الاحتفاظ بجميع التعديلات غير المحفوظة.',
-                en: 'Session renewed — all your unsaved form inputs remain preserved.',
-              });
-            }}
-            className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4"
-          >
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
-                <Clock className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'انتهت جلسة العمل — أعد تسجيل الدخول' : 'Session Expired — Re-authenticate'}
-                </h3>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  {lang === 'ar'
-                    ? 'لحماية حساب متجرك انتهت الجلسة بعد فترة عدم نشاط. جميع البيانات التي أدخلتها محفوظة في الصفحة ولن تُفقد بعد تأكيد الدخول.'
-                    : 'Your session timed out for security. Any unsaved work on this screen is safely preserved and will resume once you sign back in.'}
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                {lang === 'ar' ? 'كلمة مرور الحساب' : 'Account Password'}
-              </label>
-              <input
-                type="password"
-                required
-                value={reauthPassword}
-                onChange={(e) => setReauthPassword(e.target.value)}
-                placeholder="••••••"
-                className="w-full h-11 px-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-[#0F6B5D]"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full h-11 rounded-xl bg-[#0F6B5D] hover:bg-[#0B5348] text-white text-sm font-semibold"
-            >
-              {lang === 'ar' ? 'تأكيد الدخول واستئناف العمل' : 'Sign In & Resume Work'}
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* Step 7B: Permission Revoked While Staff Is Working */}
-      {sim.staffPermissionRevoked && !sim.merchantSessionExpired && (
-        <div
-          className="fixed inset-0 z-[78] bg-slate-950/65 backdrop-blur-[2px] flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl text-center space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center text-red-700 mx-auto">
-              <Lock className="w-6 h-6" />
-            </div>
-            <h3 className="text-base font-bold text-slate-900">
-              {lang === 'ar' ? 'تم سحب صلاحية الوصول إلى هذا المتجر' : 'Store Staff Access Was Revoked'}
-            </h3>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              {lang === 'ar'
-                ? 'قام مالك المتجر بتحديث صلاحيات حسابك أو إزالتك من فريق المتجر. لم يعد بإمكانك تعديل الأسعار أو المخزون.'
-                : 'The store owner updated or removed your staff access while you were signed in. You can no longer modify listings or inventory for this store.'}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  updateSim({ staffPermissionRevoked: false });
-                  setSection('auth');
-                }}
-                className="flex-1 h-10 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold"
-              >
-                {lang === 'ar' ? 'العودة لشاشة الدخول' : 'Return to Sign-In'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  updateSim({ staffPermissionRevoked: false });
-                  setPortal('customer');
-                }}
-                className="flex-1 h-10 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold"
-              >
-                {lang === 'ar' ? 'الانتقال لتطبيق العملاء' : 'Go to Customer App'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Remove Staff Confirmation */}
       <ConfirmDialog

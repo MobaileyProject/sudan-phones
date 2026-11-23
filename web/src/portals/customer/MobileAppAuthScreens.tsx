@@ -1182,22 +1182,6 @@ export function MobileAppAuthScreens({
                         <span>{tText(AUTH_COPY.langToggleLabel, lang)}</span>
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={handleToggleTheme}
-                        aria-label={
-                          activeTheme === 'dark'
-                            ? tText(AUTH_COPY.themeToggleLightAria, lang)
-                            : tText(AUTH_COPY.themeToggleDarkAria, lang)
-                        }
-                        className="auth-focus-ring w-[38px] h-[38px] rounded-full bg-black/45 hover:bg-black/60 backdrop-blur-md border border-white/15 text-white flex items-center justify-center active:scale-95 transition-all"
-                      >
-                        {activeTheme === 'dark' ? (
-                          <Sun className="w-4 h-4" />
-                        ) : (
-                          <Moon className="w-4 h-4" />
-                        )}
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -2076,23 +2060,6 @@ export function MobileAppAuthScreens({
                   <span>{tText(AUTH_COPY.langToggleLabel, lang)}</span>
                 </motion.button>
 
-                <motion.button
-                  type="button"
-                  whileTap={{ scale: 0.92 }}
-                  onClick={handleToggleTheme}
-                  aria-label={
-                    activeTheme === 'dark'
-                      ? tText(AUTH_COPY.themeToggleLightAria, lang)
-                      : tText(AUTH_COPY.themeToggleDarkAria, lang)
-                  }
-                  className="auth-focus-ring w-[40px] h-[40px] rounded-full bg-black/35 hover:bg-black/55 backdrop-blur-xl border border-white/15 text-white flex items-center justify-center transition-colors"
-                >
-                  {activeTheme === 'dark' ? (
-                    <Sun className="w-4 h-4 text-[#B8DFC6]" />
-                  ) : (
-                    <Moon className="w-4 h-4" />
-                  )}
-                </motion.button>
               </div>
             </motion.header>
 

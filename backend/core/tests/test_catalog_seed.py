@@ -114,9 +114,12 @@ def _sample_techspecs_detail(
 
 
 class OfficialCatalogProviderTests(TestCase):
-    def test_sudan_brand_list_covers_all_14_target_brands(self):
-        self.assertEqual(len(SUDAN_BRANDS), 14)
-        for brand in ("Samsung", "Apple", "Xiaomi", "Tecno", "Infinix", "Itel", "Honor"):
+    def test_sudan_brand_list_covers_all_target_brands(self):
+        self.assertGreaterEqual(len(SUDAN_BRANDS), 25)
+        for brand in (
+            "Samsung", "Apple", "Xiaomi", "Tecno", "Infinix", "Itel", "Honor",
+            "Motorola", "ZTE", "Lenovo", "Sony", "Nothing",
+        ):
             self.assertIn(brand, SUDAN_BRANDS)
 
     def test_memory_and_color_parsers_extract_all_variants(self):

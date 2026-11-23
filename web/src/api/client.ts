@@ -215,6 +215,29 @@ export interface ApiSession {
   email_verified: boolean;
 }
 
+export interface ApiBrand {
+  id: number;
+  name: string;
+  slug?: string;
+  name_ar?: string;
+  model_count?: number;
+}
+
+export interface ApiCatalogModel {
+  id: number;
+  name: string;
+  brand_id: number;
+  specifications?: Record<string, any>;
+}
+
+export interface ApiCatalogVariant {
+  id: number;
+  model_id: number;
+  storage_gb: number;
+  ram_gb: number;
+  color: string;
+}
+
 export interface ApiMe {
   id: number;
   name: string;
@@ -415,7 +438,7 @@ export const api = {
   getConfig: () => apiRequest('/api/v1/config'),
   getHome: (city?: string) =>
     apiRequest('/api/v1/home', { query: city && city !== 'all' ? { city } : undefined }),
-  getBrands: () => apiRequest('/api/v1/brands', { query: { limit: 100, offset: 0 } }),
+  getBrands: () => apiRequest<{ data: ApiBrand[] }>('/api/v1/brands', { query: { limit: 100, offset: 0 } }),
   getPublicModels: (query?: { brand?: string; brand_id?: number; city?: string; q?: string; limit?: number }) =>
     apiRequest('/api/v1/models', { query: { limit: 100, ...query } }),
   searchListings: (query?: Record<string, string | number | undefined>) =>
@@ -455,11 +478,16 @@ export const api = {
     apiRequest('/api/v1/stores/me/reverification', { method: 'POST', body: payload }),
   getMyDashboard: () => apiRequest('/api/v1/stores/me/dashboard'),
   getMyListings: () => apiRequest('/api/v1/stores/me/listings', { query: { limit: 100 } }),
-  getCatalogBrands: () => apiRequest('/api/v1/catalog/brands', { query: { limit: 100 } }),
-  getCatalogModels: (brandId?: number) =>
-    apiRequest('/api/v1/catalog/models', { query: { brand_id: brandId, limit: 100 } }),
+  getCatalogBrands: (q?: string) =>
+    apiRequest<{ data: ApiBrand[] }>('/api/v1/catalog/brands', { query: { q, limit: 100 } }),
+  getCatalogModels: (query?: { brand_id?: number; q?: string; limit?: number; offset?: number }) =>
+    apiRequest<{ data: ApiCatalogModel[] }>('/api/v1/catalog/models', {
+      query: { limit: 100, ...query },
+    }),
   getCatalogVariants: (modelId?: number) =>
-    apiRequest('/api/v1/catalog/variants', { query: { model_id: modelId, limit: 100 } }),
+    apiRequest<{ data: ApiCatalogVariant[] }>('/api/v1/catalog/variants', {
+      query: { model_id: modelId, limit: 100 },
+    }),
   createListing: (payload: Record<string, unknown>, idempotencyKey?: string) =>
     apiRequest('/api/v1/stores/me/listings', { method: 'POST', body: payload, idempotent: true, idempotencyKey }),
   updateListingPrice: (id: string | number, version: number, price: number, idempotencyKey?: string) =>

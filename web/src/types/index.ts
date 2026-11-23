@@ -45,14 +45,7 @@ export type UsedGrade = 'like_new' | 'excellent' | 'good' | 'fair';
 
 export type UsedAvailability = 'available' | 'reserved' | 'sold';
 
-export type BrandId =
-  | 'apple'
-  | 'samsung'
-  | 'xiaomi'
-  | 'google'
-  | 'oneplus'
-  | 'tecno'
-  | 'infinix';
+export type BrandId = string;
 
 export interface BilingualText {
   ar: string;
