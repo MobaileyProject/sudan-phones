@@ -7,16 +7,65 @@ from django.conf import settings
 
 SUPPORTED_LOCALES = ('ar', 'en')
 _CITIES = (
-    ('port_sudan', 'بورتسودان', 'Port Sudan', (
-        'port sudan', 'portsudan', 'بورتسودان', 'red sea', 'البحر الأحمر', 'البحر الاحمر',
-    )),
-    ('khartoum', 'الخرطوم', 'Khartoum', (
+    ('khartoum', 'ولاية الخرطوم', 'Khartoum State', (
         'khartoum', 'الخرطوم', 'khartoum state', 'ولاية الخرطوم',
     )),
-    ('omdurman', 'أم درمان', 'Omdurman', (
+    ('port_sudan', 'ولاية البحر الأحمر (بورتسودان)', 'Red Sea (Port Sudan)', (
+        'port sudan', 'portsudan', 'بورتسودان', 'red sea', 'البحر الأحمر', 'البحر الاحمر',
+    )),
+    ('omdurman', 'أم درمان (ولاية الخرطوم)', 'Omdurman (Khartoum)', (
         'omdurman', 'أم درمان', 'ام درمان', 'امدرمان', 'أمدرمان',
     )),
+    ('al_jazirah', 'ولاية الجزيرة (ود مدني)', 'Al Jazirah (Wad Madani)', (
+        'al jazirah', 'gezira', 'wad madani', 'الجزيرة', 'ود مدني',
+    )),
+    ('river_nile', 'ولاية نهر النيل (عطبرة / الدامر)', 'River Nile (Atbara / Ed Damer)', (
+        'river nile', 'atbara', 'ed damer', 'نهر النيل', 'عطبرة', 'الدامر',
+    )),
+    ('northern', 'الولاية الشمالية (دنقلا)', 'Northern State (Dongola)', (
+        'northern', 'dongola', 'الشمالية', 'دنقلا',
+    )),
+    ('kassala', 'ولاية كسلا', 'Kassala State', (
+        'kassala', 'كسلا',
+    )),
+    ('gedaref', 'ولاية القضارف', 'Al Qadarif (Gedaref)', (
+        'gedaref', 'al qadarif', 'qadarif', 'القضارف',
+    )),
+    ('sennar', 'ولاية سنار (سنجة)', 'Sennar State (Singa)', (
+        'sennar', 'singa', 'سنار', 'سنجة',
+    )),
+    ('white_nile', 'ولاية النيل الأبيض (كوستي / ربك)', 'White Nile (Kosti / Rabak)', (
+        'white nile', 'kosti', 'rabak', 'النيل الأبيض', 'كوستي', 'ربك',
+    )),
+    ('blue_nile', 'ولاية النيل الأزرق (الدمازين)', 'Blue Nile (Ad-Damazin)', (
+        'blue nile', 'ad-damazin', 'damazin', 'النيل الأزرق', 'الدمازين',
+    )),
+    ('north_kordofan', 'ولاية شمال كردفان (الأبيض)', 'North Kordofan (El-Obeid)', (
+        'north kordofan', 'el-obeid', 'el obeid', 'شمال كردفان', 'الأبيض',
+    )),
+    ('south_kordofan', 'ولاية جنوب كردفان (كادوقلي)', 'South Kordofan (Kadugli)', (
+        'south kordofan', 'kadugli', 'جنوب كردفان', 'كادوقلي',
+    )),
+    ('west_kordofan', 'ولاية غرب كردفان (الفولة)', 'West Kordofan (Al-Fulah)', (
+        'west kordofan', 'al-fulah', 'fulah', 'غرب كردفان', 'الفولة',
+    )),
+    ('north_darfur', 'ولاية شمال دارفور (الفاشر)', 'North Darfur (El Fasher)', (
+        'north darfur', 'el fasher', 'شمال دارفور', 'الفاشر',
+    )),
+    ('south_darfur', 'ولاية جنوب دارفور (نيالا)', 'South Darfur (Nyala)', (
+        'south darfur', 'nyala', 'جنوب دارفور', 'نيالا',
+    )),
+    ('west_darfur', 'ولاية غرب دارفور (الجنينة)', 'West Darfur (Geneina)', (
+        'west darfur', 'geneina', 'غرب دارفور', 'الجنينة',
+    )),
+    ('central_darfur', 'ولاية وسط دارفور (زالنجي)', 'Central Darfur (Zalingei)', (
+        'central darfur', 'zalingei', 'وسط دارفور', 'زالنجي',
+    )),
+    ('east_darfur', 'ولاية شرق دارفور (الضعين)', 'East Darfur (Ed Daein)', (
+        'east darfur', 'ed daein', 'شرق دارفور', 'الضعين',
+    )),
 )
+CITY_IDS = [city[0] for city in _CITIES]
 
 
 @lru_cache(maxsize=2)
@@ -49,5 +98,5 @@ def get_public_config(locale: str) -> dict:
             }
             for city in _CITIES
         ],
-        'features': {'customer_accounts': False, 'payments': False, 'paid_ads': False},
+        'features': {'customer_accounts': True, 'payments': False, 'paid_ads': False},
     }

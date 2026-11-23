@@ -1,6 +1,7 @@
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
+from core.bootstrap.services import CITY_IDS, SUPPORTED_LOCALES
 from core.common.serializers import StrictSerializer
 
 
@@ -38,11 +39,52 @@ class RegisterInput(StrictSerializer):
 
 
 class LoginInput(StrictSerializer):
-    phone = PhoneField()
+    phone = PhoneField(required=False)
+    email = serializers.EmailField(required=False)
     password = serializers.CharField(
         write_only=True, trim_whitespace=False, max_length=128
     )
     name = serializers.CharField(required=False, max_length=150)
+
+    def validate(self, attrs):
+        has_phone = bool(attrs.get("phone"))
+        has_email = bool(attrs.get("email"))
+        if has_phone == has_email:
+            raise serializers.ValidationError(
+                "Provide either phone or email with password."
+            )
+        return attrs
+
+
+class GoogleLoginInput(StrictSerializer):
+    id_token = serializers.CharField(min_length=10, max_length=4096)
+
+
+class MeUpdateInput(StrictSerializer):
+    name = serializers.CharField(max_length=150, required=False)
+    preferred_city = serializers.ChoiceField(
+        choices=[""] + CITY_IDS, required=False, allow_blank=True
+    )
+    preferred_locale = serializers.ChoiceField(
+        choices=list(SUPPORTED_LOCALES), required=False
+    )
+
+
+class MeData(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    phone = serializers.CharField()
+    email = serializers.CharField()
+    phone_verified = serializers.BooleanField()
+    email_verified = serializers.BooleanField()
+    preferred_city = serializers.CharField()
+    preferred_locale = serializers.CharField()
+    role = serializers.ChoiceField(choices=["guest", "buyer", "merchant", "admin"])
+    merchant = serializers.BooleanField()
+
+
+class MeResponse(serializers.Serializer):
+    data = MeData()
 
 
 class VerifyInput(StrictSerializer):

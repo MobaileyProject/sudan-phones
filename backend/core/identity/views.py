@@ -11,6 +11,9 @@ from . import services
 from .serializers import (
     RegisterInput,
     LoginInput,
+    GoogleLoginInput,
+    MeUpdateInput,
+    MeResponse,
     VerifyInput,
     RecoverInput,
     SessionResponse,
@@ -93,3 +96,25 @@ class RecoverView(AuthView):
     def post(self, request):
         services.recover(self.validated(RecoverInput, request.data))
         return Response({"data": {"accepted": True}})
+
+
+class GoogleLoginView(AuthView):
+    @contract("API-066", "P3", auth=[], request=GoogleLoginInput, response=SessionResponse)
+    def post(self, request):
+        user = services.login_google(self.validated(GoogleLoginInput, request.data))
+        login(request, user)
+        return Response(SessionResponse({"data": services.session_data(user)}).data)
+
+
+class MeView(DomainView):
+    @contract("API-067", "P3", response=MeResponse)
+    def get(self, request):
+        return Response(MeResponse({"data": services.me_data(request.user)}).data)
+
+    @contract("API-068", "P3", request=MeUpdateInput, response=MeResponse)
+    def patch(self, request):
+        return Response(
+            MeResponse(
+                {"data": services.update_me(request.user, self.validated(MeUpdateInput, request.data))}
+            ).data
+        )

@@ -5,6 +5,8 @@ from django.contrib.postgres.indexes import GinIndex, OpClass
 
 class Brand(models.Model):
     name = models.CharField(max_length=80, unique=True)
+    slug = models.SlugField(max_length=80, blank=True, db_index=True)
+    name_ar = models.CharField(max_length=80, blank=True)
 
     class Meta:
         indexes = [

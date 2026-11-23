@@ -25,9 +25,21 @@ def contract(api_id, phase, request=None, response=None, **kwargs):
     successes = (
         (201,)
         if api_id
-        in {"API-049", "API-051", "API-055", "API-056", "API-057", "API-050", "API-054"}
+        in {
+            "API-049",
+            "API-051",
+            "API-055",
+            "API-056",
+            "API-057",
+            "API-050",
+            "API-054",
+            "API-069",
+            "API-073",
+            "API-075",
+            "API-076",
+        }
         else (202,)
-        if api_id in {"API-063", "API-001"}
+        if api_id in {"API-063", "API-001", "API-079"}
         else (200, 201)
         if api_id == "API-045"
         else (200,)
@@ -86,6 +98,13 @@ def contract(api_id, phase, request=None, response=None, **kwargs):
         "API-059",
         "API-060",
         "API-063",
+        "API-066",
+        "API-068",
+        "API-069",
+        "API-073",
+        "API-075",
+        "API-078",
+        "API-079",
     }:
         parameters.append(
             OpenApiParameter(

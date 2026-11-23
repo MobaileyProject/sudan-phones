@@ -142,7 +142,12 @@ APPEND_SLASH = False
 MINIMUM_APP_VERSION = os.environ.get('MINIMUM_APP_VERSION', '1.0.0')
 
 SPECTACULAR_SETTINGS = {
-    'ENUM_NAME_OVERRIDES': {'LocaleEnum': ['ar', 'en']},
+    'ENUM_NAME_OVERRIDES': {
+        'LocaleEnum': ['ar', 'en'],
+        'StaffRoleEnum': ['staff', 'manager', 'clerk'],
+        'SessionRoleEnum': ['guest', 'buyer', 'merchant', 'admin'],
+        'SudanCityEnum': 'core.bootstrap.services.CITY_IDS',
+    },
     'TITLE': 'Sudan Phones Marketplace API',
     'DESCRIPTION': 'Bilingual marketplace for verified phone stores in Sudan.',
     'VERSION': '1.0.0',
@@ -159,6 +164,14 @@ R2_PUBLIC_DOMAIN = os.environ.get('R2_PUBLIC_DOMAIN', '')
 
 # Phone and email OTP delivery is explicitly configured; no SMS or console secrets.
 OTP_DELIVERY_BACKEND = os.environ.get('OTP_DELIVERY_BACKEND', 'core.identity.delivery.deliver_otp')
+GOOGLE_OAUTH_CLIENT_IDS = [
+    cid.strip()
+    for cid in os.environ.get('GOOGLE_OAUTH_CLIENT_IDS', '').split(',')
+    if cid.strip()
+]
+GOOGLE_TOKEN_VERIFIER = os.environ.get(
+    'GOOGLE_TOKEN_VERIFIER', 'core.identity.google.verify_google_id_token'
+)
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SECURE = not DEBUG

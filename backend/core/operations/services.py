@@ -1,14 +1,16 @@
+from datetime import timedelta
 from urllib.parse import quote
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction, IntegrityError
-from django.db.models import Sum, F
+from django.db.models import Avg, Count, Q, Sum, F
 from django.utils import timezone
 from core.common.domain import require, DomainError, require_actor
 from core.stores.models import Store, Verification
 from core.stores.services import member_store
+from core.catalog.models import PhoneModel
 from core.listings.models import Listing
-from core.discovery.queries import visible_listings
+from core.discovery.queries import visible_listings, visible_stores
 from .models import (
     AdminRole,
     RoleAssignment,
@@ -16,6 +18,9 @@ from .models import (
     AuditEvent,
     ContactEvent,
     DailyMetrics,
+    StoreDailyMetrics,
+    CustomerReport,
+    Rating,
 )
 from .audit import record
 from .authorization import require_admin
@@ -30,6 +35,7 @@ def role_data(role):
     return {
         "id": role.pk,
         "name": role.name,
+        "description": role.description,
         "permissions": role.permissions,
         "version": role.version,
         "user_ids": list(
@@ -64,8 +70,13 @@ def save_role(actor, data, actor_ip=None):
         require(role.version == data["version"], "STALE_VERSION", 409)
         role.version += 1
         role.name, role.permissions = data["name"], data["permissions"]
+        role.description = data.get("description", role.description)
     else:
-        role = AdminRole(name=data["name"], permissions=data["permissions"])
+        role = AdminRole(
+            name=data["name"],
+            description=data.get("description", ""),
+            permissions=data["permissions"],
+        )
     from .policy import PERMISSIONS
 
     require(set(role.permissions) <= set(PERMISSIONS), "INVALID_PERMISSIONS")
@@ -134,10 +145,35 @@ def request_suspension(actor, store, reason, actor_ip=None):
     return approval
 
 
+def approval_data(approval):
+    req_user = approval.requested_by
+    dec_user = approval.decided_by
+    return {
+        "id": approval.pk,
+        "requested_by_id": approval.requested_by_id,
+        "requested_by_name": req_user.first_name or req_user.username,
+        "decided_by_id": approval.decided_by_id,
+        "decided_by_name": (dec_user.first_name or dec_user.username) if dec_user else "",
+        "operation": approval.operation,
+        "target_id": approval.target_id,
+        "target_version": approval.target_version,
+        "reason": approval.reason,
+        "status": approval.status,
+        "version": approval.version,
+        "created_at": approval.created_at,
+        "decided_at": approval.decided_at,
+    }
+
+
 def approvals(actor, query):
     require_founder(actor)
-    return DualApproval.objects.filter(status="pending").order_by("pk")[
-        query["offset"] : query["offset"] + query["limit"]
+    qs = DualApproval.objects.select_related("requested_by", "decided_by")
+    status_filter = query.get("status", "pending")
+    if status_filter != "all":
+        qs = qs.filter(status=status_filter)
+    return [
+        approval_data(a)
+        for a in qs.order_by("pk")[query["offset"] : query["offset"] + query["limit"]]
     ]
 
 
@@ -216,11 +252,32 @@ def decide(actor, approval_id, data, actor_ip=None):
 
 def audits(actor, query):
     require_admin(actor, "view_audit")
-    events = AuditEvent.objects.order_by("-pk")
+    events = AuditEvent.objects.select_related("actor").order_by("-pk")
     for key in ["action", "actor_id", "resource"]:
         if key in query:
             events = events.filter(**{key: query[key]})
-    return events[query["offset"] : query["offset"] + query["limit"]]
+    if "q" in query and query["q"].strip():
+        term = query["q"].strip()
+        events = events.filter(
+            Q(action__icontains=term)
+            | Q(resource__icontains=term)
+            | Q(actor__first_name__icontains=term)
+            | Q(actor__username__icontains=term)
+        )
+    rows = events[query["offset"] : query["offset"] + query["limit"]]
+    return [
+        {
+            "id": e.pk,
+            "actor_id": e.actor_id,
+            "actor_name": e.actor.first_name or e.actor.username,
+            "actor_ip": e.actor_ip,
+            "action": e.action,
+            "resource": e.resource,
+            "metadata": e.metadata,
+            "created_at": e.created_at,
+        }
+        for e in rows
+    ]
 
 
 def dashboard_counts(queryset):
@@ -235,23 +292,37 @@ def dashboard_counts(queryset):
 
 def dashboard(actor):
     store = member_store(actor, verified=True)
-    return dashboard_counts(Listing.objects.filter(store=store))
+    today = timezone.localdate()
+    days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+    by_day = {
+        m.day: m.views
+        for m in StoreDailyMetrics.objects.filter(store=store, day__gte=days[0])
+    }
+    return dashboard_counts(Listing.objects.filter(store=store)) | {
+        "daily_views": [{"day": d, "count": by_day.get(d, 0)} for d in days]
+    }
 
 
 def overview(actor):
     require_admin(actor, "view_metrics")
     counts = dashboard_counts(Listing.objects.all())
     counts["active_listings"] = visible_listings().count()
+    today = timezone.localdate()
+    days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+    by_day = {
+        m.day: m.searches
+        for m in DailyMetrics.objects.filter(day__gte=days[0])
+    }
     return counts | {
         "stores": Store.objects.count(),
         "verified_stores": Store.objects.filter(status="verified").count(),
         "pending_verifications": Verification.objects.filter(
             status="pending_verification"
         ).count(),
-        "daily_searches": DailyMetrics.objects.filter(day=timezone.localdate())
-        .values_list("searches", flat=True)
-        .first()
-        or 0,
+        "open_reports": CustomerReport.objects.filter(status="open").count(),
+        "daily_searches": by_day.get(today, 0),
+        "daily_searches_trend": [{"day": d, "count": by_day.get(d, 0)} for d in days],
+        "daily_views": [],
     }
 
 
@@ -289,4 +360,202 @@ def contact_event(listing_id, data):
         Listing.objects.filter(pk=listing.pk).update(
             contact_leads=F("contact_leads") + 1
         )
+        metric, _ = StoreDailyMetrics.objects.get_or_create(
+            store_id=listing.store_id, day=timezone.localdate()
+        )
+        StoreDailyMetrics.objects.filter(pk=metric.pk).update(
+            contact_leads=F("contact_leads") + 1
+        )
     return {"accepted": True}
+
+
+def _rating_data(rating):
+    return {
+        "id": rating.pk,
+        "target_type": rating.target_type,
+        "target_id": rating.store_id if rating.target_type == "store" else rating.phone_model_id,
+        "author_id": rating.author_id,
+        "author_name": rating.author.first_name or rating.author.username,
+        "stars": rating.stars,
+        "comment": rating.comment,
+        "created_at": rating.created_at,
+        "updated_at": rating.updated_at,
+    }
+
+
+def _rating_summary(qs):
+    agg = qs.aggregate(avg=Avg("stars"), count=Count("id"))
+    dist = {str(i): 0 for i in range(1, 6)}
+    for row in qs.values("stars").annotate(c=Count("id")):
+        dist[str(row["stars"])] = row["c"]
+    return {
+        "average": round(agg["avg"], 2) if agg["avg"] is not None else None,
+        "count": agg["count"] or 0,
+        "distribution": dist,
+    }
+
+
+def list_ratings(target_type, target_id, query):
+    if target_type == "store":
+        require(visible_stores().filter(pk=target_id).exists(), "NOT_FOUND", 404)
+        qs = Rating.objects.select_related("author").filter(
+            target_type="store", store_id=target_id
+        )
+    else:
+        require(PhoneModel.objects.filter(pk=target_id).exists(), "NOT_FOUND", 404)
+        qs = Rating.objects.select_related("author").filter(
+            target_type="phone_model", phone_model_id=target_id
+        )
+    rows = qs.order_by("-updated_at", "-pk")[
+        query["offset"] : query["offset"] + query["limit"]
+    ]
+    return {
+        "data": [_rating_data(r) for r in rows],
+        "summary": _rating_summary(qs),
+    }
+
+
+@transaction.atomic
+def submit_rating(actor, target_type, target_id, data):
+    require_actor(actor)
+    if target_type == "store":
+        store = visible_stores().filter(pk=target_id).first()
+        require(store is not None, "NOT_FOUND", 404)
+        require(store.owner_id != actor.pk, "SELF_RATING_FORBIDDEN", 403)
+        rating, _ = Rating.objects.update_or_create(
+            author=actor,
+            store=store,
+            defaults={
+                "target_type": "store",
+                "phone_model": None,
+                "stars": data["stars"],
+                "comment": data.get("comment", "").strip(),
+            },
+        )
+    else:
+        model = PhoneModel.objects.filter(pk=target_id).first()
+        require(model is not None, "NOT_FOUND", 404)
+        rating, _ = Rating.objects.update_or_create(
+            author=actor,
+            phone_model=model,
+            defaults={
+                "target_type": "phone_model",
+                "store": None,
+                "stars": data["stars"],
+                "comment": data.get("comment", "").strip(),
+            },
+        )
+    return _rating_data(rating)
+
+
+@transaction.atomic
+def submit_report(actor, data):
+    reporter = actor if (actor and actor.is_authenticated) else None
+    if data["target_type"] == "listing":
+        listing = visible_listings().filter(pk=data["target_id"]).first()
+        require(listing is not None, "NOT_FOUND", 404)
+        report = CustomerReport.objects.create(
+            target_type="listing",
+            listing=listing,
+            reason=data["reason"],
+            details=data["details"],
+            reporter_contact=data.get("reporter_contact", ""),
+            reporter=reporter,
+        )
+    else:
+        store = visible_stores().filter(pk=data["target_id"]).first()
+        require(store is not None, "NOT_FOUND", 404)
+        report = CustomerReport.objects.create(
+            target_type="store",
+            store=store,
+            reason=data["reason"],
+            details=data["details"],
+            reporter_contact=data.get("reporter_contact", ""),
+            reporter=reporter,
+        )
+    return report
+
+
+def list_reports(actor, query):
+    require_admin(actor, "moderate_listings")
+    qs = CustomerReport.objects.order_by("-created_at", "-pk")
+    if query.get("status") != "all":
+        qs = qs.filter(status=query["status"])
+    return list(qs[query["offset"] : query["offset"] + query["limit"]])
+
+
+@transaction.atomic
+def resolve_report(actor, report_id, data, actor_ip=None):
+    require_admin(actor, "moderate_listings", lock=True)
+    report = CustomerReport.objects.select_for_update().filter(pk=report_id).first()
+    require(report is not None, "NOT_FOUND", 404)
+    report.status = data["status"]
+    report.resolution_note = data.get("resolution_note", "")
+    report.resolved_by = actor
+    report.resolved_at = timezone.now()
+    report.save(
+        update_fields=["status", "resolution_note", "resolved_by", "resolved_at"]
+    )
+    if data.get("flag_listing") and report.listing_id:
+        listing = (
+            Listing.objects.select_for_update()
+            .filter(pk=report.listing_id, status="published")
+            .first()
+        )
+        if listing and listing.store.owner_id != actor.pk:
+            listing.moderation = "flagged"
+            listing.feedback = data.get("resolution_note") or report.reason
+            listing.version += 1
+            listing.save(update_fields=["moderation", "feedback", "version"])
+    record(
+        actor,
+        "report.resolved",
+        report.pk,
+        status=report.status,
+        flag_listing=bool(data.get("flag_listing")),
+        actor_ip=actor_ip,
+    )
+    return report
+
+
+@transaction.atomic
+def suspend_store_request(actor, store_id, data, actor_ip=None):
+    require_founder(actor)
+    store = Store.objects.select_for_update().filter(pk=store_id).first()
+    require(store is not None, "NOT_FOUND", 404)
+    approval = request_suspension(actor, store, data["reason"], actor_ip=actor_ip)
+    return approval_data(approval)
+
+
+def list_admin_users(actor):
+    from .policy import PERMISSIONS
+
+    require_founder(actor)
+    assignments = {
+        a.user_id: a.role
+        for a in RoleAssignment.objects.select_related("role").all()
+    }
+    user_ids = set(assignments.keys())
+    users = (
+        get_user_model()
+        .objects.select_related("account")
+        .filter(Q(is_superuser=True) | Q(pk__in=user_ids), is_active=True)
+        .order_by("-is_superuser", "pk")
+    )
+    result = []
+    for u in users:
+        role = assignments.get(u.pk)
+        account = getattr(u, "account", None)
+        result.append(
+            {
+                "id": u.pk,
+                "name": u.first_name or u.username,
+                "email": u.email,
+                "phone": account.phone if account else "",
+                "is_superuser": u.is_superuser,
+                "role_id": role.pk if role else None,
+                "role_name": "Founder" if u.is_superuser else (role.name if role else ""),
+                "permissions": PERMISSIONS if u.is_superuser else (role.permissions if role else []),
+            }
+        )
+    return result

@@ -20,7 +20,8 @@ def initiate(actor, data, purpose="listing"):
         actor, owner=purpose == "verification", verified=purpose == "listing", lock=True
     )
     require(
-        purpose != "verification" or store.status in ["draft", "changes_requested"],
+        purpose != "verification"
+        or store.status in ["draft", "changes_requested", "verified"],
         "INVALID_STATE",
         409,
     )
@@ -65,6 +66,17 @@ def complete(actor, asset_id):
         asset.status = "queued"
         asset.save(update_fields=["status"])
     return {"accepted": True}
+
+
+def validate_pdf(data):
+    require(
+        len(data) >= 16
+        and len(data) <= settings.MEDIA_DOCUMENT_MAX_BYTES
+        and data.startswith(b"%PDF-")
+        and b"%%EOF" in data[-1024:],
+        "INVALID_MEDIA",
+    )
+    return data
 
 
 def decoded_image(data, content_type):
@@ -129,20 +141,27 @@ def process_asset(asset_id):
             and hashlib.sha256(data).hexdigest() == asset.sha256,
             "INVALID_MEDIA",
         )
-        image = decoded_image(data, asset.content_type)
-        image.thumbnail((1600, 1600))
-        output = BytesIO()
-        image.save(output, "JPEG", quality=85)
-        prefix = "public" if asset.purpose == "listing" else "evidence"
-        key = f"{prefix}/{asset.store_id}/{asset.pk}.jpg"
-        provider.write(key, output.getvalue(), "image/jpeg")
-        thumb_key = ""
-        if asset.purpose == "listing":
-            image.thumbnail((320, 320))
-            thumbnail = BytesIO()
-            image.save(thumbnail, "JPEG", quality=80)
-            thumb_key = f"public/{asset.store_id}/{asset.pk}-thumb.jpg"
-            provider.write(thumb_key, thumbnail.getvalue(), "image/jpeg")
+        if asset.content_type == "application/pdf":
+            require(asset.purpose == "verification", "INVALID_MEDIA")
+            validated = validate_pdf(data)
+            key = f"evidence/{asset.store_id}/{asset.pk}.pdf"
+            provider.write(key, validated, "application/pdf")
+            thumb_key = ""
+        else:
+            image = decoded_image(data, asset.content_type)
+            image.thumbnail((1600, 1600))
+            output = BytesIO()
+            image.save(output, "JPEG", quality=85)
+            prefix = "public" if asset.purpose == "listing" else "evidence"
+            key = f"{prefix}/{asset.store_id}/{asset.pk}.jpg"
+            provider.write(key, output.getvalue(), "image/jpeg")
+            thumb_key = ""
+            if asset.purpose == "listing":
+                image.thumbnail((320, 320))
+                thumbnail = BytesIO()
+                image.save(thumbnail, "JPEG", quality=80)
+                thumb_key = f"public/{asset.store_id}/{asset.pk}-thumb.jpg"
+                provider.write(thumb_key, thumbnail.getvalue(), "image/jpeg")
     except ClientError as error:
         missing = error.response.get("Error", {}).get("Code") in [
             "NoSuchKey",

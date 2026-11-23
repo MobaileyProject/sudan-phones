@@ -1,21 +1,38 @@
 from rest_framework import serializers
+from core.bootstrap.services import CITY_IDS
 from core.common.serializers import StrictSerializer
 
 
 class SubmitInput(StrictSerializer):
     documents = serializers.ListField(
-        child=serializers.UUIDField(), min_length=3, max_length=4
+        child=serializers.UUIDField(), min_length=2, max_length=4
     )
+
+
+class ReverificationInput(StrictSerializer):
+    note = serializers.CharField(max_length=1000)
+    name = serializers.CharField(max_length=160, required=False)
+    city = serializers.ChoiceField(choices=CITY_IDS, required=False)
+    documents = serializers.ListField(
+        child=serializers.UUIDField(), max_length=4, required=False, default=list
+    )
+
+    def validate_note(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("Note required.")
+        return value.strip()
 
 
 class DecisionInput(StrictSerializer):
     decision = serializers.ChoiceField(
-        choices=["verified", "changes_requested", "rejected"]
+        choices=["verified", "approved", "changes_requested", "rejected"]
     )
     reason = serializers.CharField(max_length=1000, allow_blank=True)
     version = serializers.IntegerField(min_value=1)
 
     def validate(self, attrs):
+        if attrs["decision"] == "approved":
+            attrs["decision"] = "verified"
         if attrs["decision"] != "verified" and not attrs["reason"].strip():
             raise serializers.ValidationError("Reason required.")
         return attrs
@@ -33,6 +50,8 @@ class VerificationData(serializers.Serializer):
     profile = VerificationProfile()
     id = serializers.IntegerField()
     store_id = serializers.IntegerField()
+    request_type = serializers.CharField()
+    note = serializers.CharField()
     status = serializers.CharField()
     feedback = serializers.CharField()
     version = serializers.IntegerField()

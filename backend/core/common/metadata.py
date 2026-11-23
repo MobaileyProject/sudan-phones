@@ -53,28 +53,43 @@ SUMMARIES = {
     "API-063": "Queue a completed same-store upload for server-side validation",
     "API-064": "Record a retry-safe anonymous seller contact intent",
     "API-065": "List pending destructive operations for founder confirmation",
+    "API-066": "Authenticate or register a buyer account via Google OAuth ID token",
+    "API-067": "Read the authenticated user profile and preferences",
+    "API-068": "Update the authenticated user name and app preferences",
+    "API-069": "Submit a post-approval store identity re-verification request",
+    "API-070": "List staff memberships for the current merchant store",
+    "API-071": "Browse public phone models with lowest prices, listing counts and ratings",
+    "API-072": "Read ratings and 5-star breakdown for a verified public store",
+    "API-073": "Submit or update an authenticated user rating for a verified store",
+    "API-074": "Read ratings and 5-star breakdown for a phone model",
+    "API-075": "Submit or update an authenticated user rating for a phone model",
+    "API-076": "Submit a customer report against a visible listing or store",
+    "API-077": "List customer reports for admin moderation review",
+    "API-078": "Resolve or dismiss a customer report and optionally flag the listing",
+    "API-079": "Request dual-approved suspension of a verified store directly",
+    "API-080": "List active founders and delegated admin users with role assignments",
 }
 
 
 AUTHORIZATION = {}
 for codes, policy in [
     (
-        "014 018 020 022 023 024 025 027 029 036 037 064",
+        "014 018 020 022 023 024 025 027 029 036 037 064 071 072 074 076",
         "Public guest access; listing/store resources must pass current public eligibility.",
     ),
     (
-        "049 051 047 048",
-        "Public entry point with CSRF; phone login/recovery resolves proved phone ownership only.",
+        "049 051 047 048 066",
+        "Public entry point with CSRF; phone/email login, recovery and Google OAuth verify identity before issuing session.",
     ),
     ("062", "Optional authenticated session; guest CSRF bootstrap is allowed."),
     (
         "002",
         "Current session or guest CSRF cookie; clears the current session idempotently.",
     ),
-    ("052", "Authenticated account; OTP is bound to its user, purpose and channel."),
+    ("052 067 068 073 075", "Authenticated account; actions are bound to the signed-in user."),
     (
-        "030 033 034 035",
-        "Current store owner/staff membership; suspended/rejected store access denied; no foreign resources.",
+        "030 033 034 035 070",
+        "Current store owner/staff membership; mutable access denied for suspended/rejected stores; no foreign resources.",
     ),
     (
         "059 055 004",
@@ -85,8 +100,8 @@ for codes, policy in [
         "Store owner with verified phone; business identity editable only in draft/changes_requested.",
     ),
     (
-        "056 057",
-        "Store owner; editable store state, same-store private evidence and verified contact on submission.",
+        "056 057 069",
+        "Store owner; same-store private evidence; post-approval re-verification preserves live store status until decided.",
     ),
     (
         "015 016 017 050 054 038 039 040 032",
@@ -105,13 +120,13 @@ for codes, policy in [
         "Active founder (superuser) only; delegated verify_stores permission never grants private document links.",
     ),
     (
-        "008 044",
+        "008 044 077 078",
         "Active founder or current moderate_listings role; no own-store moderation; suspension proposals require founder.",
     ),
     ("009", "Active founder or current view_metrics role."),
     ("006", "Active founder or current view_audit role."),
     (
-        "010 045 001 065",
+        "010 045 001 065 079 080",
         "Active founder (superuser) only; custom roles cannot grant founder powers.",
     ),
     (

@@ -168,9 +168,14 @@ class BackendJourneyTests(TestCase):
             )
         dashboard = merchant.get("/api/v1/stores/me/dashboard").data["data"]
         self.assertEqual(
-            dashboard,
+            {
+                k: dashboard[k]
+                for k in ("active_listings", "out_of_stock", "views", "contact_leads")
+            },
             {"active_listings": 2, "out_of_stock": 0, "views": 1, "contact_leads": 1},
         )
+        self.assertEqual(len(dashboard["daily_views"]), 7)
+        self.assertEqual(dashboard["daily_views"][-1]["count"], 1)
         events = reviewer.get("/api/v1/admin/audit-events").data["data"]
         self.assertTrue(
             any(event["action"] == "verification.decided" for event in events)

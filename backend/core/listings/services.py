@@ -23,14 +23,23 @@ FIELDS = (
     "grade",
     "battery_health",
     "defects",
+    "replaced_parts",
+    "used_unit_code",
+    "used_availability",
     "warranty_months",
     "warranty_days",
+    "warranty_type",
     "is_sealed",
     "has_original_box",
+    "featured",
     "status",
     "moderation",
     "feedback",
     "version",
+    "views",
+    "contact_leads",
+    "created_at",
+    "published_at",
 )
 
 
@@ -41,15 +50,72 @@ def ordered_media(listing):
     return sorted(links, key=lambda link: link.position)
 
 
-def listing_data(listing):
-    return {
+def listing_data(listing, include_merchant_meta=False):
+    from core.common.domain import DomainError
+    from core.media.storage import storage
+
+    provider = None
+    if include_merchant_meta:
+        try:
+            provider = storage()
+        except DomainError:
+            provider = None
+    used_av = listing.used_availability
+    if listing.condition == "used" and not used_av:
+        used_av = "available" if listing.quantity > 0 else "sold"
+    media_items = []
+    for link in ordered_media(listing):
+        item = {
+            "id": link.asset_id,
+            "kind": link.asset.kind,
+            "status": link.asset.status,
+        }
+        if (
+            include_merchant_meta
+            and provider is not None
+            and link.asset.status == "ready"
+            and link.asset.processed_key
+        ):
+            try:
+                item["url"] = provider.public_url(link.asset.processed_key)
+                item["thumbnail_url"] = (
+                    provider.public_url(link.asset.thumbnail_key)
+                    if link.asset.thumbnail_key
+                    else ""
+                )
+            except DomainError:
+                pass
+        media_items.append(item)
+    base = {
         **{key: getattr(listing, key) for key in FIELDS},
+        "used_availability": used_av,
         "currency": "SDG",
-        "media_status": [
-            {"id": link.asset_id, "kind": link.asset.kind, "status": link.asset.status}
-            for link in ordered_media(listing)
-        ],
+        "media_status": media_items,
     }
+    if include_merchant_meta:
+        variant = listing.variant
+        history = [
+            {
+                "id": ph.pk,
+                "price": ph.price,
+                "changed_by": ph.actor.first_name or ph.actor.username,
+                "created_at": ph.created_at,
+            }
+            for ph in PriceHistory.objects.select_related("actor")
+            .filter(listing=listing)
+            .order_by("-pk")[:20]
+        ]
+        base.update(
+            {
+                "brand": variant.model.brand.name,
+                "model": variant.model.name,
+                "storage_gb": variant.storage_gb,
+                "ram_gb": variant.ram_gb,
+                "color": variant.color,
+                "price_history": history,
+            }
+        )
+    return base
 
 
 def invariant(data, creation=False):
@@ -169,10 +235,15 @@ def create_listing(actor, data, key):
             "grade",
             "battery_health",
             "defects",
+            "replaced_parts",
+            "used_unit_code",
+            "used_availability",
             "warranty_months",
             "warranty_days",
+            "warranty_type",
             "is_sealed",
             "has_original_box",
+            "featured",
         },
         "INVALID_MUTATION",
     )
@@ -196,14 +267,16 @@ def create_listing(actor, data, key):
     )
     kinds = {a.kind for a in assets}
     require(
-        ({"front", "back", "screen"} <= kinds)
+        ({"front", "back"} <= kinds and bool({"screen", "screen_on"} & kinds))
         if data["condition"] == "used"
         else "seal" in kinds,
         "MISSING_PHOTOS",
     )
     values = {k: v for k, v in data.items() if k != "media"}
     if data["condition"] == "new":
-        values.update(grade="new", battery_health=100)
+        values.update(grade="new", battery_health=100, used_availability="")
+    elif not values.get("used_availability"):
+        values["used_availability"] = "available" if values["quantity"] > 0 else "sold"
     listing = Listing.objects.create(store=store, **values)
     ListingMedia.objects.bulk_create(
         [
@@ -215,7 +288,14 @@ def create_listing(actor, data, key):
     record(actor, "listing.created", listing.pk)
     publish_ready(store)
     listing.refresh_from_db()
-    return remember(actor, store, operation, key, data, listing_data(listing))
+    return remember(
+        actor,
+        store,
+        operation,
+        key,
+        data,
+        listing_data(listing, include_merchant_meta=True),
+    )
 
 
 @transaction.atomic
@@ -232,14 +312,18 @@ def update_listing(actor, listing_id, data, key, operation):
     require(listing.version == data["version"], "STALE_VERSION", 409)
     allowed = {
         "price": {"price"},
-        "stock": {"quantity"},
+        "stock": {"quantity", "used_availability"},
         "edit": {
             "grade",
             "battery_health",
             "defects",
+            "replaced_parts",
+            "used_unit_code",
             "warranty_months",
             "warranty_days",
+            "warranty_type",
             "has_original_box",
+            "featured",
             "media",
         },
     }
@@ -271,7 +355,7 @@ def update_listing(actor, listing_id, data, key, operation):
         )
         kinds = {a.kind for a in assets}
         require(
-            ({"front", "back", "screen"} <= kinds)
+            ({"front", "back"} <= kinds and bool({"screen", "screen_on"} & kinds))
             if listing.condition == "used"
             else "seal" in kinds,
             "MISSING_PHOTOS",
@@ -288,6 +372,15 @@ def update_listing(actor, listing_id, data, key, operation):
     for name, value in data.items():
         if name not in ["version", "media"]:
             setattr(listing, name, value)
+    if operation == "stock" and listing.condition == "used":
+        if "used_availability" in data:
+            listing.used_availability = data["used_availability"]
+            if data["used_availability"] in ("reserved", "sold"):
+                listing.quantity = 0
+            else:
+                listing.quantity = 1
+        else:
+            listing.used_availability = "available" if listing.quantity > 0 else "sold"
     if listing.moderation == "flagged":
         listing.moderation = "pending"
     listing.version += 1
@@ -297,34 +390,48 @@ def update_listing(actor, listing_id, data, key, operation):
     if operation == "price":
         PriceHistory.objects.create(listing=listing, actor=actor, price=listing.price)
     record(actor, f"listing.{operation}", listing.pk, version=listing.version)
-    return remember(actor, store, route, key, data, listing_data(listing))
+    return remember(
+        actor,
+        store,
+        route,
+        key,
+        data,
+        listing_data(listing, include_merchant_meta=True),
+    )
 
 
 def merchant_list(actor, query):
     store = member_store(actor)
-    return [
-        listing_data(l)
-        for l in Listing.objects.filter(store=store).order_by("-pk")[
-            query["offset"] : query["offset"] + query["limit"]
-        ]
-    ]
+    qs = (
+        Listing.objects.select_related("variant__model__brand")
+        .prefetch_related("media_links__asset")
+        .filter(store=store)
+        .order_by("-pk")[query["offset"] : query["offset"] + query["limit"]]
+    )
+    return [listing_data(l, include_merchant_meta=True) for l in qs]
 
 
 def merchant_status(actor, listing_id):
     store = member_store(actor)
-    listing = Listing.objects.filter(pk=listing_id, store=store).first()
+    listing = (
+        Listing.objects.select_related("variant__model__brand")
+        .prefetch_related("media_links__asset")
+        .filter(pk=listing_id, store=store)
+        .first()
+    )
     require(listing is not None, "NOT_FOUND", 404)
-    return listing_data(listing)
+    return listing_data(listing, include_merchant_meta=True)
 
 
 def moderation_queue(actor, query):
     require_admin(actor, "moderate_listings")
-    return [
-        listing_data(l)
-        for l in Listing.objects.filter(
-            status="published", moderation__in=["pending", "flagged"]
-        ).order_by("pk")[query["offset"] : query["offset"] + query["limit"]]
-    ]
+    qs = (
+        Listing.objects.select_related("variant__model__brand")
+        .prefetch_related("media_links__asset")
+        .filter(status="published", moderation__in=["pending", "flagged"])
+        .order_by("pk")[query["offset"] : query["offset"] + query["limit"]]
+    )
+    return [listing_data(l, include_merchant_meta=True) for l in qs]
 
 
 @transaction.atomic
@@ -342,7 +449,7 @@ def moderate(actor, listing_id, data, actor_ip=None):
         from core.operations.services import request_suspension
 
         return {
-            "listing": listing_data(listing),
+            "listing": listing_data(listing, include_merchant_meta=True),
             "approval": request_suspension(
                 actor, store, data["reason"], actor_ip=actor_ip
             ),
@@ -371,4 +478,4 @@ def moderate(actor, listing_id, data, actor_ip=None):
         reason=data["reason"],
         actor_ip=actor_ip,
     )
-    return {"listing": listing_data(listing), "approval": None}
+    return {"listing": listing_data(listing, include_merchant_meta=True), "approval": None}
