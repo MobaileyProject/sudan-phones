@@ -107,9 +107,6 @@ const FALLBACK_ADMIN: AdminUser = {
 interface PrototypeContextValue {
   lang: Language;
   setLang: (lang: Language) => void;
-  theme: 'light' | 'dark';
-  setTheme: (theme: 'light' | 'dark') => void;
-  toggleTheme: () => void;
   portal: PortalMode;
   setPortal: (portal: PortalMode) => void;
   selectedCity: CityId | 'all';
@@ -244,33 +241,15 @@ function detectInitialPortal(): PortalMode {
 
 export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLang] = useState<Language>('ar');
-  const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
-    try {
-      return window.localStorage.getItem('sp_theme_v1') === 'dark' ? 'dark' : 'light';
-    } catch {
-      return 'light';
-    }
-  });
-
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle('dark', theme === 'dark');
-    root.dataset.theme = theme;
+    document.documentElement.classList.remove('dark');
+    delete document.documentElement.dataset.theme;
     try {
-      window.localStorage.setItem('sp_theme_v1', theme);
+      window.localStorage.removeItem('sp_theme_v1');
     } catch {
-      // ignore storage errors
+      // ignore
     }
-  }, [theme]);
-
-  const setTheme = useCallback((next: 'light' | 'dark') => {
-    setThemeState(next);
   }, []);
-
-  const toggleTheme = useCallback(() => {
-    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  }, []);
-
   const [portal, setPortalState] = useState<PortalMode>(detectInitialPortal);
   const [selectedCity, setSelectedCity] = useState<CityId | 'all'>('all');
   const [hasCompletedCitySelection, setHasCompletedCitySelection] = useState<boolean>(true);
@@ -1051,9 +1030,6 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       value={{
         lang,
         setLang,
-        theme,
-        setTheme,
-        toggleTheme,
         portal,
         setPortal,
         selectedCity,

@@ -11,7 +11,6 @@ import {
   KeyRound,
   LogIn,
   MapPin,
-  Moon,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -19,7 +18,6 @@ import {
   Smartphone,
   Sparkles,
   Store as StoreIcon,
-  Sun,
   UserRound,
   WifiOff,
   X,
@@ -92,8 +90,6 @@ const DEFAULT_FILTERS: CustomerFilterState = {
 export function CustomerApp() {
   const {
     lang,
-    theme,
-    toggleTheme,
     selectedCity,
     brands,
     stores,
@@ -148,7 +144,7 @@ export function CustomerApp() {
   const [entryScreen, setEntryScreen] = useState<MobileEntryScreen | null>(() =>
     session.authenticated || hasStoredSessionToken() ? null : 'welcome'
   );
-  const authTheme: AuthThemeMode = theme;
+  const authTheme: AuthThemeMode = 'light';
   const [signedInUser, setSignedInUser] = useState<{ name: string; phone: string } | null>(() =>
     session.authenticated && me
       ? {
@@ -565,8 +561,7 @@ export function CustomerApp() {
       return (
         <MobileAppAuthScreens
           screen={entryScreen}
-          authTheme={authTheme}
-          onToggleTheme={toggleTheme}
+          authTheme="light"
           onNavigate={(next) => setEntryScreen(next)}
           onEnterAppAsGuest={() => {
             setSignedInUser(null);
@@ -910,35 +905,6 @@ export function CustomerApp() {
               </button>
 
               <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  aria-label={
-                    theme === 'dark'
-                      ? lang === 'ar'
-                        ? 'الوضع الفاتح'
-                        : 'Light Mode'
-                      : lang === 'ar'
-                        ? 'الوضع الداكن'
-                        : 'Dark Mode'
-                  }
-                  title={
-                    theme === 'dark'
-                      ? lang === 'ar'
-                        ? 'الوضع الفاتح'
-                        : 'Light Mode'
-                      : lang === 'ar'
-                        ? 'الوضع الداكن'
-                        : 'Dark Mode'
-                  }
-                  className="clay-pill clay-focus-ring w-10 h-10 rounded-full flex items-center justify-center text-[#172B20] shrink-0"
-                >
-                  {theme === 'dark' ? (
-                    <Sun className="w-4 h-4 text-amber-400" />
-                  ) : (
-                    <Moon className="w-4 h-4 text-[#2D6145]" />
-                  )}
-                </button>
                 <button
                   type="button"
                   onClick={() => setCitySheetOpen(true)}
@@ -1582,13 +1548,11 @@ export function CustomerApp() {
     entryScreen !== null &&
     (entryScreen === 'launch' ||
       entryScreen === 'welcome' ||
-      entryScreen === 'signin' ||
-      authTheme === 'dark');
+      entryScreen === 'signin');
   const isAuthDarkBottom =
     entryScreen !== null &&
     (entryScreen === 'launch' ||
-      entryScreen === 'welcome' ||
-      authTheme === 'dark');
+      entryScreen === 'welcome');
 
   const topBarBgClass =
     entryScreen === null
