@@ -17,10 +17,7 @@ def submit(actor, data):
         all([store.name, store.address, store.city, store.phone, store.whatsapp]),
         "INCOMPLETE_PROFILE",
     )
-    require(
-        actor.account.phone_verified and store.whatsapp == actor.account.phone,
-        "CONTACT_NOT_VERIFIED",
-    )
+    require(actor.account.phone_verified, "PHONE_NOT_VERIFIED", 403)
     ids = data["documents"]
     assets = list(
         MediaAsset.objects.filter(
@@ -30,11 +27,12 @@ def submit(actor, data):
     kinds = {a.kind for a in assets}
     require(len(assets) == len(ids) and len(kinds) == len(ids), "INVALID_DOCUMENTS")
     require(
-        {"id_front", "id_back"} <= kinds and bool({"commercial", "signboard"} & kinds),
+        "id_front" in kinds and bool({"commercial", "signboard"} & kinds),
         "MISSING_DOCUMENTS",
     )
     verification = Verification.objects.create(
         store=store,
+        request_type="initial",
         profile={
             key: getattr(store, key)
             for key in ["name", "city", "address", "phone", "whatsapp"]
@@ -49,8 +47,53 @@ def submit(actor, data):
     return verification
 
 
+@transaction.atomic
+def request_reverification(actor, data):
+    store = member_store(actor, owner=True, verified=True, lock=True)
+    require(
+        not Verification.objects.filter(
+            store=store,
+            request_type="reverification",
+            status="pending_verification",
+        ).exists(),
+        "REVERIFICATION_PENDING",
+        409,
+    )
+    ids = data.get("documents", [])
+    assets = []
+    if ids:
+        assets = list(
+            MediaAsset.objects.filter(
+                pk__in=ids, store=store, purpose="verification", status="ready"
+            )
+        )
+        require(
+            len(assets) == len(ids) and len({a.kind for a in assets}) == len(ids),
+            "INVALID_DOCUMENTS",
+        )
+    proposed_profile = {
+        "name": data.get("name", store.name),
+        "city": data.get("city", store.city),
+        "address": store.address,
+        "phone": store.phone,
+        "whatsapp": store.whatsapp,
+    }
+    verification = Verification.objects.create(
+        store=store,
+        request_type="reverification",
+        note=data["note"],
+        profile=proposed_profile,
+    )
+    if assets:
+        VerificationDocument.objects.bulk_create(
+            [VerificationDocument(verification=verification, asset=a) for a in assets]
+        )
+    record(actor, "verification.reverification_requested", verification.pk)
+    return verification
+
+
 def status(actor):
-    store = member_store(actor)
+    store = member_store(actor, allow_inactive=True)
     return Verification.objects.filter(store=store).order_by("-pk").first()
 
 
@@ -94,20 +137,41 @@ def decide(actor, verification_id, data, actor_ip=None):
     require_admin(actor, "verify_stores", lock=True)
     verification = Verification.objects.select_for_update().get(pk=verification_id)
     require(store.owner_id != actor.pk, "SELF_REVIEW_FORBIDDEN", 403)
-    require(
-        verification.status == "pending_verification"
-        and store.status == "pending_verification"
-        and verification.version == data["version"],
-        "STALE_VERSION",
-        409,
-    )
-    verification.status, verification.feedback = data["decision"], data["reason"]
-    verification.version += 1
-    verification.decided_at, verification.reviewed_by = timezone.now(), actor
-    verification.save()
-    store.status, store.feedback = data["decision"], data["reason"]
-    store.version += 1
-    store.save()
+    if verification.request_type == "reverification":
+        require(
+            verification.status == "pending_verification"
+            and store.status == "verified"
+            and verification.version == data["version"],
+            "STALE_VERSION",
+            409,
+        )
+        verification.status, verification.feedback = data["decision"], data["reason"]
+        verification.version += 1
+        verification.decided_at, verification.reviewed_by = timezone.now(), actor
+        verification.save()
+        if data["decision"] == "verified":
+            profile = verification.profile or {}
+            if profile.get("name"):
+                store.name = profile["name"]
+            if profile.get("city"):
+                store.city = profile["city"]
+            store.version += 1
+            store.save(update_fields=["name", "city", "version"])
+    else:
+        require(
+            verification.status == "pending_verification"
+            and store.status == "pending_verification"
+            and verification.version == data["version"],
+            "STALE_VERSION",
+            409,
+        )
+        verification.status, verification.feedback = data["decision"], data["reason"]
+        verification.version += 1
+        verification.decided_at, verification.reviewed_by = timezone.now(), actor
+        verification.save()
+        store.status, store.feedback = data["decision"], data["reason"]
+        store.version += 1
+        store.save()
     record(
         actor,
         "verification.decided",

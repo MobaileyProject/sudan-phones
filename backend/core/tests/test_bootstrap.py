@@ -15,16 +15,21 @@ class BootstrapContractTest(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()['data']
         self.assertEqual(data['currency'], {'code': 'SDG', 'decimal_places': 2})
-        self.assertEqual([c['id'] for c in data['cities']], ['port_sudan', 'khartoum', 'omdurman'])
-        self.assertEqual(data['cities'][0]['id'], 'port_sudan')
-        self.assertEqual(data['cities'][0]['name'], 'بورتسودان')
-        self.assertIn('port sudan', data['cities'][0]['aliases'])
-        self.assertIn('بورتسودان', data['cities'][0]['aliases'])
+        city_ids = [c['id'] for c in data['cities']]
+        self.assertEqual(len(city_ids), 19)
+        self.assertTrue({'khartoum', 'port_sudan', 'omdurman', 'al_jazirah', 'kassala'} <= set(city_ids))
+        port_sudan = next(c for c in data['cities'] if c['id'] == 'port_sudan')
+        self.assertIn('بورتسودان', port_sudan['name'])
+        self.assertIn('port sudan', port_sudan['aliases'])
+        self.assertIn('بورتسودان', port_sudan['aliases'])
         self.assertEqual(data['default_locale'], 'ar')
         self.assertEqual(data['locale'], 'ar')
         self.assertEqual(data['direction'], 'rtl')
         self.assertEqual(data['supported_locales'], ['ar', 'en'])
-        self.assertFalse(any(data['features'].values()))
+        self.assertEqual(
+            data['features'],
+            {'customer_accounts': True, 'payments': False, 'paid_ads': False},
+        )
         self.assertNotIn('sessionid', response.cookies)
 
     @override_settings(MINIMUM_APP_VERSION='2.3.4', SECRET_KEY='private-fixture', R2_SECRET_ACCESS_KEY='private-fixture')
@@ -32,8 +37,11 @@ class BootstrapContractTest(SimpleTestCase):
         response = self.client.get('/api/v1/config?locale=en')
         self.assertEqual(response.json()['data']['minimum_app_version'], '2.3.4')
         self.assertNotIn('private-fixture', response.content.decode())
-        self.assertEqual(response.json()['data']['cities'][0]['name'], 'Port Sudan')
-        self.assertIn('port sudan', response.json()['data']['cities'][0]['aliases'])
+        port_sudan = next(
+            c for c in response.json()['data']['cities'] if c['id'] == 'port_sudan'
+        )
+        self.assertIn('Port Sudan', port_sudan['name'])
+        self.assertIn('port sudan', port_sudan['aliases'])
 
     def test_locale_precedence_region_tags_and_default(self):
         for query, header, locale in [('', '', 'ar'), ('', 'en-US,en;q=0.8', 'en'),

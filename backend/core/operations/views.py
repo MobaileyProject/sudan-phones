@@ -1,5 +1,6 @@
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import SimpleRateThrottle
 from core.common.views import DomainView, contract
 from core.common.serializers import PageQuery, AcceptedResponse
 from . import services
@@ -8,6 +9,7 @@ from .serializers import (
     RoleResponse,
     RoleListResponse,
     PERMISSIONS,
+    ApprovalQuery,
     ApprovalDecision,
     ApprovalResponse,
     ApprovalListResponse,
@@ -17,7 +19,28 @@ from .serializers import (
     OverviewResponse,
     ContactResponse,
     ContactInput,
+    ReportInput,
+    ReportQuery,
+    ReportResolveInput,
+    ReportResponse,
+    ReportListResponse,
+    RatingInput,
+    RatingResponse,
+    RatingListResponse,
+    SuspendStoreInput,
+    AdminUserListResponse,
 )
+
+
+class ReportThrottle(SimpleRateThrottle):
+    rate = "10/min"
+    scope = "report"
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {
+            "scope": self.scope,
+            "ident": self.get_ident(request),
+        }
 
 
 class RolesView(DomainView):
@@ -65,13 +88,13 @@ class RoleDeleteView(DomainView):
 
 
 class ApprovalListView(DomainView):
-    @contract("API-065", "P6", response=ApprovalListResponse, parameters=[PageQuery])
+    @contract("API-065", "P6", response=ApprovalListResponse, parameters=[ApprovalQuery])
     def get(self, request):
         return Response(
             ApprovalListResponse(
                 {
                     "data": services.approvals(
-                        request.user, self.validated(PageQuery, request.query_params)
+                        request.user, self.validated(ApprovalQuery, request.query_params)
                     )
                 }
             ).data
@@ -146,4 +169,141 @@ class ContactEventView(DomainView):
                     id, self.validated(ContactInput, request.data)
                 )
             }
+        )
+
+
+class StoreRatingsView(DomainView):
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method == "GET" else [IsAuthenticated()]
+
+    @contract("API-072", "P5", response=RatingListResponse, parameters=[PageQuery], auth=[])
+    def get(self, request, id):
+        return Response(
+            RatingListResponse(
+                services.list_ratings(
+                    "store", id, self.validated(PageQuery, request.query_params)
+                )
+            ).data
+        )
+
+    @contract("API-073", "P5", request=RatingInput, response=RatingResponse)
+    def post(self, request, id):
+        return Response(
+            RatingResponse(
+                {
+                    "data": services.submit_rating(
+                        request.user,
+                        "store",
+                        id,
+                        self.validated(RatingInput, request.data),
+                    )
+                }
+            ).data,
+            status=201,
+        )
+
+
+class ModelRatingsView(DomainView):
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method == "GET" else [IsAuthenticated()]
+
+    @contract("API-074", "P5", response=RatingListResponse, parameters=[PageQuery], auth=[])
+    def get(self, request, id):
+        return Response(
+            RatingListResponse(
+                services.list_ratings(
+                    "phone_model", id, self.validated(PageQuery, request.query_params)
+                )
+            ).data
+        )
+
+    @contract("API-075", "P5", request=RatingInput, response=RatingResponse)
+    def post(self, request, id):
+        return Response(
+            RatingResponse(
+                {
+                    "data": services.submit_rating(
+                        request.user,
+                        "phone_model",
+                        id,
+                        self.validated(RatingInput, request.data),
+                    )
+                }
+            ).data,
+            status=201,
+        )
+
+
+class ReportCreateView(DomainView):
+    permission_classes = [AllowAny]
+    throttle_classes = [ReportThrottle]
+
+    @contract("API-076", "P5", request=ReportInput, response=ReportResponse, auth=[])
+    def post(self, request):
+        return Response(
+            ReportResponse(
+                {
+                    "data": services.submit_report(
+                        request.user, self.validated(ReportInput, request.data)
+                    )
+                }
+            ).data,
+            status=201,
+        )
+
+
+class AdminReportsView(DomainView):
+    @contract("API-077", "P6", response=ReportListResponse, parameters=[ReportQuery])
+    def get(self, request):
+        return Response(
+            ReportListResponse(
+                {
+                    "data": services.list_reports(
+                        request.user, self.validated(ReportQuery, request.query_params)
+                    )
+                }
+            ).data
+        )
+
+
+class AdminReportResolveView(DomainView):
+    @contract("API-078", "P6", request=ReportResolveInput, response=ReportResponse)
+    def post(self, request, id):
+        return Response(
+            ReportResponse(
+                {
+                    "data": services.resolve_report(
+                        request.user,
+                        id,
+                        self.validated(ReportResolveInput, request.data),
+                        actor_ip=request.META.get("REMOTE_ADDR"),
+                    )
+                }
+            ).data
+        )
+
+
+class AdminStoreSuspendView(DomainView):
+    @contract("API-079", "P6", request=SuspendStoreInput, response=ApprovalResponse)
+    def post(self, request, id):
+        return Response(
+            ApprovalResponse(
+                {
+                    "data": services.suspend_store_request(
+                        request.user,
+                        id,
+                        self.validated(SuspendStoreInput, request.data),
+                        actor_ip=request.META.get("REMOTE_ADDR"),
+                    )
+                }
+            ).data,
+            status=202,
+        )
+
+
+class AdminUsersView(DomainView):
+    @contract("API-080", "P6", response=AdminUserListResponse)
+    def get(self, request):
+        return Response(
+            AdminUserListResponse({"data": services.list_admin_users(request.user)}).data
         )

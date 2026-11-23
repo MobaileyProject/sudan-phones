@@ -4,16 +4,19 @@ from django.db import models
 
 class Account(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    phone = models.CharField(max_length=16, db_index=True)
+    phone = models.CharField(max_length=16, blank=True, db_index=True)
     phone_verified = models.BooleanField(default=False)
     email_verified = models.BooleanField(default=False)
     is_merchant = models.BooleanField(default=False)
+    google_sub = models.CharField(max_length=128, unique=True, null=True, blank=True)
+    preferred_city = models.CharField(max_length=32, blank=True)
+    preferred_locale = models.CharField(max_length=8, default="ar")
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=["phone"],
-                condition=models.Q(phone_verified=True),
+                condition=models.Q(phone_verified=True) & ~models.Q(phone=""),
                 name="unique_verified_phone",
             )
         ]

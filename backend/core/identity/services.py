@@ -135,18 +135,36 @@ def register(data, merchant=False):
 
 
 def login_user(data):
-    account = (
-        Account.objects.select_related("user")
-        .filter(phone=data["phone"], phone_verified=True)
-        .first()
-    )
-    founder = (
-        get_user_model()
-        .objects.filter(username=data["phone"], is_superuser=True, is_active=True)
-        .first()
-        if not account
-        else None
-    )
+    account = None
+    founder = None
+    if data.get("phone"):
+        account = (
+            Account.objects.select_related("user")
+            .filter(phone=data["phone"], phone_verified=True)
+            .first()
+        )
+        founder = (
+            get_user_model()
+            .objects.filter(username=data["phone"], is_superuser=True, is_active=True)
+            .first()
+            if not account
+            else None
+        )
+    elif data.get("email"):
+        email = data["email"].strip().lower()
+        account = (
+            Account.objects.select_related("user")
+            .filter(user__email__iexact=email, email_verified=True)
+            .first()
+        )
+        if not account:
+            # Allow active superusers and delegated admins/staff with matching email
+            founder = (
+                get_user_model()
+                .objects.filter(email__iexact=email, is_active=True)
+                .filter(is_superuser=True)
+                .first()
+            )
     username = (
         account.user.username
         if account
@@ -157,6 +175,103 @@ def login_user(data):
     user = authenticate(username=username, password=data["password"])
     require(user is not None, "INVALID_CREDENTIALS", 401)
     return user
+
+
+@transaction.atomic
+def login_google(data):
+    verifier = import_string(settings.GOOGLE_TOKEN_VERIFIER)
+    claims = verifier(data["id_token"])
+    sub = claims["sub"]
+    email = claims["email"].strip().lower()
+    name = (claims.get("name") or email.split("@")[0])[:150]
+
+    account = Account.objects.select_related("user").filter(google_sub=sub).first()
+    if account:
+        require(account.user.is_active, "INVALID_CREDENTIALS", 401)
+        record(account.user, "identity.google_login", account.user.pk)
+        return account.user
+
+    # Link to an existing non-superuser account only when email is already verified
+    account = (
+        Account.objects.select_related("user")
+        .filter(
+            user__email__iexact=email,
+            email_verified=True,
+            user__is_active=True,
+            user__is_superuser=False,
+        )
+        .first()
+    )
+    if account:
+        account.google_sub = sub
+        account.save(update_fields=["google_sub"])
+        record(account.user, "identity.google_linked", account.user.pk)
+        return account.user
+
+    # Never auto-link or create duplicate for an active superuser email
+    require(
+        not get_user_model()
+        .objects.filter(email__iexact=email, is_superuser=True)
+        .exists(),
+        "INVALID_CREDENTIALS",
+        401,
+    )
+    user = get_user_model().objects.create_user(
+        username="google-" + secrets.token_hex(16),
+        password=None,
+        first_name=name,
+        email=email,
+    )
+    user.set_unusable_password()
+    user.save(update_fields=["password"])
+    Account.objects.create(
+        user=user,
+        phone="",
+        phone_verified=False,
+        email_verified=True,
+        is_merchant=False,
+        google_sub=sub,
+    )
+    record(user, "identity.google_register", user.pk)
+    return user
+
+
+def me_data(actor):
+    require_actor(actor)
+    account = Account.objects.filter(user=actor).first()
+    sess = session_data(actor)
+    return {
+        "id": actor.pk,
+        "name": actor.first_name or actor.username,
+        "phone": account.phone if account else "",
+        "email": actor.email,
+        "phone_verified": bool(account and account.phone_verified),
+        "email_verified": bool(account and account.email_verified),
+        "preferred_city": account.preferred_city if account else "",
+        "preferred_locale": account.preferred_locale if account else "ar",
+        "role": sess["role"],
+        "merchant": sess["merchant"],
+    }
+
+
+@transaction.atomic
+def update_me(actor, data):
+    require_actor(actor)
+    user = get_user_model().objects.select_for_update().get(pk=actor.pk)
+    account, _ = Account.objects.select_for_update().get_or_create(
+        user=user, defaults={"phone": ""}
+    )
+    if "name" in data:
+        user.first_name = data["name"].strip()
+        user.save(update_fields=["first_name"])
+    changed = []
+    for field in ("preferred_city", "preferred_locale"):
+        if field in data:
+            setattr(account, field, data[field])
+            changed.append(field)
+    if changed:
+        account.save(update_fields=changed)
+    return me_data(user)
 
 
 def verify(actor, data):

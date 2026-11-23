@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from core.common.views import DomainView, contract
 from core.common.serializers import PageQuery
 from .serializers import (
+    HomeQuery,
     SearchQuery,
     SearchResponse,
     DetailResponse,
@@ -19,9 +20,10 @@ class PublicView(DomainView):
 
 
 class HomeView(PublicView):
-    @contract("API-020", "P5", response=HomeResponse, auth=[])
+    @contract("API-020", "P5", response=HomeResponse, parameters=[HomeQuery], auth=[])
     def get(self, request):
-        return Response(HomeResponse({"data": services.home()}).data)
+        query = self.validated(HomeQuery, request.query_params)
+        return Response(HomeResponse({"data": services.home(city=query.get("city"))}).data)
 
 
 class SearchView(PublicView):

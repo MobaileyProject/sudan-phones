@@ -1,19 +1,23 @@
 from decimal import Decimal
 from rest_framework import serializers
+from core.bootstrap.services import CITY_IDS
 from core.common.serializers import PageQuery
 from core.bootstrap.serializers import StrictQuerySerializer
 from core.listings.serializers import ListingData
 from core.catalog.serializers import BrandData
 
 
+class HomeQuery(StrictQuerySerializer):
+    city = serializers.ChoiceField(choices=CITY_IDS, required=False)
+
+
 class SearchQuery(PageQuery, StrictQuerySerializer):
     q = serializers.CharField(max_length=120, required=False)
     brand_id = serializers.IntegerField(min_value=1, required=False)
+    brand = serializers.SlugField(max_length=80, required=False)
     model_id = serializers.IntegerField(min_value=1, required=False)
     condition = serializers.ChoiceField(choices=["new", "used"], required=False)
-    city = serializers.ChoiceField(
-        choices=["port_sudan", "khartoum", "omdurman"], required=False
-    )
+    city = serializers.ChoiceField(choices=CITY_IDS, required=False)
     min_price = serializers.DecimalField(
         max_digits=14, decimal_places=2, min_value=Decimal("0"), required=False
     )
@@ -22,10 +26,12 @@ class SearchQuery(PageQuery, StrictQuerySerializer):
     )
     storage_gb = serializers.IntegerField(min_value=1, max_value=4096, required=False)
     sort = serializers.ChoiceField(
-        choices=["latest", "price_asc", "price_desc"], default="latest"
+        choices=["latest", "newest", "price_asc", "price_desc"], default="latest"
     )
 
     def validate(self, attrs):
+        if attrs.get("sort") == "newest":
+            attrs["sort"] = "latest"
         if attrs.get("min_price", 0) > attrs.get(
             "max_price", Decimal("999999999999.99")
         ):
@@ -72,8 +78,14 @@ class PublicStore(serializers.Serializer):
     name = serializers.CharField()
     city = serializers.CharField()
     address = serializers.CharField()
+    location_guidance = serializers.CharField(default="")
+    description = serializers.CharField(default="")
+    banner_url = serializers.CharField(default="")
     opening_hours = serializers.CharField()
+    contact_available = serializers.BooleanField(default=True)
     verified = serializers.BooleanField()
+    rating_average = serializers.FloatField(allow_null=True, default=None)
+    rating_count = serializers.IntegerField(default=0)
 
 
 class StoreDetailResponse(serializers.Serializer):

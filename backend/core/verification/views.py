@@ -3,6 +3,7 @@ from core.common.views import DomainView, contract
 from core.common.serializers import PageQuery
 from .serializers import (
     SubmitInput,
+    ReverificationInput,
     DecisionInput,
     VerificationResponse,
     VerificationListResponse,
@@ -27,6 +28,21 @@ class SubmitView(DomainView):
                 {
                     "data": services.submit(
                         request.user, self.validated(SubmitInput, request.data)
+                    )
+                }
+            ).data,
+            status=201,
+        )
+
+
+class ReverificationView(DomainView):
+    @contract("API-069", "P3", request=ReverificationInput, response=VerificationResponse)
+    def post(self, request):
+        return Response(
+            VerificationResponse(
+                {
+                    "data": services.request_reverification(
+                        request.user, self.validated(ReverificationInput, request.data)
                     )
                 }
             ).data,

@@ -3,12 +3,14 @@ from rest_framework.response import Response
 from core.common.views import DomainView, contract
 from .serializers import (
     CatalogQuery,
+    PublicModelQuery,
     BrandResponse,
     ModelResponse,
+    PublicModelResponse,
     VariantResponse,
     CategoryResponse,
 )
-from .services import choices
+from .services import choices, public_models
 
 
 class BrandsView(DomainView):
@@ -27,6 +29,25 @@ class BrandsView(DomainView):
                         "brands",
                         self.validated(CatalogQuery, request.query_params),
                         public=True,
+                    )
+                }
+            ).data
+        )
+
+
+class PublicModelsView(DomainView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @contract(
+        "API-071", "P4", response=PublicModelResponse, parameters=[PublicModelQuery], auth=[]
+    )
+    def get(self, request):
+        return Response(
+            PublicModelResponse(
+                {
+                    "data": public_models(
+                        self.validated(PublicModelQuery, request.query_params)
                     )
                 }
             ).data
