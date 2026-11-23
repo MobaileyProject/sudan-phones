@@ -174,11 +174,23 @@ GOOGLE_TOKEN_VERIFIER = os.environ.get(
 )
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
+_COOKIE_SECURE_DEFAULT = 'False' if DEBUG else 'True'
+SESSION_COOKIE_SECURE = os.environ.get('DJANGO_COOKIE_SECURE', _COOKIE_SECURE_DEFAULT).lower() in ('true', '1', 'yes')
+CSRF_COOKIE_SECURE = os.environ.get('DJANGO_COOKIE_SECURE', _COOKIE_SECURE_DEFAULT).lower() in ('true', '1', 'yes')
 CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 
-MEDIA_STORAGE_BACKEND = 'core.media.storage.R2Storage'
+MEDIA_STORAGE_BACKEND = os.environ.get(
+    'MEDIA_STORAGE_BACKEND', 'core.media.storage.R2Storage'
+)
+MEDIA_LOCAL_ROOT = Path(os.environ.get('MEDIA_LOCAL_ROOT', str(BASE_DIR / 'media_storage')))
+MEDIA_LOCAL_BASE_URL = os.environ.get('MEDIA_LOCAL_BASE_URL', '')
+MEDIA_PROCESS_INLINE = os.environ.get('MEDIA_PROCESS_INLINE', 'False').lower() in ('true', '1', 'yes')
+CORS_ALLOWED_ORIGINS = [
+    o.strip() for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()
+]
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()
+]
 MEDIA_PHOTO_MAX_BYTES = 8 * 1024 * 1024
 MEDIA_DOCUMENT_MAX_BYTES = 10 * 1024 * 1024
 MEDIA_MAX_PIXELS = 24_000_000

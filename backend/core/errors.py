@@ -37,6 +37,38 @@ def error_payload(status: int, locale: str, validation=None) -> dict:
     return {'error': {'code': code, 'message': strings['errors.' + key], 'details': details}}
 
 
+_DOMAIN_MESSAGES = {
+    'INVALID_CREDENTIALS': {
+        'ar': 'البريد الإلكتروني أو رقم الهاتف أو كلمة المرور غير صحيحة.',
+        'en': 'Invalid email, phone number, or password.',
+    },
+    'ACCOUNT_UNAVAILABLE': {
+        'ar': 'هذا الحساب أو رقم الهاتف مسجل مسبقاً.',
+        'en': 'This account or phone number is already registered.',
+    },
+    'INVALID_OTP': {
+        'ar': 'رمز التحقق غير صحيح أو منتهي الصلاحية.',
+        'en': 'Verification code is invalid or expired.',
+    },
+    'INVALID_GOOGLE_TOKEN': {
+        'ar': 'تعذر التحقق من حساب جوجل، حاول مرة أخرى.',
+        'en': 'Could not verify Google account. Please try again.',
+    },
+    'SELF_RATING_FORBIDDEN': {
+        'ar': 'لا يمكنك تقييم متجرك الخاص.',
+        'en': 'You cannot rate your own store.',
+    },
+    'STALE_VERSION': {
+        'ar': 'تم تحديث البيانات من مستخدم آخر، يرجى التحديث والمحاولة مجدداً.',
+        'en': 'This item was updated elsewhere. Please refresh and try again.',
+    },
+    'PHONE_NOT_VERIFIED': {
+        'ar': 'يرجى توثيق رقم الهاتف أولاً.',
+        'en': 'Please verify your phone number first.',
+    },
+}
+
+
 def api_exception_handler(exc, context):
     request = context.get('request')
     locale = getattr(request, 'api_locale', 'ar')
@@ -44,6 +76,9 @@ def api_exception_handler(exc, context):
     if isinstance(exc, DomainError):
         payload = error_payload(exc.status, locale)
         payload['error']['code'] = exc.code
+        custom = _DOMAIN_MESSAGES.get(exc.code)
+        if custom:
+            payload['error']['message'] = custom.get(locale, custom['ar'])
         return Response(payload, status=exc.status)
     response = exception_handler(exc, context)
     if response is None:

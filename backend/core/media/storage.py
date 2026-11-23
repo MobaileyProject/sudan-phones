@@ -117,3 +117,60 @@ class R2Storage:
 
     def delete(self, key):
         self.client.delete_object(Bucket=self.bucket(key), Key=key)
+
+
+class LocalDiskStorage:
+    """Signed local-disk storage for single-server EC2 staging without Cloudflare R2."""
+
+    def _safe_path(self, key):
+        from pathlib import Path
+
+        root = Path(settings.MEDIA_LOCAL_ROOT).resolve()
+        target = (root / key).resolve()
+        require(str(target).startswith(str(root) + "/"), "INVALID_MEDIA")
+        return target
+
+    def upload_url(self, key, content_type, size):
+        from django.core.signing import TimestampSigner
+
+        base = (settings.MEDIA_LOCAL_BASE_URL or "").rstrip("/")
+        require(bool(base), "STORAGE_UNAVAILABLE", 503)
+        token = TimestampSigner(salt="local-upload").sign_object(
+            {"key": key, "content_type": content_type, "size": size}
+        )
+        return {
+            "url": f"{base}/media-transfer/upload/{token}",
+            "headers": {"Content-Type": content_type},
+        }
+
+    def read(self, key, limit):
+        path = self._safe_path(key)
+        require(path.exists(), "INVALID_MEDIA")
+        data = path.read_bytes()
+        require(len(data) <= limit, "INVALID_MEDIA")
+        return data
+
+    def write(self, key, data, content_type):
+        path = self._safe_path(key)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+
+    def private_url(self, key, seconds):
+        from django.core.signing import TimestampSigner
+
+        require(not key.startswith("public/"), "INVALID_MEDIA")
+        base = (settings.MEDIA_LOCAL_BASE_URL or "").rstrip("/")
+        require(bool(base), "STORAGE_UNAVAILABLE", 503)
+        token = TimestampSigner(salt="local-private").sign_object({"key": key})
+        return f"{base}/media-transfer/private/{token}"
+
+    def public_url(self, key):
+        require(key.startswith("public/"), "INVALID_MEDIA")
+        domain = (settings.R2_PUBLIC_DOMAIN or "").rstrip("/")
+        require(bool(domain), "STORAGE_UNAVAILABLE", 503)
+        return f"{domain}/{key}"
+
+    def delete(self, key):
+        path = self._safe_path(key)
+        if path.exists():
+            path.unlink()
