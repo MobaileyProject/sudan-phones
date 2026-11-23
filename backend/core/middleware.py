@@ -37,9 +37,10 @@ class ApiResponseMiddleware:
             return self.get_response(request)
         if request.method == 'OPTIONS' and request.headers.get('Origin') in getattr(settings, 'CORS_ALLOWED_ORIGINS', []):
             return self._apply_cors(request, HttpResponse(status=204))
-        # Allow mobile APK clients to persist Django sessions across app restarts via X-Session-Token
+        # Allow mobile APK clients to persist Django sessions across app restarts via X-Session-Token.
+        # Always prefer an explicit X-Session-Token header over any stale WebView/HTTP cookie.
         session_token = request.headers.get('X-Session-Token')
-        if session_token and settings.SESSION_COOKIE_NAME not in request.COOKIES:
+        if session_token:
             request.COOKIES[settings.SESSION_COOKIE_NAME] = session_token
         request.request_id = str(uuid.uuid4())
         # Public responses vary by Accept-Language, never by a language/session

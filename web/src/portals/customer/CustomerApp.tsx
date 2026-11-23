@@ -34,6 +34,7 @@ import {
 } from '../../i18n/translations';
 import { CATALOG_MODELS } from '../../data/mockData';
 import { usePrototype } from '../../store/PrototypeContext';
+import { hasStoredSessionToken } from '../../api/client';
 import {
   BrandLogo,
   OfflineBanner,
@@ -141,17 +142,29 @@ export function CustomerApp() {
     },
   };
 
-  const [entryScreen, setEntryScreen] = useState<MobileEntryScreen | null>('welcome');
+  const [entryScreen, setEntryScreen] = useState<MobileEntryScreen | null>(() =>
+    session.authenticated || hasStoredSessionToken() ? null : 'welcome'
+  );
   const [authTheme, setAuthTheme] = useState<AuthThemeMode>('light');
-  const [signedInUser, setSignedInUser] = useState<{ name: string; phone: string } | null>(null);
+  const [signedInUser, setSignedInUser] = useState<{ name: string; phone: string } | null>(() =>
+    session.authenticated && me
+      ? {
+          name: me.name || me.email || me.phone,
+          phone: me.phone || me.email || '',
+        }
+      : null
+  );
 
   useEffect(() => {
-    if (session.authenticated && me) {
-      setSignedInUser({
-        name: me.name || me.email || me.phone,
-        phone: me.phone || me.email || '',
-      });
-    } else if (!session.authenticated) {
+    if (session.authenticated) {
+      setEntryScreen(null);
+      if (me) {
+        setSignedInUser({
+          name: me.name || me.email || me.phone,
+          phone: me.phone || me.email || '',
+        });
+      }
+    } else {
       setSignedInUser(null);
     }
   }, [session.authenticated, me]);

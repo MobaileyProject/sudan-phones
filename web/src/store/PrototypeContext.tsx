@@ -23,7 +23,16 @@ import {
   VerificationDocument,
 } from '../types';
 import { computeRatingSummary, getPhoneModelRatingKey } from '../data/ratingsData';
-import { api, ApiError, ApiMe, ApiSession, normalizeSudanPhone } from '../api/client';
+import {
+  api,
+  ApiError,
+  ApiMe,
+  ApiSession,
+  getCachedAuth,
+  initSessionStorage,
+  normalizeSudanPhone,
+  setCachedAuth,
+} from '../api/client';
 import {
   bi,
   mapAdminRole,
@@ -234,16 +243,20 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   const [selectedCity, setSelectedCity] = useState<CityId | 'all'>('all');
   const [hasCompletedCitySelection, setHasCompletedCitySelection] = useState<boolean>(true);
 
-  const [session, setSession] = useState<ApiSession>({
-    authenticated: false,
-    role: 'guest',
-    permissions: [],
-    user_id: null,
-    merchant: false,
-    phone_verified: false,
-    email_verified: false,
-  });
-  const [me, setMe] = useState<ApiMe | null>(null);
+  const initialCachedAuth = getCachedAuth();
+  const [session, setSession] = useState<ApiSession>(
+    () =>
+      initialCachedAuth?.session ?? {
+        authenticated: false,
+        role: 'guest',
+        permissions: [],
+        user_id: null,
+        merchant: false,
+        phone_verified: false,
+        email_verified: false,
+      }
+  );
+  const [me, setMe] = useState<ApiMe | null>(() => initialCachedAuth?.me ?? null);
   const [isLoadingLive, setIsLoadingLive] = useState<boolean>(true);
 
   const [stores, setStores] = useState<Store[]>([]);
@@ -469,15 +482,24 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   const hydrateSession = useCallback(async () => {
     setIsLoadingLive(true);
     try {
+      await initSessionStorage();
+      const nativeCached = getCachedAuth();
+      if (nativeCached) {
+        setSession(nativeCached.session);
+        if (nativeCached.me) setMe(nativeCached.me);
+      }
       const sess = await api.getSession();
       setSession(sess);
       if (sess.authenticated) {
+        let fetchedMe: ApiMe | null = nativeCached?.me ?? null;
         try {
           const meRes = await api.getMe();
-          setMe(meRes.data);
+          fetchedMe = meRes.data;
+          setMe(fetchedMe);
         } catch {
-          setMe(null);
+          setMe(fetchedMe);
         }
+        setCachedAuth({ session: sess, me: fetchedMe });
         if (sess.merchant || sess.role === 'merchant') {
           await refreshMerchantData();
         }
@@ -486,9 +508,10 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         setMe(null);
+        setCachedAuth(null);
       }
     } catch {
-      // offline or unreachable
+      // offline or unreachable — preserve cached session/me so user isn't kicked out
     } finally {
       await refreshPublicData();
       setIsLoadingLive(false);
@@ -514,12 +537,15 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         : { email: payload.email?.trim(), password: payload.password };
       const sess = await api.login(clean);
       setSession(sess);
+      let fetchedMe: ApiMe | null = null;
       try {
         const meRes = await api.getMe();
-        setMe(meRes.data);
+        fetchedMe = meRes.data;
+        setMe(fetchedMe);
       } catch {
         setMe(null);
       }
+      setCachedAuth({ session: sess, me: fetchedMe });
       if (sess.merchant || sess.role === 'merchant') await refreshMerchantData();
       if (sess.role === 'admin') await refreshAdminData();
       return sess;
@@ -532,7 +558,9 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       const sess = await api.loginGoogle(idToken);
       setSession(sess);
       const meRes = await api.getMe().catch(() => null);
-      if (meRes) setMe(meRes.data);
+      const fetchedMe = meRes ? meRes.data : null;
+      if (fetchedMe) setMe(fetchedMe);
+      setCachedAuth({ session: sess, me: fetchedMe });
       return sess;
     },
     []
@@ -540,6 +568,7 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
 
   const logoutSession = useCallback(async () => {
     await api.logout().catch(() => {});
+    setCachedAuth(null);
     setSession({
       authenticated: false,
       role: 'guest',
@@ -556,9 +585,10 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
     async (payload: { name?: string; preferred_city?: string; preferred_locale?: 'ar' | 'en' }) => {
       const res = await api.updateMe(payload);
       setMe(res.data);
+      setCachedAuth({ session, me: res.data });
       return res.data;
     },
-    []
+    [session]
   );
 
   const fetchContactMethods = useCallback(async (listingId: string) => {

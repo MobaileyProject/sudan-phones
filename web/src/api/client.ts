@@ -4,35 +4,115 @@
  * (for HTTP/WebView environments without crypto.subtle), and 3-step signed uploads.
  */
 
+import { Preferences } from '@capacitor/preferences';
+
 export const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
 const SESSION_TOKEN_KEY = 'sp_session_token_v1';
+const CACHED_AUTH_KEY = 'sp_cached_auth_v1';
 let cachedCsrfToken = '';
+let memorySessionToken = '';
+let storageInitialized = false;
+let storageInitPromise: Promise<void> | null = null;
 
-function getStoredSessionToken(): string {
+function readLocalStorage(key: string): string {
   try {
-    return window.localStorage.getItem(SESSION_TOKEN_KEY) || '';
+    return window.localStorage.getItem(key) || '';
   } catch {
     return '';
   }
 }
 
-function setStoredSessionToken(token: string | null) {
+function writeLocalStorage(key: string, value: string | null) {
   try {
-    if (token) {
-      window.localStorage.setItem(SESSION_TOKEN_KEY, token);
+    if (value) {
+      window.localStorage.setItem(key, value);
     } else {
-      window.localStorage.removeItem(SESSION_TOKEN_KEY);
+      window.localStorage.removeItem(key);
     }
   } catch {
     // ignore storage errors
   }
 }
 
+// Hydrate synchronous memory mirror immediately from localStorage
+memorySessionToken = readLocalStorage(SESSION_TOKEN_KEY);
+
+/** Load persisted session token & auth snapshot from native Android SharedPreferences if localStorage was cleared. */
+export async function initSessionStorage(): Promise<void> {
+  if (storageInitialized) return;
+  if (storageInitPromise) return storageInitPromise;
+  storageInitPromise = (async () => {
+    try {
+      const { value: nativeToken } = await Preferences.get({ key: SESSION_TOKEN_KEY });
+      if (nativeToken && !memorySessionToken) {
+        memorySessionToken = nativeToken;
+        writeLocalStorage(SESSION_TOKEN_KEY, nativeToken);
+      } else if (memorySessionToken && !nativeToken) {
+        await Preferences.set({ key: SESSION_TOKEN_KEY, value: memorySessionToken });
+      }
+      const { value: nativeAuth } = await Preferences.get({ key: CACHED_AUTH_KEY });
+      if (nativeAuth && !readLocalStorage(CACHED_AUTH_KEY)) {
+        writeLocalStorage(CACHED_AUTH_KEY, nativeAuth);
+      }
+    } catch {
+      // Running in plain browser or Preferences unavailable
+    } finally {
+      storageInitialized = true;
+    }
+  })();
+  return storageInitPromise;
+}
+
+export function hasStoredSessionToken(): boolean {
+  return Boolean(memorySessionToken || readLocalStorage(SESSION_TOKEN_KEY));
+}
+
+function getStoredSessionToken(): string {
+  if (memorySessionToken) return memorySessionToken;
+  const fromLs = readLocalStorage(SESSION_TOKEN_KEY);
+  if (fromLs) memorySessionToken = fromLs;
+  return fromLs;
+}
+
+function setStoredSessionToken(token: string | null) {
+  memorySessionToken = token || '';
+  writeLocalStorage(SESSION_TOKEN_KEY, token);
+  if (token) {
+    Preferences.set({ key: SESSION_TOKEN_KEY, value: token }).catch(() => {});
+  } else {
+    Preferences.remove({ key: SESSION_TOKEN_KEY }).catch(() => {});
+  }
+}
+
+export function getCachedAuth(): { session: ApiSession; me: ApiMe | null } | null {
+  try {
+    const raw = readLocalStorage(CACHED_AUTH_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.session && parsed.session.authenticated) {
+      return parsed;
+    }
+  } catch {
+    // ignore corrupted cache
+  }
+  return null;
+}
+
+export function setCachedAuth(auth: { session: ApiSession; me: ApiMe | null } | null) {
+  const serialized = auth && auth.session.authenticated ? JSON.stringify(auth) : null;
+  writeLocalStorage(CACHED_AUTH_KEY, serialized);
+  if (serialized) {
+    Preferences.set({ key: CACHED_AUTH_KEY, value: serialized }).catch(() => {});
+  } else {
+    Preferences.remove({ key: CACHED_AUTH_KEY }).catch(() => {});
+  }
+}
+
 function captureAuthHeaders(res: Response) {
-  const headerToken = res.headers.get('X-CSRFToken');
+  const headerToken = res.headers.get('X-CSRFToken') || res.headers.get('x-csrftoken');
   if (headerToken) cachedCsrfToken = headerToken;
-  const sessionToken = res.headers.get('X-Session-Token');
+  const sessionToken = res.headers.get('X-Session-Token') || res.headers.get('x-session-token');
   if (sessionToken) setStoredSessionToken(sessionToken);
 }
 
@@ -149,6 +229,7 @@ export interface ApiMe {
 }
 
 export async function ensureCsrf(): Promise<ApiSession> {
+  await initSessionStorage();
   const headers: Record<string, string> = { Accept: 'application/json' };
   const sessionToken = getStoredSessionToken();
   if (sessionToken) headers['X-Session-Token'] = sessionToken;
@@ -160,8 +241,9 @@ export async function ensureCsrf(): Promise<ApiSession> {
   captureAuthHeaders(res);
   const json = await res.json();
   const data = json.data as ApiSession;
-  if (!data.authenticated && sessionToken) {
+  if (res.ok && data && !data.authenticated && sessionToken) {
     setStoredSessionToken(null);
+    setCachedAuth(null);
   }
   return data;
 }
@@ -286,6 +368,7 @@ export const api = {
       await apiRequest('/api/v1/auth/session', { method: 'DELETE' });
     } finally {
       setStoredSessionToken(null);
+      setCachedAuth(null);
     }
   },
   login: async (payload: { phone?: string; email?: string; password: string }) => {
