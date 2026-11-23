@@ -19,7 +19,46 @@ SUDAN_BRANDS: tuple[str, ...] = (
     "OnePlus",
     "Vivo",
     "Nokia",
+    "Motorola",
+    "ZTE",
+    "Lenovo",
+    "Sony",
+    "LG",
+    "HTC",
+    "Asus",
+    "TCL",
+    "Alcatel",
+    "Blackview",
+    "Nothing",
 )
+
+BRAND_ARABIC_NAMES: dict[str, str] = {
+    "Samsung": "سامسونج",
+    "Apple": "آبل",
+    "Xiaomi": "شاومي",
+    "Tecno": "تكنو",
+    "Infinix": "إنفنكس",
+    "Itel": "آيتل",
+    "Huawei": "هواوي",
+    "Honor": "هونر",
+    "OPPO": "أوبو",
+    "Realme": "ريلمي",
+    "Google": "جوجل",
+    "OnePlus": "ون بلس",
+    "Vivo": "فيفو",
+    "Nokia": "نوكيا",
+    "Motorola": "موتورولا",
+    "ZTE": "زد تي إي",
+    "Lenovo": "لينوفو",
+    "Sony": "سوني",
+    "LG": "إل جي",
+    "HTC": "إتش تي سي",
+    "Asus": "أسوس",
+    "TCL": "تي سي إل",
+    "Alcatel": "ألكاتيل",
+    "Blackview": "بلاك فيو",
+    "Nothing": "ناثينج",
+}
 
 # Canonical brand lookup (case-insensitive) including common sub-brand aliases.
 BRAND_ALIASES: dict[str, str] = {
@@ -30,7 +69,14 @@ BRAND_ALIASES: dict[str, str] = {
     "tecno mobile": "Tecno",
     "infinix mobility": "Infinix",
     "hmd global": "Nokia",
+    "hmd": "Nokia",
+    "nubia": "ZTE",
+    "moto": "Motorola",
 }
+
+
+def brand_arabic_name(canonical: str) -> str:
+    return BRAND_ARABIC_NAMES.get(canonical, canonical)
 
 
 def canonical_brand(raw: str) -> str | None:

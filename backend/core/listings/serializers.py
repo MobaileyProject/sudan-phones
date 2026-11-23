@@ -4,7 +4,11 @@ from core.common.serializers import StrictSerializer
 
 
 class CreateInput(StrictSerializer):
-    variant_id = serializers.IntegerField(min_value=1)
+    variant_id = serializers.IntegerField(min_value=1, required=False)
+    model_id = serializers.IntegerField(min_value=1, required=False)
+    storage_gb = serializers.IntegerField(min_value=4, max_value=4096, required=False)
+    ram_gb = serializers.IntegerField(min_value=1, max_value=64, required=False)
+    color = serializers.CharField(max_length=80, allow_blank=True, required=False)
     condition = serializers.ChoiceField(choices=["new", "used"])
     price = serializers.DecimalField(
         max_digits=14, decimal_places=2, min_value=Decimal("0.01")
@@ -39,6 +43,14 @@ class CreateInput(StrictSerializer):
     is_sealed = serializers.BooleanField(required=False)
     has_original_box = serializers.BooleanField(required=False)
     featured = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        if not attrs.get("variant_id"):
+            if not (attrs.get("model_id") and attrs.get("storage_gb") and attrs.get("ram_gb")):
+                raise serializers.ValidationError(
+                    "Provide either variant_id or (model_id, storage_gb, ram_gb)."
+                )
+        return attrs
 
 
 class PriceInput(StrictSerializer):

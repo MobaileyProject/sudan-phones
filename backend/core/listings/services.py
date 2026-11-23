@@ -7,7 +7,7 @@ from django.utils import timezone
 from core.common.domain import require
 from core.stores.services import member_store
 from core.stores.models import Store
-from core.catalog.models import Variant
+from core.catalog.models import PhoneModel, Variant
 from core.media.models import MediaAsset
 from core.operations.audit import record
 from core.operations.authorization import require_admin
@@ -228,6 +228,10 @@ def create_listing(actor, data, key):
         set(data)
         <= {
             "variant_id",
+            "model_id",
+            "storage_gb",
+            "ram_gb",
+            "color",
             "condition",
             "price",
             "quantity",
@@ -248,9 +252,37 @@ def create_listing(actor, data, key):
         "INVALID_MUTATION",
     )
     invariant(data, creation=True)
-    require(
-        Variant.objects.filter(pk=data["variant_id"]).exists(), "VARIANT_NOT_FOUND", 404
-    )
+    custom_color = (data.get("color") or "").strip()[:80]
+    if data.get("variant_id"):
+        base_variant = Variant.objects.filter(pk=data["variant_id"]).first()
+        require(base_variant is not None, "VARIANT_NOT_FOUND", 404)
+        if custom_color and custom_color != base_variant.color:
+            resolved_variant, _ = Variant.objects.get_or_create(
+                model_id=base_variant.model_id,
+                storage_gb=base_variant.storage_gb,
+                ram_gb=base_variant.ram_gb,
+                color=custom_color,
+            )
+            resolved_variant_id = resolved_variant.pk
+        else:
+            resolved_variant_id = base_variant.pk
+    else:
+        require(
+            data.get("model_id") and data.get("storage_gb") and data.get("ram_gb"),
+            "INVALID_MUTATION",
+        )
+        require(
+            PhoneModel.objects.filter(pk=data["model_id"]).exists(),
+            "MODEL_NOT_FOUND",
+            404,
+        )
+        resolved_variant, _ = Variant.objects.get_or_create(
+            model_id=data["model_id"],
+            storage_gb=data["storage_gb"],
+            ram_gb=data["ram_gb"],
+            color=custom_color or "Standard",
+        )
+        resolved_variant_id = resolved_variant.pk
     ids = data["media"]
     assets = list(
         MediaAsset.objects.filter(
@@ -272,7 +304,12 @@ def create_listing(actor, data, key):
         else "seal" in kinds,
         "MISSING_PHOTOS",
     )
-    values = {k: v for k, v in data.items() if k != "media"}
+    values = {
+        k: v
+        for k, v in data.items()
+        if k not in {"media", "model_id", "storage_gb", "ram_gb", "color"}
+    }
+    values["variant_id"] = resolved_variant_id
     if data["condition"] == "new":
         values.update(grade="new", battery_health=100, used_availability="")
     elif not values.get("used_availability"):

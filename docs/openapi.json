@@ -523,6 +523,10 @@
             "nullable": true,
             "type": "integer"
           },
+          "color": {
+            "maxLength": 80,
+            "type": "string"
+          },
           "condition": {
             "$ref": "#/components/schemas/ConditionEnum"
           },
@@ -551,6 +555,10 @@
             "minItems": 1,
             "type": "array"
           },
+          "model_id": {
+            "minimum": 1,
+            "type": "integer"
+          },
           "price": {
             "format": "decimal",
             "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
@@ -561,9 +569,19 @@
             "minimum": 1,
             "type": "integer"
           },
+          "ram_gb": {
+            "maximum": 64,
+            "minimum": 1,
+            "type": "integer"
+          },
           "replaced_parts": {
             "maxLength": 500,
             "type": "string"
+          },
+          "storage_gb": {
+            "maximum": 4096,
+            "minimum": 4,
+            "type": "integer"
           },
           "used_availability": {
             "$ref": "#/components/schemas/UsedAvailabilityEnum"
@@ -595,8 +613,7 @@
           "condition",
           "media",
           "price",
-          "quantity",
-          "variant_id"
+          "quantity"
         ],
         "type": "object"
       },
@@ -10662,6 +10679,15 @@
               "minimum": 0,
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -10992,6 +11018,15 @@
               "maximum": 10000,
               "minimum": 0,
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
             }
           }
         ],
@@ -11329,6 +11364,15 @@
               "minimum": 0,
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -11664,6 +11708,15 @@
               "maximum": 10000,
               "minimum": 0,
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
             }
           }
         ],

@@ -6,6 +6,7 @@ from core.common.serializers import PageQuery
 class CatalogQuery(PageQuery):
     brand_id = serializers.IntegerField(min_value=1, required=False)
     model_id = serializers.IntegerField(min_value=1, required=False)
+    q = serializers.CharField(max_length=120, required=False)
 
 
 class PublicModelQuery(PageQuery):

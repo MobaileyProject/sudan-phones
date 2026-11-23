@@ -11,22 +11,34 @@ def choices(actor, kind, query, public=False):
     if kind == "categories":
         return [{"id": "phones", "name": "Phones"}]
     if public and kind == "brands":
+        term = (query.get("q") or "").strip()
         def _brands():
-            rows = list(Brand.objects.order_by("pk").values("id", "name", "slug", "name_ar")[
+            qs = Brand.objects.order_by("name", "pk")
+            if term:
+                qs = qs.filter(Q(name__icontains=term) | Q(name_ar__icontains=term))
+            rows = list(qs.values("id", "name", "slug", "name_ar")[
                 query["offset"]:query["offset"] + query["limit"]
             ])
             for row in rows:
                 if not row["slug"]:
                     row["slug"] = slugify(row["name"])
             return rows
-        return cached(f"brands:{query['offset']}:{query['limit']}", _brands)
-    queryset = {"brands": Brand, "models": PhoneModel, "variants": Variant}[
-        kind
-    ].objects.order_by("pk")
-    if kind == "models" and "brand_id" in query:
-        queryset = queryset.filter(brand_id=query["brand_id"])
-    if kind == "variants" and "model_id" in query:
-        queryset = queryset.filter(model_id=query["model_id"])
+        return _brands() if term else cached(f"brands:{query['offset']}:{query['limit']}", _brands)
+    term = (query.get("q") or "").strip()
+    if kind == "brands":
+        queryset = Brand.objects.order_by("name", "pk")
+        if term:
+            queryset = queryset.filter(Q(name__icontains=term) | Q(name_ar__icontains=term))
+    elif kind == "models":
+        queryset = PhoneModel.objects.select_related("brand").order_by("name", "pk")
+        if "brand_id" in query:
+            queryset = queryset.filter(brand_id=query["brand_id"])
+        if term:
+            queryset = queryset.filter(Q(name__icontains=term) | Q(brand__name__icontains=term))
+    else:
+        queryset = Variant.objects.order_by("storage_gb", "ram_gb", "color", "pk")
+        if "model_id" in query:
+            queryset = queryset.filter(model_id=query["model_id"])
     return queryset[query["offset"] : query["offset"] + query["limit"]]
 
 

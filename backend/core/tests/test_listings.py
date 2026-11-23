@@ -188,3 +188,30 @@ class ListingTests(InventoryFixture, TestCase):
         guest = APIClient()
         public = guest.get(f"/api/v1/listings/{listing['id']}")
         self.assertNotIn("feedback", public.data["data"])
+
+    def test_custom_specs_and_custom_color_create_or_resolve_variants(self):
+        # 1. Create via model_id + custom storage/RAM + custom color
+        custom_body = {
+            "model_id": self.model.pk,
+            "storage_gb": 512,
+            "ram_gb": 16,
+            "color": "Desert Titanium",
+            "condition": "new",
+            "price": "1950000.00",
+            "quantity": 2,
+            "is_sealed": True,
+            "warranty_months": 12,
+            "media": self.assets(["seal"]),
+        }
+        created_custom = self.create_listing(custom_body)
+        self.assertEqual(created_custom["storage_gb"], 512)
+        self.assertEqual(created_custom["ram_gb"], 16)
+        self.assertEqual(created_custom["color"], "Desert Titanium")
+
+        # 2. Create via pre-configured variant_id + free-text color override
+        override_body = self.payload()
+        override_body["color"] = "Emerald Green"
+        created_override = self.create_listing(override_body)
+        self.assertEqual(created_override["storage_gb"], self.variant.storage_gb)
+        self.assertEqual(created_override["ram_gb"], self.variant.ram_gb)
+        self.assertEqual(created_override["color"], "Emerald Green")
