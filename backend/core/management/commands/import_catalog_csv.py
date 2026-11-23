@@ -58,6 +58,16 @@ class Command(BaseCommand):
             help="Immediately validate and seed imported JSON files into the database.",
         )
         parser.add_argument(
+            "--include-unreleased",
+            action="store_true",
+            help="Include Cancelled and Rumored devices (excluded by default).",
+        )
+        parser.add_argument(
+            "--include-regional",
+            action="store_true",
+            help="Include region-tagged editions like (India)/(China) (excluded by default).",
+        )
+        parser.add_argument(
             "--dry-run",
             action="store_true",
             help="Parse and report counts without writing JSON files or modifying the database.",
@@ -73,6 +83,8 @@ class Command(BaseCommand):
                 min_year=options["min_year"],
                 provider_name=options["provider_name"],
                 write_json=not options["dry_run"],
+                include_unreleased=options["include_unreleased"],
+                include_regional=options["include_regional"],
             )
         except CSVImportError as exc:
             raise CommandError(str(exc)) from exc
