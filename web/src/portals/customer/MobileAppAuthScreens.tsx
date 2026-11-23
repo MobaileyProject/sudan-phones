@@ -899,9 +899,7 @@ export function MobileAppAuthScreens({
       });
       const res = await SocialLogin.login({
         provider: 'google',
-        options: {
-          scopes: ['email', 'profile'],
-        },
+        options: {},
       });
       const result: any = res?.result;
       const idToken: string | undefined = result?.idToken;
