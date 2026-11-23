@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { App as CapApp } from '@capacitor/app';
 import { motion, useReducedMotion } from 'motion/react';
 import {
   ChevronDown,
@@ -198,6 +199,79 @@ export function CustomerApp() {
   // Scroll context preservation for C-02 Search
   const searchScrollRef = useRef<HTMLDivElement | null>(null);
   const savedSearchScrollTop = useRef<number>(0);
+  const lastBackPressRef = useRef<number>(0);
+
+  // Native Android back button & gesture handler (never closes app unexpectedly)
+  useEffect(() => {
+    let listenerHandle: { remove: () => Promise<void> } | null = null;
+    const handleBack = () => {
+      if (contactTarget.store) {
+        setContactTarget({ listing: null, store: null });
+        return;
+      }
+      if (filterSheetOpen) {
+        setFilterSheetOpen(false);
+        return;
+      }
+      if (citySheetOpen) {
+        setCitySheetOpen(false);
+        return;
+      }
+      if (rateModelTarget) {
+        setRateModelTarget(null);
+        return;
+      }
+      if (entryScreen !== null) {
+        if (entryScreen === 'signin' || entryScreen === 'register') {
+          setEntryScreen(null);
+        } else if (entryScreen === 'otp' || entryScreen === 'recovery') {
+          setEntryScreen('signin');
+        } else {
+          setEntryScreen(null);
+        }
+        return;
+      }
+      if (subScreen.kind !== 'none') {
+        goBack();
+        return;
+      }
+      if (tab !== 'home') {
+        setTab('home');
+        return;
+      }
+      const now = Date.now();
+      if (now - lastBackPressRef.current < 2000) {
+        CapApp.exitApp().catch(() => {});
+      } else {
+        lastBackPressRef.current = now;
+        pushToast('info', {
+          ar: 'اضغط رجوع مرة أخرى للخروج من التطبيق',
+          en: 'Press back again to exit',
+        });
+      }
+    };
+
+    CapApp.addListener('backButton', handleBack)
+      .then((h) => {
+        listenerHandle = h;
+      })
+      .catch(() => {});
+
+    return () => {
+      if (listenerHandle) {
+        listenerHandle.remove().catch(() => {});
+      }
+    };
+  }, [
+    contactTarget.store,
+    filterSheetOpen,
+    citySheetOpen,
+    rateModelTarget,
+    entryScreen,
+    subScreen.kind,
+    tab,
+    pushToast,
+  ]);
 
   // Deep link handler from Merchant / Admin portals
   useEffect(() => {
@@ -1305,34 +1379,6 @@ export function CustomerApp() {
                   </button>
                 );
               })}
-
-              {/* Separate Optional C-07 Entry Link (never blocking guests) */}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => navigateTo({ kind: 'optional_account' })}
-                  className="w-full p-3.5 rounded-[22px] clay-inset clay-focus-ring text-start flex items-center justify-between gap-2 hover:bg-[#ECF3EF] transition-colors"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-full clay-pill flex items-center justify-center text-[#2D6145] shrink-0">
-                      <UserRound className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-[#172B20]">
-                        {lang === 'ar'
-                          ? 'مفهوم اختياري مؤجّل: حساب العميل (C-07)'
-                          : 'Deferred Optional Concept: Account (C-07)'}
-                      </p>
-                      <p className="text-[10.5px] text-[#637B6E] mt-0.5">
-                        {lang === 'ar'
-                          ? 'منفصل تماماً — التصفح والتواصل بدون تسجيل'
-                          : 'Strictly optional — guest browsing requires no sign-in'}
-                      </p>
-                    </div>
-                  </div>
-                  <ForwardChevron className="w-4 h-4 text-[#637B6E] shrink-0" />
-                </button>
-              </div>
             </div>
           </div>
         )}

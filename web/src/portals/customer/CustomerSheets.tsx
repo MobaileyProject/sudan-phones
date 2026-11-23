@@ -231,8 +231,8 @@ export function CitySelectorSheet({
                   </p>
                   <p className="text-xs text-[#3B624C]">
                     {lang === 'ar'
-                      ? 'لاقتراح أقرب مدينة تجريبية مدعومة تلقائياً'
-                      : 'Automatically suggest the nearest supported pilot city'}
+                      ? 'لاقتراح أقرب ولاية سودانية تلقائياً'
+                      : 'Automatically suggest your nearest Sudan state'}
                   </p>
                 </div>
               </div>
@@ -246,41 +246,41 @@ export function CitySelectorSheet({
                 <MapPin className="w-5 h-5 text-[#2D6145] shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-bold text-[#172B20]">
-                    {lang === 'ar' ? 'لماذا نطلب إذن الموقع؟' : 'Why we ask for location'}
+                    {lang === 'ar' ? 'تحديد الولاية تلقائياً' : 'Detect Your State'}
                   </p>
                   <p className="text-xs text-[#5A7265] mt-1 leading-relaxed">
                     {lang === 'ar'
-                      ? 'نستخدم موقعك التقريبي لمرة واحدة فقط لاختيار مدينتك بين بورتسودان أو الخرطوم أو أم درمان. لا نتتبع موقعك ولا نشارك إحداثياتك.'
-                      : 'We use approximate location once to match you with Port Sudan, Khartoum, or Omdurman. We never track you or require location to browse.'}
+                      ? 'نستخدم موقعك التقريبي لمرة واحدة فقط لاقتراح أقرب ولاية سودانية. يمكنك دائماً اختيار الولاية يدوياً أدناه.'
+                      : 'We use approximate location once to suggest your nearest state in Sudan. You can always pick any state manually below.'}
                   </p>
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-2">
                 <button
                   type="button"
-                  onClick={() => simulateDetection('port_sudan')}
+                  onClick={() => {
+                    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+                      setLocStep('detecting');
+                      navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                          const { latitude, longitude } = pos.coords;
+                          const detected: CityId =
+                            longitude > 36 ? 'port_sudan' : latitude < 14.8 ? 'al_jazirah' : 'khartoum';
+                          setDetectedCity(detected);
+                          setLocStep('detected');
+                        },
+                        () => setLocStep('denied'),
+                        { timeout: 6000 }
+                      );
+                    } else {
+                      setDetectedCity('khartoum');
+                      setLocStep('detected');
+                    }
+                  }}
                   className="clay-primary-btn clay-focus-ring w-full h-11 rounded-full text-xs font-bold"
                 >
-                  {lang === 'ar'
-                    ? 'السماح وتحديد الموقع (محاكاة: بورتسودان)'
-                    : 'Allow & Detect (Simulate: Port Sudan)'}
+                  {lang === 'ar' ? 'السماح وتحديد الموقع' : 'Allow & Detect Location'}
                 </button>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => simulateDetection('denied')}
-                    className="clay-pill h-9 rounded-full text-[#3D574A] text-[11px] font-semibold"
-                  >
-                    {lang === 'ar' ? 'محاكاة: رفض الإذن' : 'Sim: Permission denied'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => simulateDetection('outside')}
-                    className="clay-pill h-9 rounded-full text-[#3D574A] text-[11px] font-semibold"
-                  >
-                    {lang === 'ar' ? 'محاكاة: خارج المدن' : 'Sim: Outside pilot area'}
-                  </button>
-                </div>
               </div>
             </div>
           )}
@@ -768,8 +768,8 @@ export function ContactSellerSheet({
                 <div className="text-xs text-[#163926] space-y-1">
                   <p className="font-bold">
                     {lang === 'ar'
-                      ? 'تم تجهيز التحويل إلى تطبيق واتساب (محاكاة)'
-                      : 'Handing off to WhatsApp app (Simulated)'}
+                      ? 'جاري فتح محادثة واتساب مع المتجر'
+                      : 'Opening WhatsApp chat with store'}
                   </p>
                   <p className="leading-relaxed text-[#2D543E]">
                     {lang === 'ar'
@@ -804,8 +804,8 @@ export function ContactSellerSheet({
                 <div className="text-xs space-y-1">
                   <p className="font-bold text-[#172B20]">
                     {lang === 'ar'
-                      ? 'جاري فتح تطبيق الاتصال (محاكاة)'
-                      : 'Opening device dialer (Simulated)'}
+                      ? 'جاري فتح تطبيق الاتصال'
+                      : 'Opening phone dialer'}
                   </p>
                   <p className="text-[#5A7265]">
                     {lang === 'ar' ? 'رقم المتجر: ' : 'Store number: '}

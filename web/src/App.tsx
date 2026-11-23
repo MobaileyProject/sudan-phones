@@ -1,10 +1,47 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { App as CapApp } from '@capacitor/app';
 import { ArrowLeft, ArrowRight, Globe, Lock, Shield, Store } from 'lucide-react';
 import { PrototypeProvider, usePrototype } from './store/PrototypeContext';
 import { CustomerApp } from './portals/customer/CustomerApp';
 import { MerchantPortal } from './portals/merchant/MerchantPortal';
 import { AdminPortal } from './portals/admin/AdminPortal';
 import { ToastContainer } from './components/DesignSystem';
+
+class AppErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; message: string }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, message: '' };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, message: error?.message || 'Unexpected error' };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#EEF3F0] flex flex-col items-center justify-center p-6 text-center space-y-4">
+          <h2 className="text-base font-bold text-[#172B20]">حدث خطأ غير متوقع / Something went wrong</h2>
+          <p className="text-xs text-[#5E7669] max-w-xs">{this.state.message}</p>
+          <button
+            type="button"
+            onClick={() => {
+              this.setState({ hasError: false, message: '' });
+              window.location.reload();
+            }}
+            className="h-11 px-6 rounded-full bg-[#0F6B5D] text-white text-xs font-bold"
+          >
+            إعادة التحميل / Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function PortalLoginGate({ target }: { target: 'merchant' | 'admin' }) {
   const { lang, setLang, loginWithBackend, setPortal, pushToast } = usePrototype();
@@ -138,6 +175,21 @@ function ProductionShell() {
   const { lang, portal, setPortal, session } = usePrototype();
   const isMobileApp = import.meta.env.VITE_APP_MODE === 'mobile';
 
+  useEffect(() => {
+    if (portal === 'customer') return;
+    let handle: { remove: () => Promise<void> } | null = null;
+    CapApp.addListener('backButton', () => {
+      setPortal('customer');
+    })
+      .then((h) => {
+        handle = h;
+      })
+      .catch(() => {});
+    return () => {
+      if (handle) handle.remove().catch(() => {});
+    };
+  }, [portal, setPortal]);
+
   const renderSurface = () => {
     if (portal === 'merchant') {
       if (!session.authenticated || !(session.merchant || session.role === 'merchant')) {
@@ -186,8 +238,10 @@ function ProductionShell() {
 
 export default function App() {
   return (
-    <PrototypeProvider>
-      <ProductionShell />
-    </PrototypeProvider>
+    <AppErrorBoundary>
+      <PrototypeProvider>
+        <ProductionShell />
+      </PrototypeProvider>
+    </AppErrorBoundary>
   );
 }

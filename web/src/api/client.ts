@@ -6,7 +6,35 @@
 
 export const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
+const SESSION_TOKEN_KEY = 'sp_session_token_v1';
 let cachedCsrfToken = '';
+
+function getStoredSessionToken(): string {
+  try {
+    return window.localStorage.getItem(SESSION_TOKEN_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+function setStoredSessionToken(token: string | null) {
+  try {
+    if (token) {
+      window.localStorage.setItem(SESSION_TOKEN_KEY, token);
+    } else {
+      window.localStorage.removeItem(SESSION_TOKEN_KEY);
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function captureAuthHeaders(res: Response) {
+  const headerToken = res.headers.get('X-CSRFToken');
+  if (headerToken) cachedCsrfToken = headerToken;
+  const sessionToken = res.headers.get('X-Session-Token');
+  if (sessionToken) setStoredSessionToken(sessionToken);
+}
 
 function readCsrfCookie(): string {
   if (typeof document === 'undefined') return '';
@@ -121,15 +149,21 @@ export interface ApiMe {
 }
 
 export async function ensureCsrf(): Promise<ApiSession> {
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  const sessionToken = getStoredSessionToken();
+  if (sessionToken) headers['X-Session-Token'] = sessionToken;
   const res = await fetch(`${API_BASE}/api/v1/auth/session`, {
     method: 'GET',
     credentials: 'include',
-    headers: { Accept: 'application/json' },
+    headers,
   });
-  const headerToken = res.headers.get('X-CSRFToken');
-  if (headerToken) cachedCsrfToken = headerToken;
+  captureAuthHeaders(res);
   const json = await res.json();
-  return json.data as ApiSession;
+  const data = json.data as ApiSession;
+  if (!data.authenticated && sessionToken) {
+    setStoredSessionToken(null);
+  }
+  return data;
 }
 
 export async function apiRequest<T = any>(
@@ -163,6 +197,10 @@ export async function apiRequest<T = any>(
     Accept: 'application/json',
     'Accept-Language': options.lang || 'ar',
   };
+  const sessionToken = getStoredSessionToken();
+  if (sessionToken) {
+    headers['X-Session-Token'] = sessionToken;
+  }
   if (options.body !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
@@ -180,8 +218,7 @@ export async function apiRequest<T = any>(
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   });
-  const headerToken = res.headers.get('X-CSRFToken');
-  if (headerToken) cachedCsrfToken = headerToken;
+  captureAuthHeaders(res);
 
   let json: any = null;
   try {
@@ -244,7 +281,13 @@ export function normalizeSudanPhone(raw: string): string {
 export const api = {
   // Bootstrap & Auth
   getSession: () => ensureCsrf(),
-  logout: () => apiRequest('/api/v1/auth/session', { method: 'DELETE' }),
+  logout: async () => {
+    try {
+      await apiRequest('/api/v1/auth/session', { method: 'DELETE' });
+    } finally {
+      setStoredSessionToken(null);
+    }
+  },
   login: async (payload: { phone?: string; email?: string; password: string }) => {
     const res = await apiRequest<{ data: ApiSession }>('/api/v1/auth/login', {
       method: 'POST',

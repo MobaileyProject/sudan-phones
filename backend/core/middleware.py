@@ -21,8 +21,8 @@ class ApiResponseMiddleware:
             response['Access-Control-Allow-Origin'] = origin
             response['Access-Control-Allow-Credentials'] = 'true'
             response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
-            response['Access-Control-Allow-Headers'] = 'Content-Type, X-CSRFToken, Idempotency-Key, Accept-Language'
-            response['Access-Control-Expose-Headers'] = 'X-CSRFToken, X-Request-ID, Content-Language'
+            response['Access-Control-Allow-Headers'] = 'Content-Type, X-CSRFToken, X-Session-Token, Idempotency-Key, Accept-Language'
+            response['Access-Control-Expose-Headers'] = 'X-CSRFToken, X-Session-Token, X-Request-ID, Content-Language'
             vary = response.get('Vary', '')
             if 'Origin' not in vary:
                 response['Vary'] = f'{vary}, Origin'.strip(', ')
@@ -37,6 +37,10 @@ class ApiResponseMiddleware:
             return self.get_response(request)
         if request.method == 'OPTIONS' and request.headers.get('Origin') in getattr(settings, 'CORS_ALLOWED_ORIGINS', []):
             return self._apply_cors(request, HttpResponse(status=204))
+        # Allow mobile APK clients to persist Django sessions across app restarts via X-Session-Token
+        session_token = request.headers.get('X-Session-Token')
+        if session_token and settings.SESSION_COOKIE_NAME not in request.COOKIES:
+            request.COOKIES[settings.SESSION_COOKIE_NAME] = session_token
         request.request_id = str(uuid.uuid4())
         # Public responses vary by Accept-Language, never by a language/session
         # cookie. Keep Django's regional-language negotiation without cookies.
@@ -54,6 +58,10 @@ class ApiResponseMiddleware:
             response = self.get_response(request)
         if response.status_code >= 400 and not response.get('Content-Type', '').startswith('application/json'):
             response = JsonResponse(error_payload(response.status_code, request.api_locale), status=response.status_code)
+        user = getattr(request, 'user', None)
+        session = getattr(request, 'session', None)
+        if user is not None and getattr(user, 'is_authenticated', False) and session is not None and session.session_key:
+            response['X-Session-Token'] = session.session_key
         response['X-Request-ID'] = request.request_id
         response['Content-Language'] = request.api_locale
         if response.status_code >= 400 or request.path == '/api/v1/health':

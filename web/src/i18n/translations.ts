@@ -132,8 +132,9 @@ export const BRANDS: { id: BrandId; label: string; arLabel: string; origin: stri
   { id: 'infinix', label: 'Infinix', arLabel: 'إنفنكس', origin: 'Android' },
 ];
 
-export function tText(text: BilingualText, lang: Language): string {
-  return lang === 'ar' ? text.ar : text.en;
+export function tText(text: BilingualText | undefined | null, lang: Language): string {
+  if (!text) return '';
+  return lang === 'ar' ? (text.ar ?? text.en ?? '') : (text.en ?? text.ar ?? '');
 }
 
 export function formatCity(cityId: CityId | 'all', lang: Language): string {

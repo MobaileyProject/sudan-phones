@@ -707,9 +707,14 @@ export function MobileAppAuthScreens({
       });
     } catch (err: any) {
       setLoadingMode(null);
+      const isInvalidCreds = err?.code === 'INVALID_CREDENTIALS' || err?.status === 401;
       setValidationError(
         'loginPassword',
-        err?.message || (lang === 'ar' ? 'بيانات الدخول غير صحيحة.' : 'Invalid login credentials.')
+        isInvalidCreds
+          ? lang === 'ar'
+            ? 'البريد الإلكتروني أو رقم الهاتف أو كلمة المرور غير صحيحة.'
+            : 'Invalid email, phone number, or password.'
+          : err?.message || (lang === 'ar' ? 'تعذر تسجيل الدخول، حاول مرة أخرى.' : 'Could not sign in. Please try again.')
       );
     }
   };
@@ -1003,7 +1008,7 @@ export function MobileAppAuthScreens({
   return (
     <MotionConfig reducedMotion="user">
       <div
-        className="auth-theme relative h-full overflow-hidden"
+        className="auth-theme relative w-full max-w-full h-full overflow-hidden touch-pan-y"
         data-theme={activeTheme}
       >
         <AnimatePresence mode="wait">
@@ -1134,7 +1139,7 @@ export function MobileAppAuthScreens({
             <form
               onSubmit={handlePasswordSignIn}
               noValidate
-              className="relative z-10 flex-1 overflow-y-auto thin-scroll flex flex-col justify-between auth-safe-bottom"
+              className="relative z-10 flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden thin-scroll flex flex-col justify-between auth-safe-bottom touch-pan-y"
             >
               <div>
                 {/* Top Macro Phones Photo — True Alpha Mask Fade (Zero Seam Line in Light & Dark) */}
@@ -1519,7 +1524,7 @@ export function MobileAppAuthScreens({
                 requestOtp('register', otpChannel);
               }}
               noValidate
-              className="relative z-10 flex-1 overflow-y-auto thin-scroll px-6 pt-1 pb-6 auth-safe-bottom flex flex-col justify-between gap-5"
+              className="relative z-10 flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden thin-scroll px-6 pt-1 pb-6 auth-safe-bottom flex flex-col justify-between gap-5 touch-pan-y"
             >
               <div className="space-y-4">
                 {/* Centered Title & Subtitle */}

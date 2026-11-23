@@ -125,11 +125,20 @@ export function mapListing(raw: any): Listing {
   const brandId = toBrandId(brandName);
   const modelName = raw.model || `Model #${raw.variant_id}`;
   const storageGb = Number(raw.storage_gb || 128);
+  const KIND_CAPTIONS: Record<string, BilingualText> = {
+    front: { ar: 'الواجهة الأمامية', en: 'Front View' },
+    back: { ar: 'الجهة الخلفية', en: 'Back View' },
+    screen: { ar: 'الشاشة مضاءة', en: 'Screen On' },
+    screen_on: { ar: 'الشاشة مضاءة', en: 'Screen On' },
+    seal: { ar: 'ختم المصنع والعلبة', en: 'Factory Seal & Box' },
+    catalog: { ar: 'صورة الجهاز', en: 'Device Photo' },
+    general: { ar: 'صورة إضافية', en: 'Additional Photo' },
+  };
   const photos: ListingPhoto[] = (raw.media || raw.media_status || []).map((m: any, idx: number) => ({
     id: String(m.id || idx),
     url: m.url || m.thumbnail_url || '',
     kind: (m.kind === 'screen' ? 'screen_on' : m.kind === 'catalog' ? 'general' : m.kind || 'front') as ListingPhoto['kind'],
-    label: bi(m.kind || 'photo'),
+    caption: KIND_CAPTIONS[m.kind || 'front'] || bi(m.kind || 'صورة الجهاز'),
   }));
   const cond = raw.condition === 'used' ? 'used' : 'new';
   const usedAv: UsedAvailability | undefined =
