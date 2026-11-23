@@ -65,6 +65,9 @@ def complete(actor, asset_id):
         require(asset.expires_at > timezone.now(), "UPLOAD_EXPIRED")
         asset.status = "queued"
         asset.save(update_fields=["status"])
+        if getattr(settings, "MEDIA_PROCESS_INLINE", False):
+            aid = str(asset.pk)
+            transaction.on_commit(lambda: process_asset(aid))
     return {"accepted": True}
 
 

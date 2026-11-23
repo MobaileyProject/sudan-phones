@@ -71,10 +71,12 @@ class SessionView(AuthView):
     @method_decorator(ensure_csrf_cookie)
     @contract("API-062", "P3", response=SessionResponse)
     def get(self, request):
-        get_token(request)
-        return Response(
+        token = get_token(request)
+        response = Response(
             SessionResponse({"data": services.session_data(request.user)}).data
         )
+        response["X-CSRFToken"] = token
+        return response
 
     @contract("API-002", "P3", response=AcceptedResponse)
     def delete(self, request):

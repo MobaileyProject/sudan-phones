@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function () {
+        function isExtFetchError(filename, message, stack) {
+          var src = String(filename || '') + ' ' + String(stack || '');
+          var msg = String(message || '');
+          return (
+            src.indexOf('chrome-extension://') !== -1 &&
+            msg.indexOf('Cannot set property fetch') !== -1
+          );
+        }
+        window.addEventListener(
+          'error',
+          function (e) {
+            if (isExtFetchError(e.filename, e.message, e.error && e.error.stack)) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+            }
+          },
+          true
+        );
+        window.addEventListener(
+          'unhandledrejection',
+          function (e) {
+            var r = e.reason;
+            if (r && isExtFetchError('', r.message, r.stack)) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+            }
+          },
+          true
+        );
+      })();
+    </script>
+    <title>سودان فونز — سوق الموبايلات في السودان | Sudan Phones</title>
+    <meta name="description" content="سوق الموبايلات الموثوق في السودان — تصفح الهواتف الجديدة والمستعملة من المتاجر الموثقة في بورتسودان والخرطوم وأم درمان." />
+    <meta property="og:title" content="سودان فونز — سوق الموبايلات في السودان | Sudan Phones" />
+    <meta property="og:description" content="سوق الموبايلات الموثوق في السودان — تصفح الهواتف الجديدة والمستعملة من المتاجر الموثقة في بورتسودان والخرطوم وأم درمان." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-slate-50 text-slate-900 antialiased selection:bg-teal-100 selection:text-teal-900">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
