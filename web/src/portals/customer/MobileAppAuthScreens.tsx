@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { SocialLogin } from '@capgo/capacitor-social-login';
 import {
   AlertCircle,
   ArrowLeft,
@@ -316,6 +317,7 @@ export function MobileAppAuthScreens({
     pushToast,
     registerOrUpdateStore,
     loginWithBackend,
+    loginWithGoogle,
   } = usePrototype();
 
   const [internalTheme, setInternalTheme] = useState<AuthThemeMode>(authTheme);
@@ -882,12 +884,42 @@ export function MobileAppAuthScreens({
     }, 320);
   };
 
-  const handleGoogleContinue = () => {
+  const GOOGLE_WEB_CLIENT_ID =
+    import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID ||
+    '686154226276-1ninjrj2g5j07k6n4turbf4d8o2te8v9.apps.googleusercontent.com';
+
+  const handleGoogleContinue = async () => {
     clearError();
     setLoadingMode('google');
-    window.setTimeout(() => {
-      setLoadingMode(null);
-      if (accountType === 'merchant') {
+    try {
+      await SocialLogin.initialize({
+        google: {
+          webClientId: GOOGLE_WEB_CLIENT_ID,
+        },
+      });
+      const res = await SocialLogin.login({
+        provider: 'google',
+        options: {
+          scopes: ['email', 'profile'],
+        },
+      });
+      const result: any = res?.result;
+      const idToken: string | undefined = result?.idToken;
+      if (!idToken) {
+        throw new Error(
+          lang === 'ar'
+            ? 'تعذر الحصول على رمز الدخول من جوجل.'
+            : 'Could not retrieve Google ID token.'
+        );
+      }
+      const sess = await loginWithGoogle(idToken);
+      const profile = result?.profile || {};
+      const displayName =
+        profile.name ||
+        profile.givenName ||
+        profile.email ||
+        (lang === 'ar' ? 'مستخدم جوجل' : 'Google User');
+      if (accountType === 'merchant' || sess.merchant || sess.role === 'merchant') {
         pushToast('success', {
           ar: 'تم تسجيل الدخول عبر جوجل — جاري فتح بوابة التاجر.',
           en: 'Signed in with Google — opening Merchant Portal.',
@@ -900,11 +932,21 @@ export function MobileAppAuthScreens({
         en: 'Welcome to Sudan Phones — signed in with Google.',
       });
       onEnterAppSignedIn({
-        name: lang === 'ar' ? 'سارة الطيب' : 'Sara El-Tayeb',
-        phone: '+249 91 234 5678',
+        name: displayName,
+        phone: profile.email || '',
         accountType: 'customer',
       });
-    }, 380);
+    } catch (err: any) {
+      const msg =
+        err?.message ||
+        (lang === 'ar'
+          ? 'فشل تسجيل الدخول عبر جوجل. تأكد من الاتصال وحاول مرة أخرى.'
+          : 'Google Sign-In failed. Please check your connection and try again.');
+      setFormError(msg);
+      pushToast('error', { ar: msg, en: msg });
+    } finally {
+      setLoadingMode(null);
+    }
   };
 
   const handleAppleContinue = () => {
