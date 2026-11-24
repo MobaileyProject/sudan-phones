@@ -46,7 +46,6 @@ import {
   formatCoordinates,
   tText,
 } from '../../i18n/translations';
-import { IMAGES } from '../../data/mockData';
 import { usePrototype } from '../../store/PrototypeContext';
 import {
   AppleIcon,
@@ -794,7 +793,7 @@ export function MobileAppAuthScreens({
               fileName: certificateFile.name,
               uploadedAt: new Date().toISOString().slice(0, 10),
               status: 'uploaded',
-              imageUrl: IMAGES.storefront,
+              imageUrl: '',
               notes: `${certificateFile.extLabel} · ${formatAuthFileSize(certificateFile.sizeBytes, lang)}`,
             },
           ],

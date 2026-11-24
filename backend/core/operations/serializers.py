@@ -270,3 +270,16 @@ class AdminUserData(serializers.Serializer):
 
 class AdminUserListResponse(serializers.Serializer):
     data = AdminUserData(many=True)
+
+
+class FavoriteListResponse(serializers.Serializer):
+    data = serializers.ListField(child=serializers.IntegerField())
+
+
+class FavoriteActionData(serializers.Serializer):
+    listing_id = serializers.IntegerField()
+    saved = serializers.BooleanField()
+
+
+class FavoriteActionResponse(serializers.Serializer):
+    data = FavoriteActionData()

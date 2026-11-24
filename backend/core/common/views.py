@@ -105,6 +105,11 @@ def contract(api_id, phase, request=None, response=None, **kwargs):
         "API-075",
         "API-078",
         "API-079",
+        "API-081",
+        "API-082",
+        "API-083",
+        "API-085",
+        "API-086",
     }:
         parameters.append(
             OpenApiParameter(

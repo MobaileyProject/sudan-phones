@@ -50,8 +50,8 @@ import {
 
 function getBrandDisplayName(brandId: BrandId, lang: Language): string {
   const found = BRANDS.find((b) => b.id === brandId);
-  if (!found) return brandId;
-  return lang === 'ar' ? found.arLabel : found.label;
+  if (found) return lang === 'ar' ? found.arLabel : found.label;
+  return brandId.charAt(0).toUpperCase() + brandId.slice(1);
 }
 
 function yesNo(value: boolean, lang: Language): string {

@@ -43,6 +43,14 @@ class CreateInput(StrictSerializer):
     is_sealed = serializers.BooleanField(required=False)
     has_original_box = serializers.BooleanField(required=False)
     featured = serializers.BooleanField(required=False)
+    accepts_trade_in = serializers.BooleanField(required=False)
+    usd_price = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        allow_null=True,
+        required=False,
+    )
 
     def validate(self, attrs):
         if not attrs.get("variant_id"):
@@ -95,6 +103,14 @@ class EditInput(StrictSerializer):
     )
     has_original_box = serializers.BooleanField(required=False)
     featured = serializers.BooleanField(required=False)
+    accepts_trade_in = serializers.BooleanField(required=False)
+    usd_price = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        allow_null=True,
+        required=False,
+    )
 
 
 class ModerateInput(StrictSerializer):
@@ -135,6 +151,14 @@ class ListingData(serializers.Serializer):
     currency = serializers.CharField()
     media_status = MediaStatus(many=True)
     price = serializers.DecimalField(max_digits=14, decimal_places=2)
+    previous_price = serializers.DecimalField(
+        max_digits=14, decimal_places=2, allow_null=True, required=False, default=None
+    )
+    price_dropped = serializers.BooleanField(default=False)
+    usd_price = serializers.DecimalField(
+        max_digits=10, decimal_places=2, allow_null=True, required=False, default=None
+    )
+    accepts_trade_in = serializers.BooleanField(default=False)
     quantity = serializers.IntegerField()
     grade = serializers.CharField()
     battery_health = serializers.IntegerField(allow_null=True)
@@ -185,3 +209,83 @@ class ModerationData(serializers.Serializer):
 
 class ModerationResponse(serializers.Serializer):
     data = ModerationData()
+
+
+class BulkPriceInput(StrictSerializer):
+    mode = serializers.ChoiceField(choices=["percent", "usd_rate"])
+    percent = serializers.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        min_value=Decimal("-90"),
+        max_value=Decimal("500"),
+        required=False,
+    )
+    usd_rate = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        min_value=Decimal("1"),
+        required=False,
+    )
+    condition_scope = serializers.ChoiceField(
+        choices=["all", "new", "used"], default="all"
+    )
+    round_to = serializers.IntegerField(min_value=1, max_value=100000, default=1000)
+
+    def validate(self, attrs):
+        if attrs["mode"] == "percent" and attrs.get("percent") is None:
+            raise serializers.ValidationError("percent is required when mode=percent.")
+        if attrs["mode"] == "usd_rate" and attrs.get("usd_rate") is None:
+            raise serializers.ValidationError("usd_rate is required when mode=usd_rate.")
+        return attrs
+
+
+class BulkPriceData(serializers.Serializer):
+    updated_count = serializers.IntegerField()
+
+
+class BulkPriceResponse(serializers.Serializer):
+    data = BulkPriceData()
+
+
+class BulkImportRowInput(StrictSerializer):
+    brand = serializers.CharField(max_length=80)
+    model = serializers.CharField(max_length=120)
+    storage_gb = serializers.IntegerField(min_value=4, max_value=4096)
+    ram_gb = serializers.IntegerField(min_value=1, max_value=64, default=8)
+    color = serializers.CharField(max_length=80, allow_blank=True, default="Standard")
+    condition = serializers.ChoiceField(choices=["new", "used"], default="new")
+    price = serializers.DecimalField(
+        max_digits=14, decimal_places=2, min_value=Decimal("0.01")
+    )
+    usd_price = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        allow_null=True,
+        required=False,
+    )
+    quantity = serializers.IntegerField(min_value=0, max_value=1000000, default=1)
+    accepts_trade_in = serializers.BooleanField(required=False, default=False)
+
+
+class BulkImportInput(StrictSerializer):
+    rows = BulkImportRowInput(many=True, min_length=1, max_length=200)
+
+
+class BulkImportData(serializers.Serializer):
+    updated = serializers.IntegerField()
+    skipped = serializers.IntegerField()
+    errors = serializers.ListField(child=serializers.CharField())
+
+
+class BulkImportResponse(serializers.Serializer):
+    data = BulkImportData()
+
+
+class ArchiveData(serializers.Serializer):
+    archived = serializers.BooleanField()
+    id = serializers.IntegerField()
+
+
+class ArchiveResponse(serializers.Serializer):
+    data = ArchiveData()

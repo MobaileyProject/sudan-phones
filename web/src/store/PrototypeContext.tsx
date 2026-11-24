@@ -131,10 +131,24 @@ interface PrototypeContextValue {
   brands: ApiBrand[];
   stores: Store[];
   listings: Listing[];
+  adminOverview: {
+    stores: number;
+    verified_stores: number;
+    pending_verifications: number;
+    published_listings: number;
+    flagged_listings: number;
+    open_reports: number;
+    pending_approvals: number;
+    contact_leads_7d: number;
+  } | null;
   adminRoles: AdminRole[];
   adminUsers: AdminUser[];
   auditLogs: AuditLogEntry[];
   dualApprovals: DualApprovalRequest[];
+  favoriteIds: string[];
+  toggleFavorite: (listingId: string) => void;
+  archiveListing: (listingId: string) => Promise<void>;
+  deleteAdminRole: (roleId: string) => Promise<void>;
 
   activeMerchantStoreId: string;
   setActiveMerchantStoreId: (id: string) => void;
@@ -224,6 +238,8 @@ interface PrototypeContextValue {
 
   customerDeepLinkListingId: string | null;
   setCustomerDeepLinkListingId: (id: string | null) => void;
+  customerDeepLinkStoreId: string | null;
+  setCustomerDeepLinkStoreId: (id: string | null) => void;
 }
 
 const PrototypeContext = createContext<PrototypeContextValue | null>(null);
@@ -283,10 +299,19 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   const [merchantStore, setMerchantStore] = useState<Store>(FALLBACK_STORE);
   const [merchantListings, setMerchantListings] = useState<Listing[]>([]);
   const [adminVerifications, setAdminVerifications] = useState<any[]>([]);
+  const [adminOverview, setAdminOverview] = useState<PrototypeContextValue['adminOverview']>(null);
   const [adminRoles, setAdminRoles] = useState<AdminRole[]>([FOUNDER_ROLE]);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([FALLBACK_ADMIN]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [dualApprovals, setDualApprovals] = useState<DualApprovalRequest[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>(() => {
+    try {
+      const raw = window.localStorage.getItem('sp_favorites_v1');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
   const [reviews, setReviews] = useState<RatingReview[]>([]);
   const [customerReports, setCustomerReports] = useState<CustomerReport[]>([]);
   const [modelIdByKey, setModelIdByKey] = useState<Record<string, number>>({});
@@ -294,20 +319,41 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   const [activeMerchantStoreId, setActiveMerchantStoreId] = useState<string>('0');
   const [activeAdminUserId, setActiveAdminUserId] = useState<string>('0');
   const [activeMerchantRoleView, setActiveMerchantRoleView] = useState<'owner' | 'clerk'>('owner');
-  const [customerDeepLinkListingId, setCustomerDeepLinkListingId] = useState<string | null>(null);
+  const [customerDeepLinkListingId, setCustomerDeepLinkListingId] = useState<string | null>(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('listing');
+    } catch {
+      return null;
+    }
+  });
+  const [customerDeepLinkStoreId, setCustomerDeepLinkStoreId] = useState<string | null>(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('store');
+    } catch {
+      return null;
+    }
+  });
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [cachedAtLabel, setCachedAtLabel] = useState<string>('Live');
 
-  const [sim, setSim] = useState<SimulationState>({
-    startupMode: 'ready',
-    offlineMode: 'online',
-    lowDataMode: false,
-    brokenImages: false,
-    skeletonLoading: false,
-    submissionOutcome: 'normal',
-    merchantSessionExpired: false,
-    staffPermissionRevoked: false,
-    mobileFrameStyle: 'expanded',
+  const [sim, setSim] = useState<SimulationState>(() => {
+    let savedLowData = false;
+    try {
+      savedLowData = window.localStorage.getItem('sp_low_data_v1') === '1';
+    } catch {
+      // ignore
+    }
+    return {
+      startupMode: 'ready',
+      offlineMode: 'online',
+      lowDataMode: savedLowData,
+      brokenImages: false,
+      skeletonLoading: false,
+      submissionOutcome: 'normal',
+      merchantSessionExpired: false,
+      staffPermissionRevoked: false,
+      mobileFrameStyle: 'expanded',
+    };
   });
 
   const pushToast = useCallback((tone: ToastMessage['tone'], text: BilingualText) => {
@@ -323,7 +369,17 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateSim = useCallback((patch: Partial<SimulationState>) => {
-    setSim((prev) => ({ ...prev, ...patch }));
+    setSim((prev) => {
+      const next = { ...prev, ...patch };
+      if (patch.lowDataMode !== undefined) {
+        try {
+          window.localStorage.setItem('sp_low_data_v1', patch.lowDataMode ? '1' : '0');
+        } catch {
+          // ignore
+        }
+      }
+      return next;
+    });
   }, []);
 
   const setPortal = useCallback((next: PortalMode) => {
@@ -447,7 +503,8 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAdminData = useCallback(async () => {
     try {
-      const [verifRes, modRes, repRes, rolesRes, usersRes, apprRes, auditRes] = await Promise.all([
+      const [overviewRes, verifRes, modRes, repRes, rolesRes, usersRes, apprRes, auditRes] = await Promise.all([
+        api.getAdminOverview().catch(() => ({ data: null })),
         api.getAdminVerifications().catch(() => ({ data: [] })),
         api.getModerationQueue().catch(() => ({ data: [] })),
         api.getAdminReports('all').catch(() => ({ data: [] })),
@@ -456,6 +513,7 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         api.getDualApprovals('all').catch(() => ({ data: [] })),
         api.getAuditEvents().catch(() => ({ data: [] })),
       ]);
+      if (overviewRes.data) setAdminOverview(overviewRes.data);
       const verifs = verifRes.data || [];
       setAdminVerifications(verifs);
       // Merge pending verification stores into stores list for A-03/A-04
@@ -527,6 +585,18 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
           setMe(fetchedMe);
         }
         setCachedAuth({ session: sess, me: fetchedMe });
+        api
+          .getFavorites()
+          .then((favRes) => {
+            const ids = (favRes.data || []).map((l: any) => String(l.id));
+            setFavoriteIds(ids);
+            try {
+              window.localStorage.setItem('sp_favorites_v1', JSON.stringify(ids));
+            } catch {
+              // ignore
+            }
+          })
+          .catch(() => {});
         if (sess.merchant || sess.role === 'merchant') {
           await refreshMerchantData();
         }
@@ -848,15 +918,62 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       if (patch.description) body.description = patch.description.ar || patch.description.en;
       if (patch.phone) body.phone = normalizeSudanPhone(patch.phone);
       if (patch.whatsapp) body.whatsapp = normalizeSudanPhone(patch.whatsapp);
+      if (patch.latitude !== undefined) body.latitude = patch.latitude;
+      if (patch.longitude !== undefined) body.longitude = patch.longitude;
+      if (patch.acceptsTradeIn !== undefined) body.accepts_trade_in = patch.acceptsTradeIn;
       api
         .updateStoreSettings(body)
         .then(() => {
           refreshMerchantData();
+          refreshPublicData();
           pushToast('success', { ar: 'تم حفظ إعدادات المتجر.', en: 'Store settings saved.' });
         })
         .catch((err: ApiError) => pushToast('error', { ar: err.message, en: err.message }));
     },
-    [refreshMerchantData, pushToast]
+    [refreshMerchantData, refreshPublicData, pushToast]
+  );
+
+  const toggleFavorite = useCallback(
+    (listingId: string) => {
+      const exists = favoriteIds.includes(listingId);
+      const next = exists ? favoriteIds.filter((id) => id !== listingId) : [listingId, ...favoriteIds];
+      setFavoriteIds(next);
+      try {
+        window.localStorage.setItem('sp_favorites_v1', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      if (session.authenticated) {
+        const req = exists ? api.removeFavorite(listingId) : api.addFavorite(listingId);
+        req.catch(() => {});
+      }
+      pushToast('info', {
+        ar: exists ? 'تمت الإزالة من المفضلة.' : 'تم الحفظ في المفضلة.',
+        en: exists ? 'Removed from saved favorites.' : 'Saved to favorites.',
+      });
+    },
+    [favoriteIds, session.authenticated, pushToast]
+  );
+
+  const archiveListing = useCallback(
+    async (listingId: string) => {
+      await api.archiveListing(listingId);
+      await Promise.all([refreshMerchantData(), refreshPublicData()]);
+      pushToast('info', { ar: 'تم أرشفة/إزالة الإعلان بنجاح.', en: 'Listing archived successfully.' });
+    },
+    [refreshMerchantData, refreshPublicData, pushToast]
+  );
+
+  const deleteAdminRole = useCallback(
+    async (roleId: string) => {
+      await api.deleteAdminRole(roleId);
+      await refreshAdminData();
+      pushToast('warning', {
+        ar: 'تم إرسال طلب حذف الدور للموافقة المزدوجة.',
+        en: 'Role deletion submitted for dual approval.',
+      });
+    },
+    [refreshAdminData, pushToast]
   );
 
   const requestStoreReverification = useCallback(
@@ -990,9 +1107,38 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
     [refreshAdminData, pushToast]
   );
 
-  const assignAdminRole = useCallback(() => {
-    pushToast('info', { ar: 'يمكن تعديل التعيين عبر حفظ الدور.', en: 'Role assignments updated via role save.' });
-  }, [pushToast]);
+  const assignAdminRole = useCallback(
+    (userId: string, roleId: string) => {
+      const targetRole = adminRoles.find((r) => r.id === roleId) as any;
+      if (!targetRole || roleId === 'founder') {
+        pushToast('info', {
+          ar: 'أدوار المؤسسين تُدار من إعدادات النظام العليا.',
+          en: 'Founder roles are managed at the superuser level.',
+        });
+        return;
+      }
+      const existingUsers: number[] = Array.isArray(targetRole._userIds) ? targetRole._userIds : [];
+      const uid = Number(userId);
+      const nextUsers = existingUsers.includes(uid) ? existingUsers : [...existingUsers, uid];
+      api
+        .saveAdminRole({
+          id: Number(targetRole.id),
+          version: targetRole._version || 1,
+          name: targetRole.name.en || targetRole.name.ar,
+          description: targetRole.description.en || targetRole.description.ar,
+          permissions: targetRole.permissions.filter((p: string) =>
+            ['verify_stores', 'moderate_listings', 'view_audit', 'view_metrics'].includes(p)
+          ),
+          user_ids: nextUsers,
+        })
+        .then(() => {
+          refreshAdminData();
+          pushToast('success', { ar: 'تم تحديث تعيين الدور بنجاح.', en: 'Role assignment saved.' });
+        })
+        .catch((err: ApiError) => pushToast('error', { ar: err.message, en: err.message }));
+    },
+    [adminRoles, refreshAdminData, pushToast]
+  );
 
   const registerOrUpdateStore = useCallback(
     (_storeId: string | null, data: Partial<Store>) => {
@@ -1018,7 +1164,23 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   const fixAndRepublishListing = useCallback(() => {
     refreshMerchantData();
   }, [refreshMerchantData]);
-  const createDualApprovalRequest = useCallback(() => {}, []);
+  const createDualApprovalRequest = useCallback(
+    (req: Omit<DualApprovalRequest, 'id' | 'createdAt' | 'requesterId' | 'requesterName' | 'status'>) => {
+      if (req.actionType === 'suspend_store') {
+        api
+          .suspendStore(req.targetId, req.reason.ar || req.reason.en || 'Policy violation')
+          .then(() => {
+            refreshAdminData();
+            pushToast('warning', {
+              ar: 'تم إنشاء طلب تعليق المتجر بانتظار موافقة مؤسس ثانٍ.',
+              en: 'Store suspension request created awaiting second founder approval.',
+            });
+          })
+          .catch((err: ApiError) => pushToast('error', { ar: err.message, en: err.message }));
+      }
+    },
+    [refreshAdminData, pushToast]
+  );
 
   const reconnectAndRefresh = useCallback(() => {
     updateSim({ offlineMode: 'online' });
@@ -1050,10 +1212,15 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         brands,
         stores,
         listings: allListings,
+        adminOverview,
         adminRoles,
         adminUsers,
         auditLogs,
         dualApprovals,
+        favoriteIds,
+        toggleFavorite,
+        archiveListing,
+        deleteAdminRole,
         activeMerchantStoreId,
         setActiveMerchantStoreId,
         activeAdminUserId,
@@ -1102,6 +1269,8 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         resolveDualApproval,
         customerDeepLinkListingId,
         setCustomerDeepLinkListingId,
+        customerDeepLinkStoreId,
+        setCustomerDeepLinkStoreId,
       }}
     >
       {children}

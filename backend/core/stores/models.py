@@ -16,6 +16,7 @@ class Store(models.Model):
     whatsapp = models.CharField(max_length=16, blank=True)
     opening_hours = models.CharField(max_length=300, blank=True)
     contact_available = models.BooleanField(default=True)
+    accepts_trade_in = models.BooleanField(default=False)
     status = models.CharField(max_length=32, default="draft", db_index=True)
     feedback = models.CharField(max_length=1000, blank=True)
     version = models.PositiveIntegerField(default=1)

@@ -434,6 +434,7 @@ export interface CustomerFilterState {
   city: CityId | 'all';
   minPrice: string;
   maxPrice: string;
+  acceptsTradeIn: boolean;
   sortBy: 'newest' | 'price_asc' | 'price_desc';
 }
 
@@ -651,6 +652,35 @@ export function FilterBottomSheet({
               />
             </div>
           </div>
+
+          {/* Accepts Trade-In Filter */}
+          <div className="p-3.5 rounded-[20px] clay-inset flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold text-[#172B20]">
+                {lang === 'ar' ? 'يقبل الاستبدال فقط (Trade-In)' : 'Accepts Trade-In Only'}
+              </p>
+              <p className="text-[11px] text-[#5D7568]">
+                {lang === 'ar' ? 'عرض الهواتف التي تقبل استبدال جهازك القديم' : 'Show phones eligible for trade-in'}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={draft.acceptsTradeIn}
+              onClick={() => setDraft((d) => ({ ...d, acceptsTradeIn: !d.acceptsTradeIn }))}
+              className={`h-9 px-3.5 rounded-full text-[11px] font-bold transition-all whitespace-nowrap ${
+                draft.acceptsTradeIn ? 'clay-pill-active' : 'clay-pill text-[#5D7568]'
+              }`}
+            >
+              {draft.acceptsTradeIn
+                ? lang === 'ar'
+                  ? 'مفعّل'
+                  : 'On'
+                : lang === 'ar'
+                  ? 'الكل'
+                  : 'Off'}
+            </button>
+          </div>
         </div>
 
         {/* Sticky Footer */}
@@ -726,10 +756,10 @@ export function ContactSellerSheet({
 
   const prefilledInquiry = listing
     ? lang === 'ar'
-      ? `السلام عليكم ${store.name.ar}، أستفسر عن ${listing.arabicBrandPrefix} ${listing.model} (${listing.storageGb} GB - ${formatCondition(listing.condition, 'ar')}) بسعر ${formatSdg(listing.priceSdg, 'ar')}.`
-      : `Hello ${store.name.en}, I am inquiring about ${listing.model} (${listing.storageGb} GB - ${formatCondition(listing.condition, 'en')}) listed at ${formatSdg(listing.priceSdg, 'en')}.`
+      ? `السلام عليكم ${store.name.ar}، أستفسر عن هاتف ${listing.arabicBrandPrefix} ${listing.model} (${listing.storageGb}GB${listing.ramGb ? ` / ${listing.ramGb}GB RAM` : ''}، اللون: ${listing.color.ar}، الحالة: ${formatCondition(listing.condition, 'ar')}${listing.usedUnitCode ? `، كود: ${listing.usedUnitCode}` : ''}) بسعر ${formatSdg(listing.priceSdg, 'ar')} المعروض في تطبيق سودان فونز.${listing.acceptsTradeIn || store.acceptsTradeIn ? ' هل الاستبدال (Trade-In) متاح؟' : ''} هل الجهاز متوفر حالياً؟`
+      : `Hello ${store.name.en}, I am inquiring about ${listing.model} (${listing.storageGb}GB${listing.ramGb ? ` / ${listing.ramGb}GB RAM` : ''}, Color: ${listing.color.en}, Condition: ${formatCondition(listing.condition, 'en')}${listing.usedUnitCode ? `, Code: ${listing.usedUnitCode}` : ''}) listed at ${formatSdg(listing.priceSdg, 'en')} on Sudan Phones.${listing.acceptsTradeIn || store.acceptsTradeIn ? ' Is trade-in available?' : ''} Is it still available?`
     : lang === 'ar'
-      ? `السلام عليكم ${store.name.ar}، أرغب بالاستفسار عن الهواتف المتوفرة لديكم حالياً عبر سودان فونز.`
+      ? `السلام عليكم ${store.name.ar}، أرغب بالاستفسار عن الهواتف المتوفرة لديكم حالياً عبر تطبيق سودان فونز.`
       : `Hello ${store.name.en}, I saw your verified store on Sudan Phones and would like to ask about available phones.`;
 
   const DEFAULT_TEST_PHONE = '+249100090181';
@@ -756,9 +786,8 @@ export function ContactSellerSheet({
       }
     }
     if (channel === 'whatsapp') {
-      const waUrl =
-        contact?.whatsapp_url ||
-        `https://wa.me/${resolvedWhatsapp}?text=${encodeURIComponent(prefilledInquiry)}`;
+      const baseWa = contact?.whatsapp_url?.split('?')[0] || `https://wa.me/${resolvedWhatsapp}`;
+      const waUrl = `${baseWa}?text=${encodeURIComponent(prefilledInquiry)}`;
       const opened = window.open(waUrl, '_blank', 'noopener,noreferrer');
       if (!opened) {
         window.location.href = waUrl;

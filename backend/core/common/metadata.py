@@ -68,6 +68,12 @@ SUMMARIES = {
     "API-078": "Resolve or dismiss a customer report and optionally flag the listing",
     "API-079": "Request dual-approved suspension of a verified store directly",
     "API-080": "List active founders and delegated admin users with role assignments",
+    "API-081": "Archive or soft-remove a merchant listing",
+    "API-082": "Bulk update listing prices by percentage or USD-to-SDG exchange rate",
+    "API-083": "Bulk import listing prices, stock and trade-in flags from Excel or CSV",
+    "API-084": "List the authenticated user's saved favorite listings",
+    "API-085": "Save a public listing to the authenticated user's favorites",
+    "API-086": "Remove a listing from the authenticated user's favorites",
 }
 
 
@@ -86,7 +92,7 @@ for codes, policy in [
         "002",
         "Current session or guest CSRF cookie; clears the current session idempotently.",
     ),
-    ("052 067 068 073 075", "Authenticated account; actions are bound to the signed-in user."),
+    ("052 067 068 073 075 084 085 086", "Authenticated account; actions are bound to the signed-in user."),
     (
         "030 033 034 035 070",
         "Current store owner/staff membership; mutable access denied for suspended/rejected stores; no foreign resources.",
@@ -104,7 +110,7 @@ for codes, policy in [
         "Store owner; same-store private evidence; post-approval re-verification preserves live store status until decided.",
     ),
     (
-        "015 016 017 050 054 038 039 040 032",
+        "015 016 017 050 054 038 039 040 032 081 082 083",
         "Current member of a verified store; mutable resources must belong to that store.",
     ),
     (

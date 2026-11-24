@@ -10,6 +10,11 @@ from .serializers import (
     StockInput,
     EditInput,
     ModerateInput,
+    BulkPriceInput,
+    BulkPriceResponse,
+    BulkImportInput,
+    BulkImportResponse,
+    ArchiveResponse,
     ListingResponse,
     ListingListResponse,
     ModerationResponse,
@@ -87,6 +92,40 @@ class EditView(DomainView):
                         self.validated(EditInput, request.data),
                         key(request),
                         "edit",
+                    )
+                }
+            ).data
+        )
+
+    @contract("API-081", "P4", response=ArchiveResponse)
+    def delete(self, request, id):
+        return Response(
+            ArchiveResponse({"data": services.archive_listing(request.user, id)}).data
+        )
+
+
+class BulkPriceView(DomainView):
+    @contract("API-082", "P4", request=BulkPriceInput, response=BulkPriceResponse)
+    def post(self, request):
+        return Response(
+            BulkPriceResponse(
+                {
+                    "data": services.bulk_update_prices(
+                        request.user, self.validated(BulkPriceInput, request.data)
+                    )
+                }
+            ).data
+        )
+
+
+class BulkImportView(DomainView):
+    @contract("API-083", "P4", request=BulkImportInput, response=BulkImportResponse)
+    def post(self, request):
+        return Response(
+            BulkImportResponse(
+                {
+                    "data": services.bulk_import_listings(
+                        request.user, self.validated(BulkImportInput, request.data)
                     )
                 }
             ).data

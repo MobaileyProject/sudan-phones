@@ -25,4 +25,5 @@ from core.operations.models import (  # noqa: F401,E402
     StoreDailyMetrics,
     CustomerReport,
     Rating,
+    Favorite,
 )

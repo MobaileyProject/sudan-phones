@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowLeftRight,
   ArrowRight,
   Battery,
   Box,
@@ -13,15 +14,18 @@ import {
   Flag,
   GitCompareArrows,
   Globe,
+  Heart,
   Info,
   LogOut,
   MapPin,
   Maximize2,
   MessageCircle,
+  Navigation,
   Phone,
   Search,
   ShieldCheck,
   Store as StoreIcon,
+  TrendingDown,
   User,
   Wifi,
   X,
@@ -82,6 +86,8 @@ export function CustomerListingDetails({
     submitPhoneModelRating,
     customerReports,
     submitCustomerReport,
+    favoriteIds,
+    toggleFavorite,
     sim,
     reconnectAndRefresh,
   } = usePrototype();
@@ -208,6 +214,17 @@ export function CustomerListingDetails({
                   <BackIcon className="w-4 h-4" />
                 </button>
                 <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleFavorite(listing.id)}
+                    aria-label={lang === 'ar' ? 'حفظ في المفضلة' : 'Save to favorites'}
+                    title={lang === 'ar' ? 'حفظ في المفضلة' : 'Save to favorites'}
+                    className={`clay-pill clay-focus-ring w-8 h-8 rounded-full flex items-center justify-center ${
+                      favoriteIds.includes(listing.id) ? 'text-[#C81E3A]' : 'text-[#5A7265] hover:text-[#C81E3A]'
+                    }`}
+                  >
+                    <Heart className={`w-3.5 h-3.5 ${favoriteIds.includes(listing.id) ? 'fill-current' : ''}`} />
+                  </button>
                   <button
                     type="button"
                     onClick={() => setReportListingOpen(true)}
@@ -404,9 +421,22 @@ export function CustomerListingDetails({
           </div>
 
           <div className="flex items-baseline justify-between gap-3 pt-1">
-            <p className="text-[23px] font-bold text-[#1F5337] font-mono-num tracking-tight">
-              {formatSdg(listing.priceSdg, lang)}
-            </p>
+            <div>
+              <p className="text-[23px] font-bold text-[#1F5337] font-mono-num tracking-tight">
+                {formatSdg(listing.priceSdg, lang)}
+              </p>
+              {listing.priceDropped && listing.previousPriceSdg && listing.previousPriceSdg > listing.priceSdg && (
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-[#7D9186] line-through font-mono-num">
+                    {formatSdg(listing.previousPriceSdg, lang)}
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                    <TrendingDown className="w-3 h-3" />
+                    {lang === 'ar' ? 'انخفض السعر' : 'Price Drop'}
+                  </span>
+                </div>
+              )}
+            </div>
             <span className="text-xs font-semibold text-[#546E60]">
               {listing.condition === 'new'
                 ? (listing.stockQty ?? 0) > 0
@@ -419,6 +449,15 @@ export function CustomerListingDetails({
                 : formatUsedAvailability(listing.usedAvailability, lang)}
             </span>
           </div>
+
+          {(listing.acceptsTradeIn || store.acceptsTradeIn) && (
+            <div className="pt-1">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 border border-teal-200/80 text-[#0F6B5D] text-[11px] font-bold">
+                <ArrowLeftRight className="w-3.5 h-3.5" />
+                {lang === 'ar' ? 'يقبل الاستبدال (Trade-In)' : 'Accepts Trade-In'}
+              </span>
+            </div>
+          )}
         </motion.div>
 
         {/* Quick Highlights Bar + View All Specs & Detailed Comparison Triggers */}
@@ -1069,6 +1108,23 @@ export function CustomerStoreProfile({
               <Clock className="w-4 h-4 text-[#6B8276] shrink-0" />
               <span className="font-medium">{tText(store.openingHours, lang)}</span>
             </div>
+            {store.acceptsTradeIn && (
+              <div className="flex items-center gap-2 pt-2.5 border-t border-[#172B20]/[0.06] text-[#0F6B5D] font-bold">
+                <ArrowLeftRight className="w-4 h-4 shrink-0" />
+                <span>{lang === 'ar' ? 'المتجر يقبل استبدال الهواتف (Trade-In)' : 'Store accepts phone Trade-In'}</span>
+              </div>
+            )}
+            {store.latitude != null && store.longitude != null && (
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${store.latitude},${store.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 w-full h-10 px-4 rounded-full bg-[#0F6B5D] hover:bg-[#0B5348] text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+              >
+                <Navigation className="w-3.5 h-3.5" />
+                <span>{lang === 'ar' ? 'فتح موقع المتجر على خرائط قوقل' : 'Open Store Pin in Google Maps'}</span>
+              </a>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1792,12 +1848,14 @@ export function CustomerAccountSettings({
   onUpdateUser,
   onOpenCitySheet,
   onSignOut,
+  onSignIn,
   onBack,
 }: {
-  user: { name: string; phone: string };
+  user: { name: string; phone: string } | null;
   onUpdateUser: (next: { name: string; phone: string }) => void;
   onOpenCitySheet: () => void;
   onSignOut: () => void;
+  onSignIn?: () => void;
   onBack: () => void;
 }) {
   const {
@@ -1811,8 +1869,8 @@ export function CustomerAccountSettings({
     setPortal,
     updateMeProfile,
   } = usePrototype();
-  const [nameInput, setNameInput] = useState(user.name);
-  const [phoneInput, setPhoneInput] = useState(user.phone.replace(/^\+249\s*/, ''));
+  const [nameInput, setNameInput] = useState(user?.name || '');
+  const [phoneInput, setPhoneInput] = useState((user?.phone || '').replace(/^\+249\s*/, ''));
 
   const BackIcon = lang === 'ar' ? ArrowRight : ArrowLeft;
   const ForwardChevron = lang === 'ar' ? ChevronLeft : ChevronRight;
@@ -1820,7 +1878,7 @@ export function CustomerAccountSettings({
   const trimmedName = nameInput.trim();
   const trimmedPhone = phoneInput.trim();
   const formattedPhone = trimmedPhone.startsWith('+249') ? trimmedPhone : `+249 ${trimmedPhone}`;
-  const isDirty = trimmedName !== user.name || formattedPhone !== user.phone;
+  const isDirty = Boolean(user && (trimmedName !== user.name || formattedPhone !== user.phone));
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1870,18 +1928,42 @@ export function CustomerAccountSettings({
 
       <div className="flex-1 overflow-y-auto thin-scroll px-4 pt-2 pb-10 space-y-4">
         {/* Account Identity Summary Card */}
-        <div className="clay-card-tint rounded-[26px] p-4 flex items-center gap-3.5">
-          <div className="w-14 h-14 rounded-[20px] clay-primary-btn flex items-center justify-center shrink-0">
-            <User className="w-6 h-6" />
+        {user ? (
+          <div className="clay-card-tint rounded-[26px] p-4 flex items-center gap-3.5">
+            <div className="w-14 h-14 rounded-[20px] clay-primary-btn flex items-center justify-center shrink-0">
+              <User className="w-6 h-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] font-bold text-[#163926] truncate">{user.name}</p>
+              <LtrValue className="text-xs text-[#376049] font-medium mt-0.5">{user.phone}</LtrValue>
+              <p className="text-[11px] text-[#245A3D] font-semibold mt-1">
+                {lang === 'ar' ? 'حساب مسجّل · دخول نشط' : 'Signed-in account · Active session'}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-bold text-[#163926] truncate">{user.name}</p>
-            <LtrValue className="text-xs text-[#376049] font-medium mt-0.5">{user.phone}</LtrValue>
-            <p className="text-[11px] text-[#245A3D] font-semibold mt-1">
-              {lang === 'ar' ? 'حساب مسجّل · دخول نشط' : 'Signed-in account · Active session'}
-            </p>
+        ) : (
+          <div className="clay-card-tint rounded-[26px] p-4 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-[#163926]">
+                {lang === 'ar' ? 'تتصفح الآن كضيف' : 'Browsing as Guest'}
+              </p>
+              <p className="text-[11px] text-[#376049] mt-0.5">
+                {lang === 'ar'
+                  ? 'سجّل الدخول لمزامنة المفضلة والتقييمات بين أجهزتك'
+                  : 'Sign in to sync saved favorites and ratings across devices'}
+              </p>
+            </div>
+            {onSignIn && (
+              <button
+                type="button"
+                onClick={onSignIn}
+                className="clay-primary-btn h-9 px-4 rounded-full text-xs font-bold shrink-0"
+              >
+                {lang === 'ar' ? 'دخول' : 'Sign In'}
+              </button>
+            )}
           </div>
-        </div>
+        )}
 
         {/* Store Owner -> Direct Access to Merchant Portal */}
         {(session.merchant || session.role === 'merchant') && (
@@ -1927,6 +2009,7 @@ export function CustomerAccountSettings({
         )}
 
         {/* Profile Information Form */}
+        {user && (
         <form onSubmit={handleSave} className="clay-card rounded-[26px] p-4 space-y-3.5">
           <h2 className="text-xs font-bold text-[#172B20]">
             {lang === 'ar' ? 'المعلومات الشخصية' : 'Personal Information'}
@@ -1980,6 +2063,7 @@ export function CustomerAccountSettings({
             {lang === 'ar' ? 'حفظ التغييرات' : 'Save Changes'}
           </button>
         </form>
+        )}
 
         {/* Store Preferences Card */}
         <div className="clay-card rounded-[26px] p-4 space-y-3">
@@ -2067,14 +2151,16 @@ export function CustomerAccountSettings({
         </div>
 
         {/* Sign Out Action */}
-        <button
-          type="button"
-          onClick={onSignOut}
-          className="clay-pill clay-focus-ring w-full h-12 rounded-full text-xs font-bold text-[#B4232C] flex items-center justify-center gap-2"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>{lang === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}</span>
-        </button>
+        {user && (
+          <button
+            type="button"
+            onClick={onSignOut}
+            className="clay-pill clay-focus-ring w-full h-12 rounded-full text-xs font-bold text-[#B4232C] flex items-center justify-center gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>{lang === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}</span>
+          </button>
+        )}
       </div>
     </div>
   );

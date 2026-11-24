@@ -41,6 +41,17 @@ const ARABIC_BRAND_PREFIX: Record<string, string> = {
   honor: 'هونر',
   nokia: 'نوكيا',
   motorola: 'موتورولا',
+  itel: 'آيتل',
+  sony: 'سوني',
+  asus: 'أسوس',
+  lenovo: 'لينوفو',
+  zte: 'زد تي إي',
+  nothing: 'ناثينج',
+  meizu: 'ميزو',
+  htc: 'إتش تي سي',
+  lg: 'إل جي',
+  blackberry: 'بلاك بيري',
+  alcatel: 'ألكاتيل',
 };
 
 export function toBrandId(brandName: string): BrandId {
@@ -53,7 +64,7 @@ export function toBrandId(brandName: string): BrandId {
   if (slug.includes('oneplus')) return 'oneplus';
   if (slug.includes('tecno')) return 'tecno';
   if (slug.includes('infinix')) return 'infinix';
-  return 'samsung';
+  return slug.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'other';
 }
 
 export function mapVerificationStatus(status: string): VerificationStatus {
@@ -104,6 +115,9 @@ export function mapStore(
     phone: raw.phone || '',
     whatsapp: raw.whatsapp || '',
     contactAvailable: raw.contact_available !== false,
+    latitude: raw.latitude != null ? Number(raw.latitude) : null,
+    longitude: raw.longitude != null ? Number(raw.longitude) : null,
+    acceptsTradeIn: Boolean(raw.accepts_trade_in),
     verificationStatus: status,
     bannerImage: raw.banner_url || '',
     verifiedAt: status === 'verified' ? raw.created_at?.slice(0, 10) : undefined,
@@ -122,7 +136,7 @@ export function mapStore(
 
 export function mapListing(raw: any): Listing {
   const brandName = raw.brand || 'Samsung';
-  const brandId = toBrandId(brandName);
+  const brandId = raw.brand_slug ? String(raw.brand_slug) : toBrandId(brandName);
   const modelName = raw.model || `Model #${raw.variant_id}`;
   const storageGb = Number(raw.storage_gb || 128);
   const KIND_CAPTIONS: Record<string, BilingualText> = {
@@ -150,7 +164,7 @@ export function mapListing(raw: any): Listing {
     id: String(raw.id),
     storeId: String(raw.store_id),
     brand: brandId,
-    arabicBrandPrefix: ARABIC_BRAND_PREFIX[brandId] || brandName,
+    arabicBrandPrefix: raw.brand_name_ar || ARABIC_BRAND_PREFIX[brandId] || brandName,
     model: modelName,
     variantKey: `${brandId}-${modelName.toLowerCase().replace(/\s+/g, '-')}-${storageGb}`,
     storageGb,
@@ -158,18 +172,23 @@ export function mapListing(raw: any): Listing {
     color: bi(raw.color || 'Black'),
     condition: cond,
     priceSdg: Math.round(Number(raw.price || 0)),
+    previousPriceSdg: raw.previous_price != null ? Math.round(Number(raw.previous_price)) : null,
+    priceDropped: Boolean(raw.price_dropped),
+    usdPrice: raw.usd_price != null ? Number(raw.usd_price) : null,
+    acceptsTradeIn: Boolean(raw.accepts_trade_in),
     stockQty: cond === 'new' ? Number(raw.quantity ?? 0) : undefined,
     usedAvailability: usedAv,
     usedUnitCode: raw.used_unit_code || undefined,
     usedGrade: cond === 'used' ? ((raw.grade || 'excellent') as UsedGrade) : undefined,
-    batteryHealth: raw.battery_health ?? undefined,
+    batteryHealthPct: raw.battery_health != null ? Number(raw.battery_health) : null,
     defectsDescription: raw.defects ? bi(raw.defects) : undefined,
     replacedParts: raw.replaced_parts ? bi(raw.replaced_parts) : undefined,
-    hasBox: Boolean(raw.has_original_box),
-    isSealed: Boolean(raw.is_sealed),
+    originalBox: Boolean(raw.has_original_box),
+    sealedBox: Boolean(raw.is_sealed),
     warrantyMonths: raw.warranty_months ?? undefined,
-    warrantyDays: raw.warranty_days ?? undefined,
+    inspectionWarrantyDays: raw.warranty_days ?? undefined,
     warrantyType: raw.warranty_type ? bi(raw.warranty_type) : undefined,
+    specifications: raw.specifications || undefined,
     publicationStatus: mapPublicationStatus(raw.status || 'published', raw.moderation || 'approved'),
     statusReason: raw.feedback ? bi(raw.feedback) : undefined,
     photos,
@@ -178,12 +197,13 @@ export function mapListing(raw: any): Listing {
     contactClicks: Number(raw.contact_leads || 0),
     createdAt: raw.created_at || new Date().toISOString(),
     updatedAt: raw.published_at || raw.created_at || new Date().toISOString(),
+    version: Number(raw.version || 1),
     priceHistory: (raw.price_history || []).map((h: any, idx: number, arr: any[]) => ({
       id: String(h.id || idx),
       oldPriceSdg: Math.round(Number(arr[idx + 1]?.price ?? h.price)),
       newPriceSdg: Math.round(Number(h.price)),
       changedBy: bi(h.changed_by || 'Merchant'),
-      changedAt: h.created_at || '',
+      timestamp: h.created_at || '',
     })),
     // Extra backend fields preserved as non-breaking properties for mutations
     ...({ _version: Number(raw.version || 1), _variantId: Number(raw.variant_id || 0), _specifications: raw.specifications || null } as any),

@@ -11,6 +11,13 @@ class Listing(models.Model):
     variant = models.ForeignKey(Variant, on_delete=models.PROTECT)
     condition = models.CharField(max_length=8)
     price = models.DecimalField(max_digits=14, decimal_places=2)
+    previous_price = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True
+    )
+    usd_price = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    accepts_trade_in = models.BooleanField(default=False, db_index=True)
     quantity = models.PositiveIntegerField()
     grade = models.CharField(max_length=16, default="new")
     battery_health = models.PositiveSmallIntegerField(null=True)
