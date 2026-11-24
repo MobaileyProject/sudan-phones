@@ -148,6 +148,9 @@ export interface Store {
   reviewerFeedback?: BilingualText;
   staff: StoreStaffMember[];
   contactAvailable?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
+  acceptsTradeIn?: boolean;
   stats: {
     views7d: number;
     contactClicks7d: number;
@@ -228,6 +231,10 @@ export interface Listing {
   color: BilingualText;
   condition: DeviceCondition;
   priceSdg: number;
+  previousPriceSdg?: number | null;
+  priceDropped?: boolean;
+  usdPrice?: number | null;
+  acceptsTradeIn?: boolean;
   // New phone fields
   stockQty?: number;
   sealedBox?: boolean;

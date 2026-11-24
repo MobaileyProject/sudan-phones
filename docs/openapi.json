@@ -206,6 +206,32 @@
         ],
         "type": "object"
       },
+      "ArchiveData": {
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "archived",
+          "id"
+        ],
+        "type": "object"
+      },
+      "ArchiveResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ArchiveData"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
       "AuditData": {
         "properties": {
           "action": {
@@ -298,6 +324,176 @@
               "$ref": "#/components/schemas/BrandData"
             },
             "type": "array"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "BulkImportData": {
+        "properties": {
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "skipped": {
+            "type": "integer"
+          },
+          "updated": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "errors",
+          "skipped",
+          "updated"
+        ],
+        "type": "object"
+      },
+      "BulkImportInputRequest": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/BulkImportRowInputRequest"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "rows"
+        ],
+        "type": "object"
+      },
+      "BulkImportResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/BulkImportData"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "BulkImportRowInputRequest": {
+        "properties": {
+          "accepts_trade_in": {
+            "default": false,
+            "type": "boolean"
+          },
+          "brand": {
+            "maxLength": 80,
+            "minLength": 1,
+            "type": "string"
+          },
+          "color": {
+            "default": "Standard",
+            "maxLength": 80,
+            "type": "string"
+          },
+          "condition": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConditionEnum"
+              }
+            ],
+            "default": "new"
+          },
+          "model": {
+            "maxLength": 120,
+            "minLength": 1,
+            "type": "string"
+          },
+          "price": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "quantity": {
+            "default": 1,
+            "maximum": 1000000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "ram_gb": {
+            "default": 8,
+            "maximum": 64,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "storage_gb": {
+            "maximum": 4096,
+            "minimum": 4,
+            "type": "integer"
+          },
+          "usd_price": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "brand",
+          "model",
+          "price",
+          "storage_gb"
+        ],
+        "type": "object"
+      },
+      "BulkPriceData": {
+        "properties": {
+          "updated_count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated_count"
+        ],
+        "type": "object"
+      },
+      "BulkPriceInputRequest": {
+        "properties": {
+          "condition_scope": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ConditionScopeEnum"
+              }
+            ],
+            "default": "all"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/ModeEnum"
+          },
+          "percent": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,4}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
+          "round_to": {
+            "default": 1000,
+            "maximum": 100000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "usd_rate": {
+            "format": "decimal",
+            "pattern": "^-?\\d{0,10}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "type": "object"
+      },
+      "BulkPriceResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/BulkPriceData"
           }
         },
         "required": [
@@ -416,6 +612,15 @@
         ],
         "type": "string"
       },
+      "ConditionScopeEnum": {
+        "description": "* `all` - all\n* `new` - new\n* `used` - used",
+        "enum": [
+          "all",
+          "new",
+          "used"
+        ],
+        "type": "string"
+      },
       "ConfigData": {
         "properties": {
           "api_version": {
@@ -521,6 +726,9 @@
       },
       "CreateInputRequest": {
         "properties": {
+          "accepts_trade_in": {
+            "type": "boolean"
+          },
           "battery_health": {
             "maximum": 100,
             "minimum": 50,
@@ -586,6 +794,12 @@
             "maximum": 4096,
             "minimum": 4,
             "type": "integer"
+          },
+          "usd_price": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
           },
           "used_availability": {
             "$ref": "#/components/schemas/UsedAvailabilityEnum"
@@ -886,6 +1100,46 @@
         },
         "required": [
           "error"
+        ],
+        "type": "object"
+      },
+      "FavoriteActionData": {
+        "properties": {
+          "listing_id": {
+            "type": "integer"
+          },
+          "saved": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "listing_id",
+          "saved"
+        ],
+        "type": "object"
+      },
+      "FavoriteActionResponse": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FavoriteActionData"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "FavoriteListResponse": {
+        "properties": {
+          "data": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "data"
         ],
         "type": "object"
       },
@@ -1208,6 +1462,10 @@
       },
       "MerchantListingData": {
         "properties": {
+          "accepts_trade_in": {
+            "default": false,
+            "type": "boolean"
+          },
           "battery_health": {
             "nullable": true,
             "type": "integer"
@@ -1271,10 +1529,20 @@
           "moderation": {
             "type": "string"
           },
+          "previous_price": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
           "price": {
             "format": "decimal",
             "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
             "type": "string"
+          },
+          "price_dropped": {
+            "default": false,
+            "type": "boolean"
           },
           "price_history": {
             "items": {
@@ -1307,6 +1575,12 @@
           },
           "store_id": {
             "type": "integer"
+          },
+          "usd_price": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+            "type": "string"
           },
           "used_availability": {
             "default": "",
@@ -1385,6 +1659,14 @@
         "enum": [
           "whatsapp",
           "phone"
+        ],
+        "type": "string"
+      },
+      "ModeEnum": {
+        "description": "* `percent` - percent\n* `usd_rate` - usd_rate",
+        "enum": [
+          "percent",
+          "usd_rate"
         ],
         "type": "string"
       },
@@ -1543,6 +1825,9 @@
       },
       "PatchedEditInputRequest": {
         "properties": {
+          "accepts_trade_in": {
+            "type": "boolean"
+          },
           "battery_health": {
             "maximum": 100,
             "minimum": 50,
@@ -1573,6 +1858,12 @@
           },
           "replaced_parts": {
             "maxLength": 500,
+            "type": "string"
+          },
+          "usd_price": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
             "type": "string"
           },
           "used_unit_code": {
@@ -1692,6 +1983,9 @@
       },
       "ProfileInputRequest": {
         "properties": {
+          "accepts_trade_in": {
+            "type": "boolean"
+          },
           "address": {
             "maxLength": 300,
             "minLength": 1,
@@ -1747,11 +2041,23 @@
       },
       "PublicListing": {
         "properties": {
+          "accepts_trade_in": {
+            "default": false,
+            "type": "boolean"
+          },
           "battery_health": {
             "nullable": true,
             "type": "integer"
           },
           "brand": {
+            "type": "string"
+          },
+          "brand_name_ar": {
+            "default": "",
+            "type": "string"
+          },
+          "brand_slug": {
+            "default": "",
             "type": "string"
           },
           "city": {
@@ -1812,10 +2118,20 @@
           "moderation": {
             "type": "string"
           },
+          "previous_price": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+            "type": "string"
+          },
           "price": {
             "format": "decimal",
             "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
             "type": "string"
+          },
+          "price_dropped": {
+            "default": false,
+            "type": "boolean"
           },
           "published_at": {
             "format": "date-time",
@@ -1843,6 +2159,12 @@
             "type": "integer"
           },
           "store_name": {
+            "type": "string"
+          },
+          "usd_price": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
             "type": "string"
           },
           "used_availability": {
@@ -1995,6 +2317,10 @@
       },
       "PublicStore": {
         "properties": {
+          "accepts_trade_in": {
+            "default": false,
+            "type": "boolean"
+          },
           "address": {
             "type": "string"
           },
@@ -2016,8 +2342,20 @@
           "id": {
             "type": "integer"
           },
+          "latitude": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,6})?$",
+            "type": "string"
+          },
           "location_guidance": {
             "default": "",
+            "type": "string"
+          },
+          "longitude": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,6})?$",
             "type": "string"
           },
           "name": {
@@ -2617,6 +2955,9 @@
       },
       "SettingsInputRequest": {
         "properties": {
+          "accepts_trade_in": {
+            "type": "boolean"
+          },
           "address": {
             "maxLength": 300,
             "type": "string"
@@ -2628,8 +2969,20 @@
             "maxLength": 2000,
             "type": "string"
           },
+          "latitude": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,6})?$",
+            "type": "string"
+          },
           "location_guidance": {
             "maxLength": 300,
+            "type": "string"
+          },
+          "longitude": {
+            "format": "decimal",
+            "nullable": true,
+            "pattern": "^-?\\d{0,3}(?:\\.\\d{0,6})?$",
             "type": "string"
           },
           "opening_hours": {
@@ -2729,6 +3082,10 @@
       },
       "StoreData": {
         "properties": {
+          "accepts_trade_in": {
+            "default": false,
+            "type": "boolean"
+          },
           "address": {
             "type": "string"
           },
@@ -12997,6 +13354,13 @@
           },
           {
             "in": "query",
+            "name": "accepts_trade_in",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
             "name": "brand",
             "schema": {
               "maxLength": 80,
@@ -14362,6 +14726,13 @@
           },
           {
             "in": "query",
+            "name": "accepts_trade_in",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
             "name": "brand",
             "schema": {
               "maxLength": 80,
@@ -15415,6 +15786,938 @@
         "x-api-id": "API-068",
         "x-authorization": "Authenticated account; actions are bound to the signed-in user.",
         "x-phase": "P3"
+      }
+    },
+    "/api/v1/me/favorites": {
+      "get": {
+        "description": "List the authenticated user's saved favorite listings. Authenticated account; actions are bound to the signed-in user. See docs/api for authorization, state transitions, examples and deployment prerequisites.",
+        "operationId": "api_084",
+        "parameters": [
+          {
+            "description": "Arabic default; supports ar/en.",
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoriteListResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List the authenticated user's saved favorite listings",
+        "tags": [
+          "P5"
+        ],
+        "x-api-id": "API-084",
+        "x-authorization": "Authenticated account; actions are bound to the signed-in user.",
+        "x-phase": "P5"
+      }
+    },
+    "/api/v1/me/favorites/{listing_id}": {
+      "delete": {
+        "description": "Remove a listing from the authenticated user's favorites. Authenticated account; actions are bound to the signed-in user. See docs/api for authorization, state transitions, examples and deployment prerequisites.",
+        "operationId": "api_086",
+        "parameters": [
+          {
+            "description": "Arabic default; supports ar/en.",
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "CSRF token from the same cookie jar; bootstrap with GET /api/v1/auth/session and refresh after login.",
+            "in": "header",
+            "name": "X-CSRFToken",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoriteActionResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Remove a listing from the authenticated user's favorites",
+        "tags": [
+          "P5"
+        ],
+        "x-api-id": "API-086",
+        "x-authorization": "Authenticated account; actions are bound to the signed-in user.",
+        "x-phase": "P5"
+      },
+      "post": {
+        "description": "Save a public listing to the authenticated user's favorites. Authenticated account; actions are bound to the signed-in user. See docs/api for authorization, state transitions, examples and deployment prerequisites.",
+        "operationId": "api_085",
+        "parameters": [
+          {
+            "description": "Arabic default; supports ar/en.",
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "CSRF token from the same cookie jar; bootstrap with GET /api/v1/auth/session and refresh after login.",
+            "in": "header",
+            "name": "X-CSRFToken",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "listing_id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavoriteActionResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Save a public listing to the authenticated user's favorites",
+        "tags": [
+          "P5"
+        ],
+        "x-api-id": "API-085",
+        "x-authorization": "Authenticated account; actions are bound to the signed-in user.",
+        "x-phase": "P5"
       }
     },
     "/api/v1/media/uploads": {
@@ -17757,6 +19060,13 @@
             "name": "Accept-Language",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "accepts_trade_in",
+            "schema": {
+              "type": "boolean"
             }
           },
           {
@@ -20402,7 +21712,980 @@
         "x-phase": "P4"
       }
     },
+    "/api/v1/stores/me/listings/bulk-price": {
+      "post": {
+        "description": "Bulk update listing prices by percentage or USD-to-SDG exchange rate. Current member of a verified store; mutable resources must belong to that store. See docs/api for authorization, state transitions, examples and deployment prerequisites.",
+        "operationId": "api_082",
+        "parameters": [
+          {
+            "description": "Arabic default; supports ar/en.",
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "CSRF token from the same cookie jar; bootstrap with GET /api/v1/auth/session and refresh after login.",
+            "in": "header",
+            "name": "X-CSRFToken",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkPriceInputRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkPriceInputRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkPriceInputRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkPriceResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Bulk update listing prices by percentage or USD-to-SDG exchange rate",
+        "tags": [
+          "P4"
+        ],
+        "x-api-id": "API-082",
+        "x-authorization": "Current member of a verified store; mutable resources must belong to that store.",
+        "x-phase": "P4"
+      }
+    },
+    "/api/v1/stores/me/listings/import": {
+      "post": {
+        "description": "Bulk import listing prices, stock and trade-in flags from Excel or CSV. Current member of a verified store; mutable resources must belong to that store. See docs/api for authorization, state transitions, examples and deployment prerequisites.",
+        "operationId": "api_083",
+        "parameters": [
+          {
+            "description": "Arabic default; supports ar/en.",
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "CSRF token from the same cookie jar; bootstrap with GET /api/v1/auth/session and refresh after login.",
+            "in": "header",
+            "name": "X-CSRFToken",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkImportInputRequest"
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkImportInputRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkImportInputRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkImportResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Bulk import listing prices, stock and trade-in flags from Excel or CSV",
+        "tags": [
+          "P4"
+        ],
+        "x-api-id": "API-083",
+        "x-authorization": "Current member of a verified store; mutable resources must belong to that store.",
+        "x-phase": "P4"
+      }
+    },
     "/api/v1/stores/me/listings/{id}": {
+      "delete": {
+        "description": "Archive or soft-remove a merchant listing. Current member of a verified store; mutable resources must belong to that store. See docs/api for authorization, state transitions, examples and deployment prerequisites.",
+        "operationId": "api_081",
+        "parameters": [
+          {
+            "description": "Arabic default; supports ar/en.",
+            "in": "header",
+            "name": "Accept-Language",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "CSRF token from the same cookie jar; bootstrap with GET /api/v1/auth/session and refresh after login.",
+            "in": "header",
+            "name": "X-CSRFToken",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Language": {
+                "description": "Resolved ar/en response language.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Request-ID": {
+                "description": "Server-generated request UUID.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Archive or soft-remove a merchant listing",
+        "tags": [
+          "P4"
+        ],
+        "x-api-id": "API-081",
+        "x-authorization": "Current member of a verified store; mutable resources must belong to that store.",
+        "x-phase": "P4"
+      },
       "patch": {
         "description": "Update listing condition details, warranty or replacement media. Current member of a verified store; mutable resources must belong to that store. See docs/api for authorization, state transitions, examples and deployment prerequisites.",
         "operationId": "api_038",
@@ -24618,6 +26901,13 @@
             "name": "Accept-Language",
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "accepts_trade_in",
+            "schema": {
+              "type": "boolean"
             }
           },
           {

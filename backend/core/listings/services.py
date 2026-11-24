@@ -19,6 +19,9 @@ FIELDS = (
     "variant_id",
     "condition",
     "price",
+    "previous_price",
+    "usd_price",
+    "accepts_trade_in",
     "quantity",
     "grade",
     "battery_health",
@@ -88,6 +91,9 @@ def listing_data(listing, include_merchant_meta=False):
         media_items.append(item)
     base = {
         **{key: getattr(listing, key) for key in FIELDS},
+        "price_dropped": bool(
+            listing.previous_price is not None and listing.previous_price > listing.price
+        ),
         "used_availability": used_av,
         "currency": "SDG",
         "media_status": media_items,
@@ -248,6 +254,8 @@ def create_listing(actor, data, key):
             "is_sealed",
             "has_original_box",
             "featured",
+            "accepts_trade_in",
+            "usd_price",
         },
         "INVALID_MUTATION",
     )
@@ -361,6 +369,8 @@ def update_listing(actor, listing_id, data, key, operation):
             "warranty_type",
             "has_original_box",
             "featured",
+            "accepts_trade_in",
+            "usd_price",
             "media",
         },
     }
@@ -406,9 +416,12 @@ def update_listing(actor, listing_id, data, key, operation):
         )
         if listing.status != "removed":
             listing.status, listing.moderation = "processing", "pending"
+    old_price = listing.price
     for name, value in data.items():
         if name not in ["version", "media"]:
             setattr(listing, name, value)
+    if operation == "price" and listing.price != old_price:
+        listing.previous_price = old_price
     if operation == "stock" and listing.condition == "used":
         if "used_availability" in data:
             listing.used_availability = data["used_availability"]
@@ -516,3 +529,123 @@ def moderate(actor, listing_id, data, actor_ip=None):
         actor_ip=actor_ip,
     )
     return {"listing": listing_data(listing, include_merchant_meta=True), "approval": None}
+
+
+@transaction.atomic
+def archive_listing(actor, listing_id):
+    store = member_store(actor, verified=True, lock=True)
+    listing = (
+        Listing.objects.select_for_update().filter(store=store, pk=listing_id).first()
+    )
+    require(listing is not None, "NOT_FOUND", 404)
+    listing.status = "removed"
+    listing.version += 1
+    listing.save(update_fields=["status", "version"])
+    record(actor, "listing.archived", listing.pk, version=listing.version)
+    return {"archived": True, "id": listing.pk}
+
+
+@transaction.atomic
+def bulk_update_prices(actor, data):
+    from decimal import ROUND_HALF_UP
+
+    store = member_store(actor, verified=True, lock=True)
+    qs = Listing.objects.select_for_update().filter(
+        store=store, status__in=["published", "processing"]
+    )
+    scope = data.get("condition_scope", "all")
+    if scope in ("new", "used"):
+        qs = qs.filter(condition=scope)
+    round_to = Decimal(str(data.get("round_to") or 1000))
+    mode = data["mode"]
+    updated = 0
+    history_rows = []
+    for listing in qs:
+        if mode == "percent":
+            factor = Decimal("1") + (Decimal(str(data["percent"])) / Decimal("100"))
+            raw_new = listing.price * factor
+        else:
+            if not listing.usd_price:
+                continue
+            raw_new = listing.usd_price * Decimal(str(data["usd_rate"]))
+        rounded = (raw_new / round_to).quantize(Decimal("1"), rounding=ROUND_HALF_UP) * round_to
+        if rounded <= 0:
+            rounded = round_to
+        if rounded != listing.price:
+            listing.previous_price = listing.price
+            listing.price = rounded
+            listing.version += 1
+            listing.save(update_fields=["previous_price", "price", "version"])
+            history_rows.append(PriceHistory(listing=listing, actor=actor, price=rounded))
+            updated += 1
+    if history_rows:
+        PriceHistory.objects.bulk_create(history_rows)
+    record(actor, "listing.bulk_price", store.pk, mode=mode, updated=updated)
+    return {"updated_count": updated}
+
+
+@transaction.atomic
+def bulk_import_listings(actor, data):
+    from core.catalog.models import Brand
+
+    store = member_store(actor, verified=True, lock=True)
+    updated = 0
+    skipped = 0
+    errors = []
+    history_rows = []
+    for idx, row in enumerate(data["rows"], start=1):
+        brand_name = row["brand"].strip()
+        model_name = row["model"].strip()
+        brand = Brand.objects.filter(name__iexact=brand_name).first()
+        if not brand:
+            brand = Brand.objects.filter(name_ar__iexact=brand_name).first()
+        if not brand:
+            skipped += 1
+            errors.append(f"Row {idx}: Unknown brand '{brand_name}'")
+            continue
+        model = PhoneModel.objects.filter(brand=brand, name__iexact=model_name).first()
+        if not model:
+            model = PhoneModel.objects.filter(brand=brand, name__icontains=model_name).first()
+        if not model:
+            skipped += 1
+            errors.append(f"Row {idx}: Unknown model '{model_name}' for {brand.name}")
+            continue
+        color_val = (row.get("color") or "").strip()[:80] or "Standard"
+        variant, _ = Variant.objects.get_or_create(
+            model=model,
+            storage_gb=row["storage_gb"],
+            ram_gb=row["ram_gb"],
+            color=color_val,
+        )
+        existing = (
+            Listing.objects.select_for_update()
+            .filter(store=store, variant=variant, condition=row["condition"])
+            .exclude(status="removed")
+            .first()
+        )
+        if existing:
+            new_price = Decimal(str(row["price"]))
+            if new_price != existing.price:
+                existing.previous_price = existing.price
+                existing.price = new_price
+                history_rows.append(PriceHistory(listing=existing, actor=actor, price=new_price))
+            if row["condition"] == "new":
+                existing.quantity = row["quantity"]
+            else:
+                existing.quantity = min(1, row["quantity"])
+                existing.used_availability = "available" if existing.quantity > 0 else "sold"
+            if row.get("usd_price") is not None:
+                existing.usd_price = row["usd_price"]
+            existing.accepts_trade_in = bool(row.get("accepts_trade_in", existing.accepts_trade_in))
+            existing.version += 1
+            existing.save()
+            updated += 1
+        else:
+            skipped += 1
+            errors.append(
+                f"Row {idx}: No existing listing found for {brand.name} {model.name} ({row['storage_gb']}GB/{row['ram_gb']}GB {color_val}); create it with photos first."
+            )
+    if history_rows:
+        PriceHistory.objects.bulk_create(history_rows)
+    record(actor, "listing.bulk_import", store.pk, updated=updated, skipped=skipped)
+    return {"updated": updated, "skipped": skipped, "errors": errors[:25]}

@@ -22,6 +22,7 @@ class ProfileInput(StrictSerializer):
     longitude = serializers.DecimalField(
         max_digits=9, decimal_places=6, allow_null=True, required=False
     )
+    accepts_trade_in = serializers.BooleanField(required=False)
 
 
 class SettingsInput(StrictSerializer):
@@ -37,7 +38,14 @@ class SettingsInput(StrictSerializer):
     )
     phone = PhoneField(required=False)
     whatsapp = PhoneField(required=False)
+    latitude = serializers.DecimalField(
+        max_digits=9, decimal_places=6, allow_null=True, required=False
+    )
+    longitude = serializers.DecimalField(
+        max_digits=9, decimal_places=6, allow_null=True, required=False
+    )
     contact_available = serializers.BooleanField(required=False)
+    accepts_trade_in = serializers.BooleanField(required=False)
 
 
 class StaffInput(StrictSerializer):
@@ -84,6 +92,7 @@ class StoreData(serializers.Serializer):
     whatsapp = serializers.CharField()
     opening_hours = serializers.CharField()
     contact_available = serializers.BooleanField()
+    accepts_trade_in = serializers.BooleanField(default=False)
     status = serializers.CharField()
     feedback = serializers.CharField()
     version = serializers.IntegerField()

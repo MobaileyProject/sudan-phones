@@ -16,6 +16,8 @@ def public_listing(listing):
     return {
         **public_data,
         "brand": variant.model.brand.name,
+        "brand_slug": variant.model.brand.slug or variant.model.brand.name.lower(),
+        "brand_name_ar": variant.model.brand.name_ar or variant.model.brand.name,
         "model": variant.model.name,
         "storage_gb": variant.storage_gb,
         "ram_gb": variant.ram_gb,
@@ -54,8 +56,11 @@ def store_data(store):
             "location_guidance",
             "description",
             "banner_url",
+            "latitude",
+            "longitude",
             "opening_hours",
             "contact_available",
+            "accepts_trade_in",
         ]
     } | {
         "verified": True,
@@ -85,6 +90,7 @@ def search(query, store_id=None, variant_id=None, related_id=None, count_search=
         "min_price": "price__gte",
         "max_price": "price__lte",
         "storage_gb": "variant__storage_gb",
+        "accepts_trade_in": "accepts_trade_in",
     }
     for key, field in filters.items():
         if key in query:

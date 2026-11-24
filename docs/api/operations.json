@@ -312,6 +312,30 @@
     "authentication": "required"
   },
   {
+    "api_id": "API-084",
+    "method": "GET",
+    "path": "/api/v1/me/favorites",
+    "phase": "P5",
+    "operation_id": "api_084",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-086",
+    "method": "DELETE",
+    "path": "/api/v1/me/favorites/{listing_id}",
+    "phase": "P5",
+    "operation_id": "api_086",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-085",
+    "method": "POST",
+    "path": "/api/v1/me/favorites/{listing_id}",
+    "phase": "P5",
+    "operation_id": "api_085",
+    "authentication": "required"
+  },
+  {
     "api_id": "API-050",
     "method": "POST",
     "path": "/api/v1/media/uploads",
@@ -429,6 +453,30 @@
     "path": "/api/v1/stores/me/listings",
     "phase": "P4",
     "operation_id": "api_054",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-082",
+    "method": "POST",
+    "path": "/api/v1/stores/me/listings/bulk-price",
+    "phase": "P4",
+    "operation_id": "api_082",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-083",
+    "method": "POST",
+    "path": "/api/v1/stores/me/listings/import",
+    "phase": "P4",
+    "operation_id": "api_083",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-081",
+    "method": "DELETE",
+    "path": "/api/v1/stores/me/listings/{id}",
+    "phase": "P4",
+    "operation_id": "api_081",
     "authentication": "required"
   },
   {

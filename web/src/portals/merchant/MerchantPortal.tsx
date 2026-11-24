@@ -1,30 +1,41 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import * as XLSX from 'xlsx';
+import QRCode from 'qrcode';
 import {
   AlertTriangle,
+  ArrowLeftRight,
   BarChart3,
   CheckCircle2,
   Clock,
+  Download,
   Edit3,
   ExternalLink,
+  FileSpreadsheet,
   History,
   KeyRound,
   LayoutDashboard,
   Lock,
+  MapPin,
   Menu,
   MessageCircle,
   Package,
+  Percent,
   Plus,
+  Printer,
+  QrCode,
   RefreshCw,
   Search,
   Settings,
   ShieldCheck,
   Store as StoreIcon,
   Trash2,
+  Upload,
   UserPlus,
   Users,
   WifiOff,
   X,
 } from 'lucide-react';
+import { api } from '../../api/client';
 import {
   CityId,
   DeviceCondition,
@@ -81,6 +92,9 @@ export function MerchantPortal() {
     activeMerchantStore,
     activeMerchantRoleView,
     updateListingQuick,
+    archiveListing,
+    refreshMerchantData,
+    refreshPublicData,
     fixAndRepublishListing,
     updateStoreProfile,
     requestStoreReverification,
@@ -105,9 +119,29 @@ export function MerchantPortal() {
   // Quick Price & Stock Modal
   const [quickEditListing, setQuickEditListing] = useState<Listing | null>(null);
   const [qePrice, setQePrice] = useState('');
+  const [qeUsdPrice, setQeUsdPrice] = useState('');
+  const [qeTradeIn, setQeTradeIn] = useState(false);
   const [qeStock, setQeStock] = useState('');
   const [qeUsedAv, setQeUsedAv] = useState<UsedAvailability>('available');
   const [qeState, setQeState] = useState<'idle' | 'saving' | 'conflict' | 'uncertain' | 'failed'>('idle');
+  const [listingToArchive, setListingToArchive] = useState<Listing | null>(null);
+
+  // Bulk Price Adjustment Modal
+  const [bulkPriceOpen, setBulkPriceOpen] = useState(false);
+  const [bulkMode, setBulkMode] = useState<'percent' | 'usd_rate'>('percent');
+  const [bulkPercent, setBulkPercent] = useState('5');
+  const [bulkUsdRate, setBulkUsdRate] = useState('2700');
+  const [bulkRoundTo, setBulkRoundTo] = useState('1000');
+  const [bulkCondition, setBulkCondition] = useState<'all' | 'new' | 'used'>('all');
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  // Excel Import ref
+  const excelInputRef = useRef<HTMLInputElement | null>(null);
+  const [excelImporting, setExcelImporting] = useState(false);
+
+  // Printable Store QR Code Poster Modal
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
 
   // Protected verified identity re-verification modal state
   const [reverifyOpen, setReverifyOpen] = useState(false);
@@ -121,6 +155,9 @@ export function MerchantPortal() {
   const [sPhone, setSPhone] = useState(activeMerchantStore.phone);
   const [sWhatsapp, setSWhatsapp] = useState(activeMerchantStore.whatsapp);
   const [sDescAr, setSDescAr] = useState(activeMerchantStore.description.ar);
+  const [sLat, setSLat] = useState<string>(activeMerchantStore.latitude != null ? String(activeMerchantStore.latitude) : '');
+  const [sLng, setSLng] = useState<string>(activeMerchantStore.longitude != null ? String(activeMerchantStore.longitude) : '');
+  const [sAcceptsTradeIn, setSAcceptsTradeIn] = useState<boolean>(Boolean(activeMerchantStore.acceptsTradeIn));
 
   const [addStaffOpen, setAddStaffOpen] = useState(false);
   const [newStaffName, setNewStaffName] = useState('');
@@ -143,8 +180,11 @@ export function MerchantPortal() {
     setSPhone(activeMerchantStore.phone);
     setSWhatsapp(activeMerchantStore.whatsapp);
     setSDescAr(activeMerchantStore.description.ar);
+    setSLat(activeMerchantStore.latitude != null ? String(activeMerchantStore.latitude) : '');
+    setSLng(activeMerchantStore.longitude != null ? String(activeMerchantStore.longitude) : '');
+    setSAcceptsTradeIn(Boolean(activeMerchantStore.acceptsTradeIn));
     setSettingsDirty(false);
-  }, [activeMerchantStore.id]);
+  }, [activeMerchantStore.id, activeMerchantStore.latitude, activeMerchantStore.longitude, activeMerchantStore.acceptsTradeIn]);
 
   const storeListings = useMemo(
     () => listings.filter((l) => l.storeId === activeMerchantStore.id),
@@ -192,6 +232,8 @@ export function MerchantPortal() {
   const openQuickEdit = (item: Listing) => {
     setQuickEditListing(item);
     setQePrice(String(item.priceSdg));
+    setQeUsdPrice(item.usdPrice != null ? String(item.usdPrice) : '');
+    setQeTradeIn(Boolean(item.acceptsTradeIn));
     setQeStock(String(item.stockQty ?? 1));
     setQeUsedAv(item.usedAvailability ?? 'available');
     setQeState('idle');
@@ -201,6 +243,17 @@ export function MerchantPortal() {
     if (!quickEditListing) return;
     setQeState('saving');
     try {
+      const currentRaw = quickEditListing as any;
+      const usdVal = qeUsdPrice.trim() ? Number(qeUsdPrice) : null;
+      const tradeInChanged = qeTradeIn !== Boolean(quickEditListing.acceptsTradeIn);
+      const usdChanged = usdVal !== (quickEditListing.usdPrice ?? null);
+      if (tradeInChanged || usdChanged) {
+        await api.editListing(quickEditListing.id, {
+          version: currentRaw._version || quickEditListing.version || 1,
+          accepts_trade_in: qeTradeIn,
+          usd_price: usdVal != null && usdVal > 0 ? usdVal.toFixed(2) : null,
+        });
+      }
       await updateListingQuick(
         quickEditListing.id,
         {
@@ -215,6 +268,168 @@ export function MerchantPortal() {
     } catch {
       setQeState('failed');
     }
+  };
+
+  const handleExportExcel = () => {
+    const rows = storeListings.map((l) => ({
+      listing_id: Number(l.id),
+      brand: l.brand,
+      model: l.model,
+      storage_gb: l.storageGb,
+      ram_gb: l.ramGb ?? 8,
+      color: l.color.en || l.color.ar,
+      condition: l.condition,
+      price_sdg: l.priceSdg,
+      usd_price: l.usdPrice ?? '',
+      stock_qty: l.condition === 'new' ? l.stockQty ?? 0 : l.usedAvailability === 'available' ? 1 : 0,
+      accepts_trade_in: l.acceptsTradeIn ? 'yes' : 'no',
+      status: l.publicationStatus,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+    const safeName = (activeMerchantStore.name.en || activeMerchantStore.name.ar || 'store')
+      .replace(/[^a-zA-Z0-9\u0600-\u06FF_-]+/g, '_')
+      .slice(0, 32);
+    XLSX.writeFile(wb, `sudan-phones-${safeName}-inventory.xlsx`);
+    pushToast('success', {
+      ar: `تم تصدير ${rows.length} إعلان إلى ملف Excel بنجاح.`,
+      en: `Exported ${rows.length} listings to Excel (.xlsx).`,
+    });
+  };
+
+  const handleImportExcelFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setExcelImporting(true);
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rawRows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet);
+      const payloadRows = rawRows
+        .filter((r) => r.listing_id != null && Number(r.listing_id) > 0)
+        .map((r) => {
+          const item: {
+            listing_id: number;
+            price?: number;
+            quantity?: number;
+            usd_price?: number | null;
+            accepts_trade_in?: boolean;
+          } = { listing_id: Number(r.listing_id) };
+          const p = r.price_sdg ?? r.price;
+          if (p !== undefined && p !== '' && !Number.isNaN(Number(p))) item.price = Number(p);
+          const q = r.stock_qty ?? r.quantity;
+          if (q !== undefined && q !== '' && !Number.isNaN(Number(q))) item.quantity = Number(q);
+          if (r.usd_price !== undefined && r.usd_price !== '' && !Number.isNaN(Number(r.usd_price))) {
+            item.usd_price = Number(r.usd_price);
+          }
+          if (r.accepts_trade_in !== undefined && r.accepts_trade_in !== '') {
+            const v = String(r.accepts_trade_in).toLowerCase().trim();
+            item.accepts_trade_in = v === 'true' || v === 'yes' || v === '1' || v === 'نعم';
+          }
+          return item;
+        });
+      if (payloadRows.length === 0) {
+        pushToast('warning', {
+          ar: 'لم يتم العثور على صفوف صالحة تحتوي على عمود listing_id. قم بتصدير ملف المخزون أولاً كقالب.',
+          en: 'No valid rows with listing_id found. Export your inventory first to get the exact template.',
+        });
+        return;
+      }
+      const res = await api.bulkImportListings(payloadRows);
+      await Promise.all([refreshMerchantData(), refreshPublicData()]);
+      pushToast('success', {
+        ar: `تم تحديث ${res.data.updated_count} إعلان من ملف Excel (تم تخطي ${res.data.skipped_count}).`,
+        en: `Updated ${res.data.updated_count} listings from Excel (${res.data.skipped_count} skipped).`,
+      });
+    } catch (err: any) {
+      pushToast('error', {
+        ar: err?.message || 'فشل استيراد ملف Excel.',
+        en: err?.message || 'Failed to import Excel file.',
+      });
+    } finally {
+      setExcelImporting(false);
+    }
+  };
+
+  const handleBulkPriceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBulkBusy(true);
+    try {
+      const payload =
+        bulkMode === 'percent'
+          ? {
+              mode: 'percent' as const,
+              percent: Number(bulkPercent),
+              round_to: Number(bulkRoundTo) || 1000,
+              condition: bulkCondition,
+            }
+          : {
+              mode: 'usd_rate' as const,
+              usd_rate: Number(bulkUsdRate),
+              round_to: Number(bulkRoundTo) || 1000,
+              condition: bulkCondition,
+            };
+      const res = await api.bulkUpdatePrices(payload);
+      await Promise.all([refreshMerchantData(), refreshPublicData()]);
+      setBulkPriceOpen(false);
+      pushToast('success', {
+        ar: `تم تحديث أسعار ${res.data.updated_count} إعلان دفعة واحدة.`,
+        en: `Bulk-updated prices for ${res.data.updated_count} listings.`,
+      });
+    } catch (err: any) {
+      pushToast('error', {
+        ar: err?.message || 'فشل التحديث الجماعي للأسعار.',
+        en: err?.message || 'Bulk price update failed.',
+      });
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const storePublicUrl = `http://13.53.46.243/sudan-phones/?store=${activeMerchantStore.id}`;
+
+  const openQrPoster = async () => {
+    try {
+      const url = await QRCode.toDataURL(storePublicUrl, {
+        width: 320,
+        margin: 2,
+        color: { dark: '#0F172A', light: '#FFFFFF' },
+      });
+      setQrDataUrl(url);
+      setQrModalOpen(true);
+    } catch {
+      pushToast('error', { ar: 'تعذر توليد رمز QR.', en: 'Failed to generate QR code.' });
+    }
+  };
+
+  const handleDetectGps = () => {
+    if (!navigator.geolocation) {
+      pushToast('warning', {
+        ar: 'متصفحك لا يدعم تحديد الموقع الجغرافي (GPS). أدخل الإحداثيات يدوياً.',
+        en: 'Geolocation is not supported in this browser. Enter coordinates manually.',
+      });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setSLat(pos.coords.latitude.toFixed(6));
+        setSLng(pos.coords.longitude.toFixed(6));
+        setSettingsDirty(true);
+        pushToast('success', {
+          ar: 'تم التقاط موقع المتجر بنجاح. اضغط "حفظ التغييرات" لتثبيته.',
+          en: 'Store GPS coordinates captured. Click Save Settings to persist.',
+        });
+      },
+      () => {
+        pushToast('error', {
+          ar: 'تعذر الوصول للموقع الجغرافي. تأكد من منح إذن الموقع أو أدخل الإحداثيات يدوياً.',
+          en: 'Could not read GPS location. Allow location permission or enter coordinates manually.',
+        });
+      }
+    );
   };
 
   const handleSaveSettings = (e: React.FormEvent) => {
@@ -233,6 +448,9 @@ export function MerchantPortal() {
       phone: sPhone.trim(),
       whatsapp: sWhatsapp.trim(),
       description: { ar: sDescAr.trim(), en: sDescAr.trim() },
+      latitude: sLat.trim() ? Number(sLat) : null,
+      longitude: sLng.trim() ? Number(sLng) : null,
+      acceptsTradeIn: sAcceptsTradeIn,
     });
     setSettingsDirty(false);
   };
@@ -653,6 +871,14 @@ export function MerchantPortal() {
                           <Edit3 className="w-4 h-4 text-[#0F6B5D]" />
                           {lang === 'ar' ? 'تحديث الأسعار والمخزون بسرعة' : 'Quick Update Price & Stock'}
                         </button>
+                        <button
+                          type="button"
+                          onClick={openQrPoster}
+                          className="w-full h-10 px-4 rounded-xl border border-teal-200 bg-teal-50/70 hover:bg-teal-50 text-[#0F6B5D] text-xs font-semibold flex items-center justify-center gap-2"
+                        >
+                          <QrCode className="w-4 h-4" />
+                          {lang === 'ar' ? 'ملصق QR قابل للطباعة للمتجر' : 'Printable Store QR Poster'}
+                        </button>
                       </div>
 
                       {outOfStockListings.length > 0 && (
@@ -701,14 +927,56 @@ export function MerchantPortal() {
                       : 'Valid listings publish automatically after automated photo checks. Use Quick Update for instant SDG price & stock edits.'}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSection('create_listing')}
-                  className="h-10 px-4 rounded-xl bg-[#0F6B5D] hover:bg-[#0B5348] text-white text-xs font-semibold flex items-center gap-1.5"
-                >
-                  <Plus className="w-4 h-4" />
-                  {lang === 'ar' ? 'إضافة هاتف' : 'Add Listing'}
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBulkPriceOpen(true)}
+                    disabled={storeListings.length === 0}
+                    className="h-10 px-3.5 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 text-[#0F6B5D] text-xs font-semibold flex items-center gap-1.5 disabled:opacity-45"
+                  >
+                    <Percent className="w-4 h-4" />
+                    {lang === 'ar' ? 'تعديل جماعي للأسعار' : 'Bulk Price Adjust'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportExcel}
+                    disabled={storeListings.length === 0}
+                    className="h-10 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-45"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                    {lang === 'ar' ? 'تصدير Excel' : 'Export Excel'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => excelInputRef.current?.click()}
+                    disabled={excelImporting}
+                    className="h-10 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold flex items-center gap-1.5 disabled:opacity-45"
+                  >
+                    <Upload className="w-4 h-4 text-blue-700" />
+                    {excelImporting
+                      ? lang === 'ar'
+                        ? 'جاري الاستيراد...'
+                        : 'Importing...'
+                      : lang === 'ar'
+                        ? 'استيراد Excel'
+                        : 'Import Excel'}
+                  </button>
+                  <input
+                    ref={excelInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleImportExcelFile}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setSection('create_listing')}
+                    className="h-10 px-4 rounded-xl bg-[#0F6B5D] hover:bg-[#0B5348] text-white text-xs font-semibold flex items-center gap-1.5"
+                  >
+                    <Plus className="w-4 h-4" />
+                    {lang === 'ar' ? 'إضافة هاتف' : 'Add Listing'}
+                  </button>
+                </div>
               </div>
 
               {/* Filter Toolbar */}
@@ -858,26 +1126,34 @@ export function MerchantPortal() {
                                 </td>
                                 <td className="py-3 px-4 text-end whitespace-nowrap">
                                   <div className="inline-flex items-center gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => openQuickEdit(item)}
-                                      className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white hover:border-[#0F6B5D] text-slate-800 font-semibold"
-                                    >
-                                      {lang === 'ar' ? 'تحديث سريع' : 'Quick Edit'}
-                                    </button>
-                                    {item.publicationStatus === 'published' && (
                                       <button
                                         type="button"
-                                        onClick={() => {
-                                          setCustomerDeepLinkListingId(item.id);
-                                          setPortal('customer');
-                                        }}
-                                        title={lang === 'ar' ? 'عرض في تطبيق العملاء' : 'View in Customer App'}
-                                        className="h-8 w-8 rounded-lg border border-slate-200 text-slate-600 hover:text-[#0F6B5D] inline-flex items-center justify-center"
+                                        onClick={() => openQuickEdit(item)}
+                                        className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white hover:border-[#0F6B5D] text-slate-800 font-semibold"
                                       >
-                                        <ExternalLink className="w-3.5 h-3.5" />
+                                        {lang === 'ar' ? 'تحديث سريع' : 'Quick Edit'}
                                       </button>
-                                    )}
+                                      {item.publicationStatus === 'published' && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setCustomerDeepLinkListingId(item.id);
+                                            setPortal('customer');
+                                          }}
+                                          title={lang === 'ar' ? 'عرض في تطبيق العملاء' : 'View in Customer App'}
+                                          className="h-8 w-8 rounded-lg border border-slate-200 text-slate-600 hover:text-[#0F6B5D] inline-flex items-center justify-center"
+                                        >
+                                          <ExternalLink className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => setListingToArchive(item)}
+                                        title={lang === 'ar' ? 'حذف / أرشفة الإعلان' : 'Archive / Delete Listing'}
+                                        className="h-8 w-8 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 inline-flex items-center justify-center"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
                                   </div>
                                 </td>
                               </tr>
@@ -1153,7 +1429,85 @@ export function MerchantPortal() {
                     />
                   </div>
 
-                  <div className="flex justify-end">
+                  {/* Verified Store GPS Map Pin */}
+                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <MapPin className="w-4 h-4 text-[#0F6B5D]" />
+                        {lang === 'ar' ? 'دبوس موقع المتجر على خرائط قوقل (GPS)' : 'Verified Store Map Pin (GPS)'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleDetectGps}
+                        className="h-8 px-3 rounded-lg bg-white border border-teal-200 text-[#0F6B5D] hover:bg-teal-50 text-[11px] font-semibold"
+                      >
+                        {lang === 'ar' ? 'تحديد موقعي الحالي' : 'Use Current GPS'}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          {lang === 'ar' ? 'خط العرض (Latitude)' : 'Latitude'}
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          dir="ltr"
+                          value={sLat}
+                          onChange={(e) => {
+                            setSLat(e.target.value);
+                            setSettingsDirty(true);
+                          }}
+                          placeholder="15.5007"
+                          className="w-full h-9 px-2.5 rounded-lg border border-slate-200 bg-white text-xs font-mono-num"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          {lang === 'ar' ? 'خط الطول (Longitude)' : 'Longitude'}
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          dir="ltr"
+                          value={sLng}
+                          onChange={(e) => {
+                            setSLng(e.target.value);
+                            setSettingsDirty(true);
+                          }}
+                          placeholder="32.5599"
+                          className="w-full h-9 px-2.5 rounded-lg border border-slate-200 bg-white text-xs font-mono-num"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Store-Wide Trade-In Toggle */}
+                  <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer text-xs">
+                    <input
+                      type="checkbox"
+                      checked={sAcceptsTradeIn}
+                      onChange={(e) => {
+                        setSAcceptsTradeIn(e.target.checked);
+                        setSettingsDirty(true);
+                      }}
+                      className="w-4 h-4 accent-[#0F6B5D]"
+                    />
+                    <span className="font-semibold text-slate-800 flex items-center gap-1.5">
+                      <ArrowLeftRight className="w-3.5 h-3.5 text-[#0F6B5D]" />
+                      {lang === 'ar' ? 'المتجر يقبل استبدال الهواتف (Trade-In)' : 'Store accepts phone Trade-In'}
+                    </span>
+                  </label>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={openQrPoster}
+                      className="h-10 px-4 rounded-xl border border-teal-200 bg-teal-50/70 hover:bg-teal-50 text-[#0F6B5D] text-xs font-semibold flex items-center gap-1.5"
+                    >
+                      <QrCode className="w-4 h-4" />
+                      {lang === 'ar' ? 'طباعة ملصق QR للمتجر' : 'Store QR Poster'}
+                    </button>
                     <button
                       type="submit"
                       disabled={!settingsDirty}
@@ -1371,6 +1725,34 @@ export function MerchantPortal() {
                   </select>
                 </div>
               )}
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  {lang === 'ar' ? 'السعر المرجعي بالدولار (اختياري)' : 'Reference USD Price (Optional)'}
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  dir="ltr"
+                  value={qeUsdPrice}
+                  onChange={(e) => setQeUsdPrice(e.target.value)}
+                  placeholder="350"
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm font-mono-num"
+                />
+              </div>
+
+              <div className="flex items-end pb-1.5">
+                <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={qeTradeIn}
+                    onChange={(e) => setQeTradeIn(e.target.checked)}
+                    className="w-4 h-4 accent-[#0F6B5D]"
+                  />
+                  {lang === 'ar' ? 'يقبل الاستبدال (Trade-In)' : 'Accepts Trade-In'}
+                </label>
+              </div>
             </div>
 
             {/* Connection Lost / Save Failure State */}
@@ -1524,6 +1906,226 @@ export function MerchantPortal() {
           className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-[#0F6B5D]"
         />
       </ConfirmDialog>
+
+      {/* Bulk Price Adjustment Modal */}
+      {bulkPriceOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[1px]">
+          <form
+            onSubmit={handleBulkPriceSubmit}
+            className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Percent className="w-4 h-4 text-[#0F6B5D]" />
+                {lang === 'ar' ? 'تعديل جماعي لأسعار المخزون' : 'Bulk Price Adjustment'}
+              </h3>
+              <button type="button" onClick={() => setBulkPriceOpen(false)} className="p-1 text-slate-400">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl text-xs">
+              <button
+                type="button"
+                onClick={() => setBulkMode('percent')}
+                className={`h-9 rounded-lg font-semibold ${
+                  bulkMode === 'percent' ? 'bg-white text-[#0F6B5D] shadow-sm' : 'text-slate-600'
+                }`}
+              >
+                {lang === 'ar' ? 'نسبة مئوية (+/- %)' : 'Percentage (+/- %)'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setBulkMode('usd_rate')}
+                className={`h-9 rounded-lg font-semibold ${
+                  bulkMode === 'usd_rate' ? 'bg-white text-[#0F6B5D] shadow-sm' : 'text-slate-600'
+                }`}
+              >
+                {lang === 'ar' ? 'سعر صرف الدولار (USD)' : 'USD → SDG Rate'}
+              </button>
+            </div>
+
+            {bulkMode === 'percent' ? (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  {lang === 'ar' ? 'نسبة التغيير (% — سالب للتخفيض، موجب للزيادة)' : 'Change Percentage (% — negative to discount)'}
+                </label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min={-90}
+                  max={500}
+                  required
+                  dir="ltr"
+                  value={bulkPercent}
+                  onChange={(e) => setBulkPercent(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm font-mono-num"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  {lang === 'ar' ? 'سعر صرف الدولار اليوم (ج.س / 1$)' : 'Exchange Rate (SDG per 1 USD)'}
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  required
+                  dir="ltr"
+                  value={bulkUsdRate}
+                  onChange={(e) => setBulkUsdRate(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm font-mono-num"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {lang === 'ar'
+                    ? 'سيتم تحديث الإعلانات التي تحتوي على "سعر مرجعي بالدولار" تلقائياً.'
+                    : 'Applies to all listings that have a Reference USD Price set.'}
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  {lang === 'ar' ? 'تقريب لأقرب (ج.س)' : 'Round To (SDG)'}
+                </label>
+                <select
+                  value={bulkRoundTo}
+                  onChange={(e) => setBulkRoundTo(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs font-mono-num"
+                >
+                  <option value="1">1 SDG</option>
+                  <option value="1000">1,000 SDG</option>
+                  <option value="5000">5,000 SDG</option>
+                  <option value="10000">10,000 SDG</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  {lang === 'ar' ? 'نطاق التحديث' : 'Condition Scope'}
+                </label>
+                <select
+                  value={bulkCondition}
+                  onChange={(e) => setBulkCondition(e.target.value as 'all' | 'new' | 'used')}
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs"
+                >
+                  <option value="all">{lang === 'ar' ? 'الكل (جديد ومستعمل)' : 'All Listings'}</option>
+                  <option value="new">{lang === 'ar' ? 'الجديد فقط' : 'New Only'}</option>
+                  <option value="used">{lang === 'ar' ? 'المستعمل فقط' : 'Used Only'}</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setBulkPriceOpen(false)}
+                className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700"
+              >
+                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="submit"
+                disabled={bulkBusy}
+                className="h-10 px-5 rounded-xl bg-[#0F6B5D] hover:bg-[#0B5348] text-white text-xs font-semibold disabled:opacity-50"
+              >
+                {bulkBusy
+                  ? lang === 'ar'
+                    ? 'جاري التحديث...'
+                    : 'Updating...'
+                  : lang === 'ar'
+                    ? 'تطبيق التعديل الجماعي'
+                    : 'Apply Bulk Update'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Printable Store QR Code Poster Modal */}
+      {qrModalOpen && (
+        <div className="fixed inset-0 z-[75] flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-[1px]">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5 text-center">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-[#0F6B5D]">
+                {lang === 'ar' ? 'ملصق متجرك الموثّق' : 'Verified Store Poster'}
+              </span>
+              <button type="button" onClick={() => setQrModalOpen(false)} className="p-1 text-slate-400">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-6 rounded-2xl border-2 border-[#0F6B5D] bg-gradient-to-b from-teal-50/50 to-white space-y-3">
+              <p className="text-xs font-bold text-[#0F6B5D] tracking-wide">
+                {lang === 'ar' ? 'سودان فونز · Sudan Phones' : 'Sudan Phones · سودان فونز'}
+              </p>
+              <h3 className="text-lg font-extrabold text-slate-900">
+                {tText(activeMerchantStore.name, lang)}
+              </h3>
+              <p className="text-xs text-slate-600">
+                {formatCity(activeMerchantStore.city, lang)} · {tText(activeMerchantStore.address, lang)}
+              </p>
+              {qrDataUrl && (
+                <img
+                  src={qrDataUrl}
+                  alt="Store QR Code"
+                  className="w-52 h-52 mx-auto rounded-xl border border-slate-200 bg-white p-2 shadow-sm"
+                />
+              )}
+              <p className="text-xs font-semibold text-slate-800">
+                {lang === 'ar'
+                  ? 'امسح الكود لمشاهدة جميع هواتفنا وأسعار اليوم المحدّثة'
+                  : "Scan to browse our live phone inventory & today's SDG prices"}
+              </p>
+              <p dir="ltr" className="text-[10px] font-mono-num text-slate-400 break-all">
+                {storePublicUrl}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-2.5">
+              {qrDataUrl && (
+                <a
+                  href={qrDataUrl}
+                  download={`store-${activeMerchantStore.id}-qr.png`}
+                  className="h-10 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <Download className="w-4 h-4" />
+                  {lang === 'ar' ? 'تحميل PNG' : 'Download PNG'}
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="h-10 px-5 rounded-xl bg-[#0F6B5D] hover:bg-[#0B5348] text-white text-xs font-semibold flex items-center gap-1.5"
+              >
+                <Printer className="w-4 h-4" />
+                {lang === 'ar' ? 'طباعة الملصق' : 'Print Poster'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Archive / Delete Listing Confirmation */}
+      <ConfirmDialog
+        open={Boolean(listingToArchive)}
+        title={lang === 'ar' ? 'حذف / أرشفة الإعلان؟' : 'Archive / Delete Listing?'}
+        description={
+          lang === 'ar'
+            ? `سيتم إخفاء "${listingToArchive?.model}" فوراً من تطبيق العملاء وإزالته من المخزون النشط.`
+            : `This will immediately hide "${listingToArchive?.model}" from customers and archive it.`
+        }
+        confirmLabel={lang === 'ar' ? 'نعم، حذف الإعلان' : 'Yes, Archive'}
+        cancelLabel={lang === 'ar' ? 'إلغاء' : 'Cancel'}
+        tone="danger"
+        onConfirm={async () => {
+          if (listingToArchive) {
+            await archiveListing(listingToArchive.id);
+          }
+          setListingToArchive(null);
+        }}
+        onCancel={() => setListingToArchive(null)}
+      />
 
       {/* Remove Staff Confirmation */}
       <ConfirmDialog

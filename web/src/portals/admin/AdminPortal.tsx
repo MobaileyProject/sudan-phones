@@ -1,17 +1,17 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Check,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Clock,
-  Eye,
+  ExternalLink,
   FileSearch,
+  FileText,
   Flag,
-  KeyRound,
   LayoutGrid,
   Lock,
+  LogOut,
   Maximize2,
   Menu,
   Search,
@@ -19,13 +19,13 @@ import {
   ShieldAlert,
   ShieldCheck,
   Slash,
-  Store as StoreIcon,
   Trash2,
   UserCheck,
   Users,
   X,
   XCircle,
 } from 'lucide-react';
+import { api } from '../../api/client';
 import {
   AdminPermission,
   AdminRole,
@@ -57,7 +57,7 @@ import {
   VerificationStatusLabel,
 } from '../../components/DesignSystem';
 
-type AdminSection = 'overview' | 'verification' | 'moderation' | 'roles' | 'audit' | 'auth';
+type AdminSection = 'overview' | 'verification' | 'moderation' | 'roles' | 'audit';
 
 const ALL_PERMISSIONS: { id: AdminPermission; group: { ar: string; en: string }; label: { ar: string; en: string } }[] = [
   { id: 'review_stores', group: { ar: 'التوثيق', en: 'Verification' }, label: { ar: 'مراجعة طلبات المتاجر واتخاذ قرارات التوثيق', en: 'Review store applications & issue verification decisions' } },
@@ -72,8 +72,13 @@ const ALL_PERMISSIONS: { id: AdminPermission; group: { ar: string; en: string };
 export function AdminPortal() {
   const {
     lang,
+    session,
+    me,
+    loginWithBackend,
+    logoutSession,
     stores,
     listings,
+    adminOverview,
     adminRoles,
     adminUsers,
     auditLogs,
@@ -87,6 +92,7 @@ export function AdminPortal() {
     customerReports,
     resolveCustomerReport,
     saveAdminRole,
+    deleteAdminRole,
     assignAdminRole,
     createDualApprovalRequest,
     resolveDualApproval,
@@ -98,25 +104,29 @@ export function AdminPortal() {
   const [section, setSection] = useState<AdminSection>('overview');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  // Admin Sign-in & Access-Denied Demo State
-  const [authView, setAuthView] = useState<'signin' | 'denied'>('signin');
-  const [adminEmail, setAdminEmail] = useState('tariq@sudanphones.sd');
+  // Real Admin Sign-In State
+  const [adminIdentifier, setAdminIdentifier] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminLoginBusy, setAdminLoginBusy] = useState(false);
+  const [adminLoginError, setAdminLoginError] = useState('');
 
-  // A-02 / A-03 / A-04 Verification Queue & Review
+  // Verification Queue & Review
   const [qSearch, setQSearch] = useState('');
   const [qStatus, setQStatus] = useState<'all' | VerificationStatus>('all');
   const [qCity, setQCity] = useState<'all' | CityId>('all');
-  const [selectedStoreId, setSelectedStoreId] = useState<string | null>('store-tuti');
-  const [zoomDoc, setZoomDoc] = useState<{ title: string; url: string; fileName: string } | null>(null);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
+  const [liveDocs, setLiveDocs] = useState<Array<{ id: string; kind: string; content_type?: string; url: string; fileName: string }>>([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [zoomDoc, setZoomDoc] = useState<{ title: string; url: string; fileName: string; isPdf?: boolean } | null>(null);
   const [checklist, setChecklist] = useState<Record<string, boolean>>({
-    id_clear: true,
-    name_matches: true,
+    id_clear: false,
+    name_matches: false,
     storefront_real: false,
   });
   const [decisionModal, setDecisionModal] = useState<'approved' | 'changes_requested' | 'rejected' | null>(null);
   const [decisionNote, setDecisionNote] = useState('');
 
-  // A-05 Listing Moderation
+  // Listing Moderation
   const [modSearch, setModSearch] = useState('');
   const [modStatus, setModStatus] = useState<'all' | PublicationStatus>('all');
   const [modActionModal, setModActionModal] = useState<{
@@ -126,30 +136,30 @@ export function AdminPortal() {
   const [modReason, setModReason] = useState('');
   const [suspendViaDual, setSuspendViaDual] = useState(true);
 
-  // A-06 Roles & Permissions
+  // Roles & Permissions
   const [editingRole, setEditingRole] = useState<AdminRole | null>(null);
   const [confirmRoleSave, setConfirmRoleSave] = useState(false);
 
-  // A-07 Audit Logs & Dual Approval
+  // Audit Logs & Dual Approval
   const [auditSearch, setAuditSearch] = useState('');
   const [auditActorFilter, setAuditActorFilter] = useState('all');
   const [auditTargetFilter, setAuditTargetFilter] = useState<'all' | 'store' | 'listing' | 'role' | 'approval'>('all');
   const [expandedAuditId, setExpandedAuditId] = useState<string | null>(null);
   const [newDualReqOpen, setNewDualReqOpen] = useState(false);
-  const [dualTargetStoreId, setDualTargetStoreId] = useState('store-redsea');
-  const [dualReqReason, setDualReqReason] = useState(
-    'طلب تعليق مؤقت لحين التحقق من شكاوى تطابق الأسعار.'
-  );
+  const [dualTargetStoreId, setDualTargetStoreId] = useState('');
+  const [dualReqReason, setDualReqReason] = useState('');
 
-  // Derived metrics for A-01 Founder Overview
-  const verifiedStoresCount = stores.filter((s) => s.verificationStatus === 'verified').length;
-  const pendingApplicationsCount = stores.filter(
-    (s) => s.verificationStatus === 'submitted' || s.verificationStatus === 'changes_requested'
-  ).length;
-  const liveListingsCount = listings.filter((l) => l.publicationStatus === 'published').length;
-  const flaggedListingsCount = listings.filter((l) => l.publicationStatus === 'flagged').length;
+  // Derived metrics for Founder Overview (prefer live backend aggregates)
+  const verifiedStoresCount = adminOverview?.verified_stores ?? stores.filter((s) => s.verificationStatus === 'verified').length;
+  const totalStoresCount = adminOverview?.stores ?? stores.length;
+  const pendingApplicationsCount =
+    adminOverview?.pending_verifications ??
+    stores.filter((s) => s.verificationStatus === 'submitted' || s.verificationStatus === 'changes_requested').length;
+  const liveListingsCount = adminOverview?.published_listings ?? listings.filter((l) => l.publicationStatus === 'published').length;
+  const flaggedListingsCount = adminOverview?.flagged_listings ?? listings.filter((l) => l.publicationStatus === 'flagged').length;
   const openCustomerReports = customerReports.filter((r) => r.status === 'open');
-  const pendingDualCount = dualApprovals.filter((d) => d.status === 'awaiting_second_approval').length;
+  const pendingDualCount = adminOverview?.pending_approvals ?? dualApprovals.filter((d) => d.status === 'awaiting_second_approval').length;
+  const contactLeads7d = adminOverview?.contact_leads_7d ?? 0;
 
   // Filtered Verification Queue (A-02)
   const queueStores = useMemo(() => {
@@ -168,7 +178,47 @@ export function AdminPortal() {
     });
   }, [stores, qSearch, qStatus, qCity]);
 
-  const selectedStore: Store | undefined = stores.find((s) => s.id === selectedStoreId);
+  const selectedStore: Store | undefined = stores.find((s) => s.id === selectedStoreId) || queueStores[0];
+
+  // Fetch live private verification documents (Images + PDFs) when selecting an application
+  useEffect(() => {
+    const verifId = (selectedStore as any)?._verificationId;
+    if (!verifId || !session.authenticated || session.role !== 'admin') {
+      setLiveDocs([]);
+      return;
+    }
+    let cancelled = false;
+    setDocsLoading(true);
+    api
+      .getAdminVerificationDocs(verifId)
+      .then((res) => {
+        if (cancelled) return;
+        const docs = (res.data || []).map((d: any, idx: number) => ({
+          id: String(d.id || idx),
+          kind: d.kind || 'document',
+          content_type: d.content_type || '',
+          url: d.url || '',
+          fileName: d.file_name || `${d.kind || 'doc'}-${idx + 1}`,
+        }));
+        setLiveDocs(docs);
+      })
+      .catch(() => {
+        if (!cancelled) setLiveDocs([]);
+      })
+      .finally(() => {
+        if (!cancelled) setDocsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedStore?.id, session.authenticated, session.role]);
+
+  useEffect(() => {
+    if (!dualTargetStoreId) {
+      const firstVerified = stores.find((s) => s.verificationStatus === 'verified');
+      if (firstVerified) setDualTargetStoreId(firstVerified.id);
+    }
+  }, [stores, dualTargetStoreId]);
 
   // Filtered Moderation Queue (A-05)
   const modListings = useMemo(() => {
@@ -251,12 +301,11 @@ export function AdminPortal() {
     icon: React.ComponentType<{ className?: string }>;
     count?: number;
   }[] = [
-    { id: 'overview', ar: 'نظرة المؤسس (A-01)', en: 'Founder Overview (A-01)', icon: LayoutGrid },
-    { id: 'verification', ar: 'توثيق المتاجر (A-02–04)', en: 'Store Verification (A-02–04)', icon: FileSearch, count: pendingApplicationsCount },
-    { id: 'moderation', ar: 'إشراف الإعلانات (A-05)', en: 'Listing Moderation (A-05)', icon: Flag, count: flaggedListingsCount + openCustomerReports.length },
-    { id: 'roles', ar: 'الأدوار والصلاحيات (A-06)', en: 'Roles & Permissions (A-06)', icon: Users },
-    { id: 'audit', ar: 'التدقيق والموافقة المزدوجة (A-07)', en: 'Audit & Dual Approval (A-07)', icon: Shield, count: pendingDualCount },
-    { id: 'auth', ar: 'دخول الإدارة / رفض الوصول', en: 'Admin Auth / Access Denied', icon: KeyRound },
+    { id: 'overview', ar: 'نظرة عامة للمؤسس', en: 'Founder Overview', icon: LayoutGrid },
+    { id: 'verification', ar: 'توثيق المتاجر', en: 'Store Verification', icon: FileSearch, count: pendingApplicationsCount },
+    { id: 'moderation', ar: 'إشراف الإعلانات', en: 'Listing Moderation', icon: Flag, count: flaggedListingsCount + openCustomerReports.length },
+    { id: 'roles', ar: 'الأدوار والصلاحيات', en: 'Roles & Permissions', icon: Users },
+    { id: 'audit', ar: 'التدقيق والموافقة المزدوجة', en: 'Audit & Dual Approval', icon: Shield, count: pendingDualCount },
   ];
 
   // Distinct Dark Slate-Indigo Administrative Sidebar (visually separated from Merchant portal)
@@ -314,10 +363,20 @@ export function AdminPortal() {
         })}
       </nav>
 
-      {/* Authenticated Admin Identity Footer (No mock role switcher in ordinary admin chrome) */}
-      <div className="p-3.5 border-t border-slate-800 bg-slate-950/60 space-y-1 text-[11px]">
-        <p className="font-bold text-white truncate">{tText(activeAdminUser.name, lang)}</p>
-        <p className="text-slate-400 truncate">{tText(activeAdminRole.name, lang)}</p>
+      {/* Authenticated Admin Identity Footer */}
+      <div className="p-3.5 border-t border-slate-800 bg-slate-950/60 space-y-2 text-[11px]">
+        <div>
+          <p className="font-bold text-white truncate">{me?.name || tText(activeAdminUser.name, lang)}</p>
+          <p className="text-slate-400 truncate">{tText(activeAdminRole.name, lang)}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => logoutSession()}
+          className="w-full h-8 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold flex items-center justify-center gap-1.5"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          {lang === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}
+        </button>
       </div>
     </div>
   );
@@ -350,6 +409,131 @@ export function AdminPortal() {
       </div>
     </div>
   );
+
+  if (!session.authenticated || session.role !== 'admin') {
+    return (
+      <div className="min-h-[calc(100vh-52px)] bg-slate-100/80 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
+          {session.authenticated && session.role !== 'admin' ? (
+            <div className="py-4 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center text-red-700 mx-auto">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <h2 className="text-base font-bold text-slate-900">
+                {lang === 'ar' ? 'الوصول مرفوض (403)' : 'Access Denied (403)'}
+              </h2>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                {lang === 'ar'
+                  ? 'حسابك الحالي لا يملك صلاحيات الإدارة. يرجى تسجيل الخروج والدخول بحساب مؤسس أو مشرف مخوّل.'
+                  : 'Your current account does not hold administrative privileges. Sign out and sign in with an authorized admin account.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => logoutSession()}
+                className="h-10 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold"
+              >
+                {lang === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}
+              </button>
+            </div>
+          ) : (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setAdminLoginError('');
+                setAdminLoginBusy(true);
+                try {
+                  const idVal = adminIdentifier.trim();
+                  const payload = idVal.includes('@')
+                    ? { email: idVal, password: adminPassword }
+                    : { phone: idVal, password: adminPassword };
+                  const sess = await loginWithBackend(payload);
+                  if (sess.role !== 'admin') {
+                    setAdminLoginError(
+                      lang === 'ar'
+                        ? 'هذا الحساب ليس لديه صلاحيات إدارية.'
+                        : 'This account does not have administrative permissions.'
+                    );
+                  } else {
+                    pushToast('success', {
+                      ar: 'تم تسجيل الدخول إلى لوحة الإدارة.',
+                      en: 'Signed in to Admin Console.',
+                    });
+                  }
+                } catch (err: any) {
+                  setAdminLoginError(
+                    err?.message || (lang === 'ar' ? 'بيانات الدخول غير صحيحة.' : 'Invalid credentials.')
+                  );
+                } finally {
+                  setAdminLoginBusy(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    {lang === 'ar' ? 'تسجيل دخول إدارة سودان فونز' : 'Sudan Phones Admin Sign-In'}
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    {lang === 'ar'
+                      ? 'مخصص للمؤسسين وفريق التوثيق والإشراف المخوّل فقط.'
+                      : 'Restricted to authorized founders, verifiers, and moderators.'}
+                  </p>
+                </div>
+              </div>
+              {adminLoginError && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium">
+                  {adminLoginError}
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  {lang === 'ar' ? 'البريد الإلكتروني أو رقم الهاتف' : 'Admin Email or Phone'}
+                </label>
+                <input
+                  type="text"
+                  dir="ltr"
+                  required
+                  value={adminIdentifier}
+                  onChange={(e) => setAdminIdentifier(e.target.value)}
+                  placeholder="admin@sudanphones.sd"
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm font-mono-num"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  {lang === 'ar' ? 'كلمة المرور' : 'Password'}
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={adminLoginBusy}
+                className="w-full h-11 rounded-xl bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white text-sm font-semibold"
+              >
+                {adminLoginBusy
+                  ? lang === 'ar'
+                    ? 'جاري التحقق...'
+                    : 'Signing in...'
+                  : lang === 'ar'
+                    ? 'دخول لوحة الإدارة'
+                    : 'Sign In to Admin Console'}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-52px)] flex bg-slate-100/70">
@@ -406,110 +590,17 @@ export function AdminPortal() {
         </header>
 
         <main className="flex-1 p-4 lg:p-6 max-w-6xl w-full mx-auto">
-          {/* ADMIN AUTH & ACCESS DENIED */}
-          {section === 'auth' && (
-            <div className="max-w-md mx-auto my-6 bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
-              <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl text-xs">
-                <button
-                  type="button"
-                  onClick={() => setAuthView('signin')}
-                  className={`h-9 rounded-lg font-semibold ${
-                    authView === 'signin' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-                  }`}
-                >
-                  {lang === 'ar' ? 'دخول المشرفين' : 'Admin Sign-In'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAuthView('denied')}
-                  className={`h-9 rounded-lg font-semibold ${
-                    authView === 'denied' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-                  }`}
-                >
-                  {lang === 'ar' ? 'حالة رفض الوصول' : 'Access Denied State'}
-                </button>
-              </div>
-
-              {authView === 'signin' ? (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    pushToast('success', {
-                      ar: 'تم تسجيل الدخول إلى لوحة المؤسس.',
-                      en: 'Authenticated into Founder/Admin Console.',
-                    });
-                    setSection('overview');
-                  }}
-                  className="space-y-4"
-                >
-                  <div className="space-y-1">
-                    <h2 className="text-base font-bold text-slate-900">
-                      {lang === 'ar' ? 'تسجيل دخول إدارة سودان فونز' : 'Sudan Phones Admin Sign-In'}
-                    </h2>
-                    <p className="text-xs text-slate-500">
-                      {lang === 'ar'
-                        ? 'مخصص للمؤسسين وفريق التوثيق والإشراف المخوّل فقط.'
-                        : 'Restricted to authorized founders, verifiers, and moderators.'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      {lang === 'ar' ? 'البريد الإداري' : 'Administrative Email'}
-                    </label>
-                    <input
-                      type="email"
-                      dir="ltr"
-                      value={adminEmail}
-                      onChange={(e) => setAdminEmail(e.target.value)}
-                      className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm font-mono-num"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      {lang === 'ar' ? 'كلمة المرور + التحقق الثنائي' : 'Password + 2FA Key'}
-                    </label>
-                    <input
-                      type="password"
-                      defaultValue="••••••••••••"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-200 text-sm"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full h-11 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold"
-                  >
-                    {lang === 'ar' ? 'دخول لوحة الإدارة' : 'Sign In to Admin Console'}
-                  </button>
-                </form>
-              ) : (
-                <div className="py-4 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-red-50 border border-red-200 flex items-center justify-center text-red-700 mx-auto">
-                    <ShieldAlert className="w-6 h-6" />
-                  </div>
-                  <h2 className="text-base font-bold text-slate-900">
-                    {lang === 'ar' ? 'الوصول مرفوض (403)' : 'Access Denied (403)'}
-                  </h2>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    {lang === 'ar'
-                      ? 'حسابك المسجل هو حساب تاجر ولا يملك صلاحيات الدخول إلى بوابة الإدارة والمؤسس. تم تسجيل محاولة الوصول في سجل الأمان.'
-                      : 'Your account is a merchant account and does not hold administrative privileges. Return to the Merchant Portal.'}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* A-01: FOUNDER OVERVIEW */}
+          {/* FOUNDER OVERVIEW */}
           {section === 'overview' && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
-                  {lang === 'ar' ? 'نظرة عامة على المنصة (A-01)' : 'Platform-Wide Founder Overview (A-01)'}
+                  {lang === 'ar' ? 'نظرة عامة على المنصة' : 'Platform-Wide Founder Overview'}
                 </h2>
                 <p className="text-xs text-slate-500">
                   {lang === 'ar'
-                    ? 'مؤشرات السوق الكلية عبر المدن التجريبية الثلاث — منفصلة عن مقاييس المتاجر الفردية.'
-                    : 'Platform-wide operations metrics across Port Sudan, Khartoum, and Omdurman — distinct from individual merchant analytics.'}
+                    ? 'مؤشرات السوق الكلية الحية من قاعدة البيانات عبر جميع ولايات السودان.'
+                    : 'Live platform-wide operations metrics from the database across Sudan.'}
                 </p>
               </div>
 
@@ -519,7 +610,7 @@ export function AdminPortal() {
                   <p className="text-xs text-slate-500">{lang === 'ar' ? 'المتاجر الموثّقة' : 'Verified Stores'}</p>
                   <p className="text-2xl font-bold text-slate-900 font-mono-num">{verifiedStoresCount}</p>
                   <p className="text-[11px] text-slate-500">
-                    {lang === 'ar' ? `من إجمالي ${stores.length} متاجر مسجلة` : `out of ${stores.length} total accounts`}
+                    {lang === 'ar' ? `من إجمالي ${totalStoresCount} متاجر مسجلة` : `out of ${totalStoresCount} total accounts`}
                   </p>
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-1">
@@ -544,52 +635,29 @@ export function AdminPortal() {
                 </div>
                 <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-1">
                   <p className="text-xs text-slate-500">
-                    {lang === 'ar' ? 'عمليات البحث اليومية (تقديري)' : 'Daily Discovery Searches'}
+                    {lang === 'ar' ? 'نقرات التواصل (آخر 7 أيام)' : 'Buyer Contact Leads (7d)'}
                   </p>
-                  <p className="text-2xl font-bold text-blue-700 font-mono-num">3,840</p>
-                  <p className="text-[11px] text-emerald-700 font-medium">
-                    {lang === 'ar' ? '+14% مقارنة بالأسبوع الماضي' : '+14% vs prior 7 days'}
+                  <p className="text-2xl font-bold text-blue-700 font-mono-num">{contactLeads7d}</p>
+                  <p className="text-[11px] text-slate-500">
+                    {lang === 'ar' ? `${openCustomerReports.length} بلاغ عميل مفتوح` : `${openCustomerReports.length} open customer reports`}
                   </p>
                 </div>
               </div>
 
-              {/* Discovery Trend + Actionable Workload Shortcuts */}
+              {/* Regional Distribution + Actionable Workload Shortcuts */}
               <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-5">
                 <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold text-slate-900">
-                      {lang === 'ar' ? 'نشاط البحث والاستكشاف اليومي (بورتسودان · الخرطوم · أم درمان)' : 'Platform Discovery Activity by Day'}
+                      {lang === 'ar' ? 'توزيع المتاجر والإعلانات حسب الولاية' : 'Live Store & Listing Distribution by State'}
                     </h3>
-                    <span className="text-[11px] font-mono-num text-slate-500">Nov 13 – Nov 19</span>
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-2 items-end h-40 pt-2">
-                    {[
-                      { dAr: 'السبت', dEn: 'Sat', v: 2900 },
-                      { dAr: 'الأحد', dEn: 'Sun', v: 3240 },
-                      { dAr: 'الإثنين', dEn: 'Mon', v: 3110 },
-                      { dAr: 'الثلاثاء', dEn: 'Tue', v: 3560 },
-                      { dAr: 'الأربعاء', dEn: 'Wed', v: 3420 },
-                      { dAr: 'الخميس', dEn: 'Thu', v: 3840 },
-                      { dAr: 'الجمعة', dEn: 'Fri', v: 2680 },
-                    ].map((row, idx) => {
-                      const h = Math.round((row.v / 3900) * 112);
-                      return (
-                        <div key={idx} className="flex flex-col items-center gap-1.5">
-                          <span className="text-[10px] font-mono-num text-slate-500">
-                            {(row.v / 1000).toFixed(1)}k
-                          </span>
-                          <div style={{ height: `${h}px` }} className="w-6 sm:w-8 rounded-t bg-blue-600/85" />
-                          <span className="text-[10px] font-medium text-slate-600">
-                            {lang === 'ar' ? row.dAr : row.dEn}
-                          </span>
-                        </div>
-                      );
-                    })}
+                    <span className="text-[11px] font-mono-num text-emerald-700 font-semibold">
+                      {lang === 'ar' ? 'بيانات حية' : 'Live DB'}
+                    </span>
                   </div>
 
                   {/* Active States Distribution */}
-                  <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-100 text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                     {CITIES.filter(
                       (c) =>
                         stores.some((s) => s.city === c.id) ||
@@ -627,7 +695,7 @@ export function AdminPortal() {
                   >
                     <div>
                       <p className="text-xs font-bold text-slate-900">
-                        {lang === 'ar' ? 'قائمة توثيق المتاجر (A-02)' : 'Store Verification Queue (A-02)'}
+                        {lang === 'ar' ? 'قائمة توثيق المتاجر' : 'Store Verification Queue'}
                       </p>
                       <p className="text-[11px] text-slate-500 mt-0.5">
                         {lang === 'ar' ? `${pendingApplicationsCount} طلبات بانتظار المراجعة` : `${pendingApplicationsCount} applications awaiting action`}
@@ -645,14 +713,14 @@ export function AdminPortal() {
                   >
                     <div>
                       <p className="text-xs font-bold text-slate-900">
-                        {lang === 'ar' ? 'إشراف الإعلانات المنشورة (A-05)' : 'Post-Publication Moderation (A-05)'}
+                        {lang === 'ar' ? 'إشراف الإعلانات المنشورة' : 'Post-Publication Moderation'}
                       </p>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        {lang === 'ar' ? `${flaggedListingsCount} إعلان مُعلّم للفحص` : `${flaggedListingsCount} flagged listings to inspect`}
+                        {lang === 'ar' ? `${flaggedListingsCount} إعلان مُعلّم · ${openCustomerReports.length} بلاغ` : `${flaggedListingsCount} flagged · ${openCustomerReports.length} reports`}
                       </p>
                     </div>
                     <span className="h-7 px-2.5 rounded-lg bg-orange-100 text-orange-900 text-xs font-mono-num font-bold flex items-center">
-                      {flaggedListingsCount}
+                      {flaggedListingsCount + openCustomerReports.length}
                     </span>
                   </button>
 
@@ -663,7 +731,7 @@ export function AdminPortal() {
                   >
                     <div>
                       <p className="text-xs font-bold text-slate-900">
-                        {lang === 'ar' ? 'طلبات الموافقة المزدوجة (A-07)' : 'Dual Approval Requests (A-07)'}
+                        {lang === 'ar' ? 'طلبات الموافقة المزدوجة' : 'Dual Approval Requests'}
                       </p>
                       <p className="text-[11px] text-slate-500 mt-0.5">
                         {lang === 'ar' ? `${pendingDualCount} طلب بانتظار موافقة ثانية` : `${pendingDualCount} awaiting second approver`}
@@ -687,12 +755,12 @@ export function AdminPortal() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-bold text-slate-900">
-                      {lang === 'ar' ? 'قائمة توثيق المتاجر وفحص المستندات (A-02 / A-03 / A-04)' : 'Store Verification Queue & Evidence Review (A-02–A-04)'}
+                      {lang === 'ar' ? 'قائمة توثيق المتاجر وفحص المستندات' : 'Store Verification Queue & Evidence Review'}
                     </h2>
                     <p className="text-xs text-slate-500">
                       {lang === 'ar'
-                        ? 'مستندات التوثيق خاصة وسرية ولا تظهر للعملاء أبداً. القرار هنا ينعكس فوراً في بوابة التاجر (M-04).'
-                        : 'Private documents never appear publicly. Approving or requesting changes updates Merchant M-04 immediately.'}
+                        ? 'مستندات التوثيق خاصة وسرية ولا تظهر للعملاء أبداً. القرار هنا ينعكس فوراً في بوابة التاجر.'
+                        : 'Private documents never appear publicly. Approving or requesting changes updates the merchant store immediately.'}
                     </p>
                   </div>
                 </div>
@@ -817,12 +885,12 @@ export function AdminPortal() {
                         </span>
                       </div>
 
-                      {/* Documents Grid with Zoom Inspection — Strictly Founder/Private-Evidence Permission Only */}
+                      {/* Documents Grid with Zoom & PDF Inspection — Strictly Founder/Private-Evidence Permission Only */}
                       <div>
                         <h4 className="text-xs font-bold text-slate-900 mb-2.5">
                           {lang === 'ar'
-                            ? `المستندات المرفقة (${selectedStore.documents.length})`
-                            : `Submitted Private Documents (${selectedStore.documents.length})`}
+                            ? `المستندات المرفقة (${liveDocs.length || selectedStore.documents.length})`
+                            : `Submitted Private Documents (${liveDocs.length || selectedStore.documents.length})`}
                         </h4>
                         {!hasAdminPermission('view_private_evidence') ? (
                           <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-xs text-red-900 flex items-start gap-2.5">
@@ -833,44 +901,80 @@ export function AdminPortal() {
                                 : 'Private identity documents (National ID & business filings) are restricted strictly to authorized founders.'}
                             </p>
                           </div>
-                        ) : selectedStore.documents.length === 0 ? (
+                        ) : docsLoading ? (
+                          <p className="text-xs text-slate-500 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                            {lang === 'ar' ? 'جاري تحميل روابط المستندات السرية...' : 'Loading private evidence links...'}
+                          </p>
+                        ) : liveDocs.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {liveDocs.map((doc) => {
+                              const isPdf =
+                                doc.content_type?.includes('pdf') ||
+                                doc.fileName.toLowerCase().endsWith('.pdf') ||
+                                doc.url.toLowerCase().includes('.pdf');
+                              return (
+                                <div
+                                  key={doc.id}
+                                  className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50"
+                                >
+                                  <div
+                                    className="relative group cursor-zoom-in"
+                                    onClick={() =>
+                                      setZoomDoc({
+                                        title: doc.kind,
+                                        url: doc.url,
+                                        fileName: doc.fileName,
+                                        isPdf,
+                                      })
+                                    }
+                                  >
+                                    {isPdf ? (
+                                      <div className="aspect-[4/3] bg-slate-100 flex flex-col items-center justify-center gap-2 text-slate-700">
+                                        <FileText className="w-8 h-8 text-red-600" />
+                                        <span className="text-[11px] font-bold">PDF Document</span>
+                                      </div>
+                                    ) : (
+                                      <SafeImage src={doc.url} alt={doc.fileName} aspectClass="aspect-[4/3]" />
+                                    )}
+                                    <div className="absolute inset-0 bg-slate-950/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <span className="px-2.5 py-1 rounded-lg bg-white text-slate-900 text-[11px] font-semibold flex items-center gap-1">
+                                        <Maximize2 className="w-3 h-3" />
+                                        {lang === 'ar' ? 'فحص مكبّر' : 'Inspect'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="p-2.5 flex items-center justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <p className="text-[11px] font-bold text-slate-900 truncate">{doc.kind}</p>
+                                      <p dir="ltr" className="text-[10px] font-mono-num text-slate-500 truncate">
+                                        {doc.fileName}
+                                      </p>
+                                    </div>
+                                    <a
+                                      href={doc.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-600 shrink-0"
+                                      title={lang === 'ar' ? 'فتح في نافذة جديدة' : 'Open in new tab'}
+                                    >
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                    </a>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
                           <p className="text-xs text-slate-500 p-4 rounded-xl bg-slate-50 border border-slate-200">
                             {lang === 'ar' ? 'لم يقم المتجر برفع مستندات بعد.' : 'No verification documents uploaded yet.'}
                           </p>
-                        ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            {selectedStore.documents.map((doc) => (
-                              <div
-                                key={doc.id}
-                                className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50"
-                              >
-                                <div className="relative group cursor-zoom-in" onClick={() => setZoomDoc({ title: tText(doc.label, lang), url: doc.imageUrl, fileName: doc.fileName })}>
-                                  <SafeImage src={doc.imageUrl} alt={doc.fileName} aspectClass="aspect-[4/3]" />
-                                  <div className="absolute inset-0 bg-slate-950/35 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <span className="px-2.5 py-1 rounded-lg bg-white text-slate-900 text-[11px] font-semibold flex items-center gap-1">
-                                      <Maximize2 className="w-3 h-3" />
-                                      {lang === 'ar' ? 'فحص مكبّر' : 'Inspect'}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="p-2.5 space-y-0.5">
-                                  <p className="text-[11px] font-bold text-slate-900 truncate">
-                                    {tText(doc.label, lang)}
-                                  </p>
-                                  <p dir="ltr" className="text-[10px] font-mono-num text-slate-500 truncate">
-                                    {doc.fileName}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
                         )}
                       </div>
 
                       {/* Reviewer Evidence Checklist */}
                       <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
                         <p className="font-bold text-slate-900">
-                          {lang === 'ar' ? 'قائمة التحقق للمراجع (A-03)' : 'Reviewer Evidence Checklist (A-03)'}
+                          {lang === 'ar' ? 'قائمة التحقق للمراجع' : 'Reviewer Evidence Checklist'}
                         </p>
                         {(
                           [
@@ -1249,7 +1353,7 @@ export function AdminPortal() {
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-bold text-slate-900">
-                      {lang === 'ar' ? 'الأدوار والصلاحيات الإدارية (A-06)' : 'Admin Roles & Permissions (A-06)'}
+                      {lang === 'ar' ? 'الأدوار والصلاحيات الإدارية' : 'Admin Roles & Permissions'}
                     </h2>
                     <p className="text-xs text-slate-500">
                       {lang === 'ar'
@@ -1305,13 +1409,25 @@ export function AdminPortal() {
                           })}
                         </ul>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setEditingRole({ ...role, permissions: [...role.permissions] })}
-                        className="w-full h-9 rounded-xl border border-slate-200 hover:border-blue-400 text-xs font-semibold text-slate-800"
-                      >
-                        {lang === 'ar' ? 'تعديل الصلاحيات' : 'Edit Permissions'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingRole({ ...role, permissions: [...role.permissions] })}
+                          className="flex-1 h-9 rounded-xl border border-slate-200 hover:border-blue-400 text-xs font-semibold text-slate-800"
+                        >
+                          {lang === 'ar' ? 'تعديل الصلاحيات' : 'Edit Permissions'}
+                        </button>
+                        {role.id !== 'founder' && (
+                          <button
+                            type="button"
+                            onClick={() => deleteAdminRole(role.id)}
+                            title={lang === 'ar' ? 'طلب حذف الدور' : 'Request Role Deletion'}
+                            className="h-9 px-3 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-semibold"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1360,7 +1476,7 @@ export function AdminPortal() {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <h2 className="text-base font-bold text-slate-900">
-                        {lang === 'ar' ? 'الموافقة المزدوجة للإجراءات الحساسة (A-07)' : 'Sensitive-Action Dual Approval Queue (A-07)'}
+                        {lang === 'ar' ? 'الموافقة المزدوجة للإجراءات الحساسة' : 'Sensitive-Action Dual Approval Queue'}
                       </h2>
                       <p className="text-xs text-slate-500 mt-0.5">
                         {lang === 'ar'
@@ -1667,7 +1783,15 @@ export function AdminPortal() {
             </button>
           </div>
           <div className="max-w-3xl w-full mx-auto my-auto">
-            <SafeImage src={zoomDoc.url} alt={zoomDoc.title} aspectClass="aspect-[16/10]" className="rounded-xl" />
+            {zoomDoc.isPdf ? (
+              <iframe
+                src={zoomDoc.url}
+                title={zoomDoc.title}
+                className="w-full h-[70vh] rounded-xl bg-white"
+              />
+            ) : (
+              <SafeImage src={zoomDoc.url} alt={zoomDoc.title} aspectClass="aspect-[16/10]" className="rounded-xl" />
+            )}
           </div>
           <div className="text-center text-xs text-slate-400">
             {lang === 'ar' ? 'لا تُشارك هذه الوثيقة خارج بوابة الإدارة.' : 'Confidential verification asset.'}
@@ -1812,7 +1936,7 @@ export function AdminPortal() {
           <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-5 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-900">
-                {lang === 'ar' ? 'تعديل الدور والصلاحيات (A-06)' : 'Edit Role & Permissions (A-06)'}
+                {lang === 'ar' ? 'تعديل الدور والصلاحيات' : 'Edit Role & Permissions'}
               </h3>
               <button type="button" onClick={() => setEditingRole(null)} className="p-1 text-slate-400">
                 <X className="w-4 h-4" />

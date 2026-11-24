@@ -43,6 +43,9 @@ Generated from `docs/openapi.json`; run `make openapi`. See [bootstrap contracts
 | API-025 | GET | `/api/v1/listings/{id}/related` | P5 | public |
 | API-067 | GET | `/api/v1/me` | P3 | required |
 | API-068 | PATCH | `/api/v1/me` | P3 | required |
+| API-084 | GET | `/api/v1/me/favorites` | P5 | required |
+| API-086 | DELETE | `/api/v1/me/favorites/{listing_id}` | P5 | required |
+| API-085 | POST | `/api/v1/me/favorites/{listing_id}` | P5 | required |
 | API-050 | POST | `/api/v1/media/uploads` | P4 | required |
 | API-063 | POST | `/api/v1/media/uploads/{id}/complete` | P4 | required |
 | API-051 | POST | `/api/v1/merchant/auth/register` | P3 | public |
@@ -58,6 +61,9 @@ Generated from `docs/openapi.json`; run `make openapi`. See [bootstrap contracts
 | API-032 | GET | `/api/v1/stores/me/dashboard` | P6 | required |
 | API-033 | GET | `/api/v1/stores/me/listings` | P4 | required |
 | API-054 | POST | `/api/v1/stores/me/listings` | P4 | required |
+| API-082 | POST | `/api/v1/stores/me/listings/bulk-price` | P4 | required |
+| API-083 | POST | `/api/v1/stores/me/listings/import` | P4 | required |
+| API-081 | DELETE | `/api/v1/stores/me/listings/{id}` | P4 | required |
 | API-038 | PATCH | `/api/v1/stores/me/listings/{id}` | P4 | required |
 | API-039 | PATCH | `/api/v1/stores/me/listings/{id}/price` | P4 | required |
 | API-034 | GET | `/api/v1/stores/me/listings/{id}/status` | P4 | required |

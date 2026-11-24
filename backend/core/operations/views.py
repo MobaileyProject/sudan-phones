@@ -29,6 +29,8 @@ from .serializers import (
     RatingListResponse,
     SuspendStoreInput,
     AdminUserListResponse,
+    FavoriteListResponse,
+    FavoriteActionResponse,
 )
 
 
@@ -306,4 +308,31 @@ class AdminUsersView(DomainView):
     def get(self, request):
         return Response(
             AdminUserListResponse({"data": services.list_admin_users(request.user)}).data
+        )
+
+
+class FavoritesView(DomainView):
+    @contract("API-084", "P5", response=FavoriteListResponse)
+    def get(self, request):
+        return Response(
+            FavoriteListResponse({"data": services.list_favorites(request.user)}).data
+        )
+
+
+class FavoriteDetailView(DomainView):
+    @contract("API-085", "P5", response=FavoriteActionResponse)
+    def post(self, request, listing_id):
+        return Response(
+            FavoriteActionResponse(
+                {"data": services.add_favorite(request.user, listing_id)}
+            ).data,
+            status=201,
+        )
+
+    @contract("API-086", "P5", response=FavoriteActionResponse)
+    def delete(self, request, listing_id):
+        return Response(
+            FavoriteActionResponse(
+                {"data": services.remove_favorite(request.user, listing_id)}
+            ).data
         )

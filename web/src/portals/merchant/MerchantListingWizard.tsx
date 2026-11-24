@@ -122,6 +122,8 @@ function VerifiedListingWizardInner({ onComplete }: { onComplete: () => void }) 
 
   // Step 2: New phone fields
   const [priceSdg, setPriceSdg] = useState('');
+  const [usdPrice, setUsdPrice] = useState('');
+  const [acceptsTradeIn, setAcceptsTradeIn] = useState(false);
   const [stockQty, setStockQty] = useState('1');
   const [warrantyMonths, setWarrantyMonths] = useState('12');
   const [warrantyType, setWarrantyType] = useState('');
@@ -440,7 +442,11 @@ function VerifiedListingWizardInner({ onComplete }: { onComplete: () => void }) 
         quantity: condition === 'new' ? Number(stockQty) : 1,
         media: mediaIds,
         color: color.trim() || 'Standard',
+        accepts_trade_in: acceptsTradeIn,
       };
+      if (usdPrice.trim() && Number(usdPrice) > 0) {
+        payload.usd_price = Number(usdPrice).toFixed(2);
+      }
 
       if (selectedVariantId) {
         payload.variant_id = selectedVariantId;
@@ -1026,6 +1032,36 @@ function VerifiedListingWizardInner({ onComplete }: { onComplete: () => void }) 
                     {formatSdg(Number(priceSdg), lang)}
                   </p>
                 )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  {lang === 'ar' ? 'السعر المرجعي بالدولار (اختياري — للتحديث الجماعي)' : 'Reference USD Price (Optional — for bulk updates)'}
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  dir="ltr"
+                  value={usdPrice}
+                  onChange={(e) => setUsdPrice(e.target.value)}
+                  placeholder="350"
+                  className="w-full h-11 px-3 rounded-xl border border-slate-200 text-sm font-mono-num focus:outline-none focus:border-[#0F6B5D]"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={acceptsTradeIn}
+                    onChange={(e) => setAcceptsTradeIn(e.target.checked)}
+                    className="rounded border-slate-300 text-[#0F6B5D]"
+                  />
+                  {lang === 'ar'
+                    ? 'يقبل الاستبدال (Trade-In) — يمكن للعميل استبدال هاتفه القديم بهذا الجهاز'
+                    : 'Accepts Trade-In — buyers can trade in their old phone for this device'}
+                </label>
               </div>
 
               {condition === 'new' ? (

@@ -2,22 +2,26 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { motion, useReducedMotion } from 'motion/react';
 import {
+  ArrowLeftRight,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   GitCompareArrows,
   Grid2x2,
+  Heart,
   Home,
   KeyRound,
   LogIn,
   MapPin,
   RefreshCw,
   Search,
+  Settings,
   ShieldCheck,
   SlidersHorizontal,
   Smartphone,
   Sparkles,
   Store as StoreIcon,
+  TrendingDown,
   UserRound,
   WifiOff,
   X,
@@ -52,7 +56,6 @@ import {
   CustomerCompareOffers,
   CustomerListingDetails,
   CustomerStoreProfile,
-  OptionalCustomerAccountConcept,
 } from './CustomerDetailScreens';
 import { CustomerDetailedPhoneCompare } from './PhoneSpecsAndCompare';
 import {
@@ -74,7 +77,7 @@ type CustomerSubScreen =
   | { kind: 'compare'; variantKey: string }
   | { kind: 'compare_phones'; primaryListingId: string; secondaryListingId?: string }
   | { kind: 'brand_models'; brandId: BrandId }
-  | { kind: 'optional_account' }
+  | { kind: 'favorites' }
   | { kind: 'account_settings' };
 
 const DEFAULT_FILTERS: CustomerFilterState = {
@@ -84,6 +87,7 @@ const DEFAULT_FILTERS: CustomerFilterState = {
   city: 'all',
   minPrice: '',
   maxPrice: '',
+  acceptsTradeIn: false,
   sortBy: 'newest',
 };
 
@@ -105,6 +109,10 @@ export function CustomerApp() {
     pushToast,
     customerDeepLinkListingId,
     setCustomerDeepLinkListingId,
+    customerDeepLinkStoreId,
+    setCustomerDeepLinkStoreId,
+    favoriteIds,
+    toggleFavorite,
     session,
     me,
     logoutSession,
@@ -319,7 +327,7 @@ export function CustomerApp() {
     pushToast,
   ]);
 
-  // Deep link handler from Merchant / Admin portals
+  // Deep link handlers (Listing & QR Code Store Poster ?store=<id>)
   useEffect(() => {
     if (customerDeepLinkListingId) {
       setEntryScreen(null);
@@ -328,6 +336,15 @@ export function CustomerApp() {
       setCustomerDeepLinkListingId(null);
     }
   }, [customerDeepLinkListingId, setCustomerDeepLinkListingId]);
+
+  useEffect(() => {
+    if (customerDeepLinkStoreId) {
+      setEntryScreen(null);
+      setHistoryStack([]);
+      setSubScreen({ kind: 'store', storeId: customerDeepLinkStoreId });
+      setCustomerDeepLinkStoreId(null);
+    }
+  }, [customerDeepLinkStoreId, setCustomerDeepLinkStoreId]);
 
   // Restore scroll when returning to search tab
   useEffect(() => {
@@ -388,6 +405,7 @@ export function CustomerApp() {
       if (filters.city !== 'all' && st?.city !== filters.city) return false;
       if (minP !== null && !Number.isNaN(minP) && l.priceSdg < minP) return false;
       if (maxP !== null && !Number.isNaN(maxP) && l.priceSdg > maxP) return false;
+      if (filters.acceptsTradeIn && !(l.acceptsTradeIn || st?.acceptsTradeIn)) return false;
       if (q) {
         const hay = `${l.model} ${l.arabicBrandPrefix} ${l.brand} ${l.storageGb}gb ${st?.name.ar ?? ''} ${st?.name.en ?? ''}`.toLowerCase();
         return hay.includes(q);
@@ -419,6 +437,7 @@ export function CustomerApp() {
     filters.city !== 'all',
     Boolean(filters.minPrice),
     Boolean(filters.maxPrice),
+    filters.acceptsTradeIn,
   ].filter(Boolean).length;
 
   // Group counts of offers per variantKey so cards can show "Compare 3 offers"
@@ -471,6 +490,33 @@ export function CustomerApp() {
             label={listing.model}
             className="group-hover:scale-[1.035] transition-transform duration-300 ease-out"
           />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavorite(listing.id);
+            }}
+            aria-label={lang === 'ar' ? 'المفضلة' : 'Favorite'}
+            className={`absolute top-2 end-2 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm shadow-sm flex items-center justify-center transition-colors ${
+              favoriteIds.includes(listing.id) ? 'text-[#C81E3A]' : 'text-[#5A7265] hover:text-[#C81E3A]'
+            }`}
+          >
+            <Heart className={`w-3.5 h-3.5 ${favoriteIds.includes(listing.id) ? 'fill-current' : ''}`} />
+          </button>
+          <div className="absolute top-2 start-2 flex flex-col gap-1 items-start pointer-events-none">
+            {listing.priceDropped && listing.previousPriceSdg && listing.previousPriceSdg > listing.priceSdg && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-bold shadow-sm">
+                <TrendingDown className="w-2.5 h-2.5" />
+                {lang === 'ar' ? 'انخفض السعر' : 'Drop'}
+              </span>
+            )}
+            {(listing.acceptsTradeIn || store?.acceptsTradeIn) && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#0F6B5D]/90 text-white text-[9px] font-bold shadow-sm">
+                <ArrowLeftRight className="w-2.5 h-2.5" />
+                {lang === 'ar' ? 'استبدال' : 'Trade-In'}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Sculpted Content Hierarchy */}
@@ -500,9 +546,16 @@ export function CustomerApp() {
 
             {/* Primary Price Anchor + Shared Phone Model Rating */}
             <div className="mt-2 flex items-center justify-between gap-1.5">
-              <p className="text-[13.5px] font-extrabold text-[#1E5637] font-mono-num tracking-tight truncate">
-                {formatSdg(listing.priceSdg, lang)}
-              </p>
+              <div className="min-w-0">
+                <p className="text-[13.5px] font-extrabold text-[#1E5637] font-mono-num tracking-tight truncate">
+                  {formatSdg(listing.priceSdg, lang)}
+                </p>
+                {listing.priceDropped && listing.previousPriceSdg && listing.previousPriceSdg > listing.priceSdg && (
+                  <p className="text-[10px] text-[#7D9186] line-through font-mono-num truncate">
+                    {formatSdg(listing.previousPriceSdg, lang)}
+                  </p>
+                )}
+              </div>
               <CompactStarRating
                 average={modelRating.average}
                 count={modelRating.count}
@@ -633,16 +686,57 @@ export function CustomerApp() {
       );
     }
 
-    if (subScreen.kind === 'optional_account') {
-      return <OptionalCustomerAccountConcept onClose={goBack} />;
+    if (subScreen.kind === 'favorites') {
+      const savedListings = discoveryListings.filter((l) => favoriteIds.includes(l.id));
+      return (
+        <div className="store-clay flex flex-col h-full">
+          <div className="sticky top-0 z-20 flex items-center justify-between h-[60px] px-4 clay-topbar shrink-0">
+            <button
+              type="button"
+              onClick={goBack}
+              aria-label={lang === 'ar' ? 'رجوع' : 'Back'}
+              className="clay-pill clay-focus-ring w-11 h-11 rounded-full flex items-center justify-center text-[#172B20]"
+            >
+              {lang === 'ar' ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+            </button>
+            <h1 className="text-sm font-bold text-[#172B20] flex items-center gap-1.5">
+              <Heart className="w-4 h-4 text-[#C81E3A] fill-current" />
+              {lang === 'ar' ? `المفضلة (${savedListings.length})` : `Saved Favorites (${savedListings.length})`}
+            </h1>
+            <div className="w-11" />
+          </div>
+          <div className="flex-1 overflow-y-auto thin-scroll px-4 pt-3 pb-10">
+            {savedListings.length === 0 ? (
+              <div className="clay-card rounded-[26px] p-8 text-center space-y-3 mt-4">
+                <div className="w-12 h-12 rounded-2xl clay-inset mx-auto flex items-center justify-center text-[#8AA093]">
+                  <Heart className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-bold text-[#172B20]">
+                  {lang === 'ar' ? 'قائمة المفضلة فارغة' : 'No saved phones yet'}
+                </p>
+                <p className="text-xs text-[#60776B] leading-relaxed">
+                  {lang === 'ar'
+                    ? 'اضغط على أيقونة القلب على أي هاتف لحفظه هنا ومراقبة سعره لاحقاً.'
+                    : 'Tap the heart icon on any phone to save it here and track price drops.'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {savedListings.map(renderPhoneCard)}
+              </div>
+            )}
+          </div>
+        </div>
+      );
     }
 
-    if (subScreen.kind === 'account_settings' && signedInUser) {
+    if (subScreen.kind === 'account_settings') {
       return (
         <CustomerAccountSettings
           user={signedInUser}
           onUpdateUser={(next) => setSignedInUser(next)}
           onOpenCitySheet={() => setCitySheetOpen(true)}
+          onSignIn={() => setEntryScreen('signin')}
           onSignOut={() => {
             logoutSession();
             setSignedInUser(null);
@@ -916,36 +1010,36 @@ export function CustomerApp() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (signedInUser) {
-                      navigateTo({ kind: 'account_settings' });
-                    } else {
-                      setEntryScreen('register');
-                    }
-                  }}
-                  aria-label={
-                    signedInUser
-                      ? lang === 'ar'
-                        ? 'إعدادات الحساب'
-                        : 'Account Settings'
-                      : lang === 'ar'
-                        ? 'إنشاء حساب'
-                        : 'Register'
-                  }
+                  onClick={() => navigateTo({ kind: 'favorites' })}
+                  aria-label={lang === 'ar' ? 'المفضلة' : 'Saved Favorites'}
+                  title={lang === 'ar' ? 'المفضلة' : 'Saved Favorites'}
+                  className="relative clay-pill clay-focus-ring w-10 h-10 rounded-full flex items-center justify-center text-[#C81E3A] shrink-0"
+                >
+                  <Heart className={`w-4 h-4 ${favoriteIds.length > 0 ? 'fill-current' : ''}`} />
+                  {favoriteIds.length > 0 && (
+                    <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[#C81E3A] text-white text-[9px] font-bold font-mono-num flex items-center justify-center">
+                      {favoriteIds.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigateTo({ kind: 'account_settings' })}
+                  aria-label={lang === 'ar' ? 'الإعدادات والحساب' : 'Settings & Account'}
                   title={
                     signedInUser
                       ? lang === 'ar'
                         ? `إعدادات الحساب (${signedInUser.name})`
                         : `Account Settings (${signedInUser.name})`
                       : lang === 'ar'
-                        ? 'إنشاء حساب'
-                        : 'Create Account'
+                        ? 'الإعدادات (وضع توفير البيانات واللغة)'
+                        : 'Settings (Data Saver & Language)'
                   }
                   className={`clay-focus-ring w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
                     signedInUser ? 'clay-pill-active text-[#18432C]' : 'clay-pill text-[#2D6145]'
                   }`}
                 >
-                  <UserRound className="w-4 h-4" />
+                  {signedInUser ? <UserRound className="w-4 h-4" /> : <Settings className="w-4 h-4" />}
                 </button>
               </div>
             </div>

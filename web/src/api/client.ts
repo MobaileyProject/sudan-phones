@@ -506,6 +506,33 @@ export const api = {
     }),
   editListing: (id: string | number, payload: Record<string, unknown>, idempotencyKey?: string) =>
     apiRequest(`/api/v1/stores/me/listings/${id}`, { method: 'PATCH', body: payload, idempotent: true, idempotencyKey }),
+  archiveListing: (id: string | number) =>
+    apiRequest(`/api/v1/stores/me/listings/${id}`, { method: 'DELETE' }),
+  bulkUpdatePrices: (payload: {
+    mode: 'percent' | 'usd_rate';
+    percent?: number;
+    usd_rate?: number;
+    round_to?: number;
+    condition?: 'all' | 'new' | 'used';
+  }) => apiRequest<{ data: { updated_count: number } }>('/api/v1/stores/me/listings/bulk-price', { method: 'POST', body: payload }),
+  bulkImportListings: (
+    rows: Array<{
+      listing_id: number;
+      price?: number;
+      quantity?: number;
+      usd_price?: number | null;
+      accepts_trade_in?: boolean;
+    }>
+  ) =>
+    apiRequest<{ data: { updated_count: number; skipped_count: number; errors: Array<{ row: number; message: string }> } }>(
+      '/api/v1/stores/me/listings/import',
+      { method: 'POST', body: { rows } }
+    ),
+  getFavorites: () => apiRequest<{ data: any[] }>('/api/v1/me/favorites'),
+  addFavorite: (listingId: string | number) =>
+    apiRequest(`/api/v1/me/favorites/${listingId}`, { method: 'POST' }),
+  removeFavorite: (listingId: string | number) =>
+    apiRequest(`/api/v1/me/favorites/${listingId}`, { method: 'DELETE' }),
   getMyStaff: () => apiRequest('/api/v1/stores/me/staff'),
   addStaff: (payload: { phone?: string; user_id?: number; role: 'manager' | 'clerk' | 'staff' }) =>
     apiRequest('/api/v1/stores/me/staff', { method: 'POST', body: payload }),
@@ -538,6 +565,8 @@ export const api = {
   getAdminRoles: () => apiRequest('/api/v1/admin/roles', { query: { limit: 100 } }),
   saveAdminRole: (payload: Record<string, unknown>) =>
     apiRequest('/api/v1/admin/roles', { method: 'POST', body: payload }),
+  deleteAdminRole: (roleId: string | number) =>
+    apiRequest(`/api/v1/admin/roles/${roleId}`, { method: 'DELETE' }),
   getAdminUsers: () => apiRequest('/api/v1/admin/users'),
   getDualApprovals: (status = 'all') => apiRequest('/api/v1/admin/dual-approvals', { query: { status, limit: 100 } }),
   decideDualApproval: (id: string | number, decision: 'approve' | 'reject', version: number) =>

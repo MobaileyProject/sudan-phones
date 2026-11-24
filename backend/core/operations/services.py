@@ -559,3 +559,33 @@ def list_admin_users(actor):
             }
         )
     return result
+
+
+def list_favorites(actor):
+    from .models import Favorite
+
+    require_actor(actor)
+    return list(
+        Favorite.objects.filter(user=actor)
+        .order_by("-created_at")
+        .values_list("listing_id", flat=True)
+    )
+
+
+@transaction.atomic
+def add_favorite(actor, listing_id):
+    from .models import Favorite
+
+    require_actor(actor)
+    require(visible_listings().filter(pk=listing_id).exists(), "NOT_FOUND", 404)
+    Favorite.objects.get_or_create(user=actor, listing_id=listing_id)
+    return {"listing_id": listing_id, "saved": True}
+
+
+@transaction.atomic
+def remove_favorite(actor, listing_id):
+    from .models import Favorite
+
+    require_actor(actor)
+    Favorite.objects.filter(user=actor, listing_id=listing_id).delete()
+    return {"listing_id": listing_id, "saved": False}

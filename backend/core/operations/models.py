@@ -174,3 +174,23 @@ class Rating(models.Model):
             models.Index(fields=["store", "-created_at"]),
             models.Index(fields=["phone_model", "-created_at"]),
         ]
+
+
+class Favorite(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="favorites"
+    )
+    listing = models.ForeignKey(
+        "core.Listing", on_delete=models.CASCADE, related_name="favorited_by"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "listing"], name="unique_user_listing_favorite"
+            )
+        ]
+        indexes = [
+            models.Index(fields=["user", "-created_at"]),
+        ]

@@ -25,6 +25,7 @@ class SearchQuery(PageQuery, StrictQuerySerializer):
         max_digits=14, decimal_places=2, min_value=Decimal("0"), required=False
     )
     storage_gb = serializers.IntegerField(min_value=1, max_value=4096, required=False)
+    accepts_trade_in = serializers.BooleanField(required=False)
     sort = serializers.ChoiceField(
         choices=["latest", "newest", "price_asc", "price_desc"], default="latest"
     )
@@ -48,6 +49,8 @@ class PublicMedia(serializers.Serializer):
 
 class PublicListing(ListingData):
     brand = serializers.CharField()
+    brand_slug = serializers.CharField(default="")
+    brand_name_ar = serializers.CharField(default="")
     model = serializers.CharField()
     storage_gb = serializers.IntegerField()
     ram_gb = serializers.IntegerField()
@@ -81,8 +84,15 @@ class PublicStore(serializers.Serializer):
     location_guidance = serializers.CharField(default="")
     description = serializers.CharField(default="")
     banner_url = serializers.CharField(default="")
+    latitude = serializers.DecimalField(
+        max_digits=9, decimal_places=6, allow_null=True, required=False, default=None
+    )
+    longitude = serializers.DecimalField(
+        max_digits=9, decimal_places=6, allow_null=True, required=False, default=None
+    )
     opening_hours = serializers.CharField()
     contact_available = serializers.BooleanField(default=True)
+    accepts_trade_in = serializers.BooleanField(default=False)
     verified = serializers.BooleanField()
     rating_average = serializers.FloatField(allow_null=True, default=None)
     rating_count = serializers.IntegerField(default=0)
