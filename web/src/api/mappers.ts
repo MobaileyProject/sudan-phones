@@ -14,6 +14,9 @@ import {
   Listing,
   ListingPhoto,
   PublicationStatus,
+  SponsoredAd,
+  SponsoredAdPaymentStatus,
+  SponsoredAdStatus,
   Store,
   StoreStaffMember,
   UsedAvailability,
@@ -280,11 +283,72 @@ export function mapAuditLog(raw: any): AuditLogEntry {
         ? 'listing'
         : raw.action?.startsWith('role')
           ? 'role'
-          : 'approval',
+          : raw.action?.startsWith('ad')
+            ? 'ad'
+            : 'approval',
     targetId: String(raw.resource || ''),
     targetName: bi(raw.resource || raw.action),
     details: bi(JSON.stringify(raw.metadata || {})),
     timestamp: raw.created_at || '',
     ipAddress: raw.actor_ip || '—',
+  };
+}
+
+export function mapSponsoredAd(raw: any): SponsoredAd {
+  return {
+    id: String(raw.id),
+    storeId: String(raw.store_id),
+    storeName: {
+      ar: String(raw.store_name_ar || raw.store_name || `متجر #${raw.store_id}`),
+      en: String(raw.store_name_en || raw.store_name || `Store #${raw.store_id}`),
+    },
+    listingId: raw.listing_id != null && raw.listing_id !== '' ? String(raw.listing_id) : null,
+    title: {
+      ar: String(raw.title_ar || raw.title || ''),
+      en: String(raw.title_en || raw.title_ar || raw.title || ''),
+    },
+    subtitle: {
+      ar: String(raw.subtitle_ar || raw.subtitle || ''),
+      en: String(raw.subtitle_en || raw.subtitle_ar || raw.subtitle || ''),
+    },
+    ctaLabel: {
+      ar: String(raw.cta_label_ar || 'زيارة المتجر'),
+      en: String(raw.cta_label_en || 'Visit Store'),
+    },
+    badgeText:
+      raw.badge_ar || raw.badge_en
+        ? {
+            ar: String(raw.badge_ar || raw.badge_en || ''),
+            en: String(raw.badge_en || raw.badge_ar || ''),
+          }
+        : undefined,
+    imageUrl: String(raw.image_url || ''),
+    targetCity: (raw.target_city || 'all') as CityId | 'all',
+    status: (raw.status || 'active') as SponsoredAdStatus,
+    priority: Number(raw.priority ?? 10),
+    skipDelaySec: Number(raw.skip_delay_sec ?? 3),
+    paidAmountSdg: Math.round(Number(raw.paid_amount_sdg || 0)),
+    paymentStatus: (raw.payment_status || 'paid') as SponsoredAdPaymentStatus,
+    paymentRef: raw.payment_ref ? String(raw.payment_ref) : undefined,
+    startsAt: String(raw.starts_at || '').slice(0, 10),
+    endsAt: String(raw.ends_at || '').slice(0, 10),
+    impressions: Number(raw.impressions || 0),
+    clicks: Number(raw.clicks || 0),
+    ctrPct:
+      raw.ctr_pct != null
+        ? Number(raw.ctr_pct)
+        : Number(raw.impressions || 0) > 0
+          ? Number(((Number(raw.clicks || 0) / Number(raw.impressions || 0)) * 100).toFixed(2))
+          : 0,
+    lastClickedAt: raw.last_clicked_at ? String(raw.last_clicked_at) : null,
+    avgTimeToClickMs: raw.avg_time_to_click_ms != null ? Number(raw.avg_time_to_click_ms) : null,
+    dailyStats: Array.isArray(raw.daily_stats)
+      ? raw.daily_stats.map((d: any) => ({
+          date: String(d.date || ''),
+          impressions: Number(d.impressions || 0),
+          clicks: Number(d.clicks || 0),
+        }))
+      : [],
+    createdAt: String(raw.created_at || ''),
   };
 }

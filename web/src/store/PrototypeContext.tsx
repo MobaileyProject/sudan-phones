@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
+  AdAnalyticsMetadata,
   AdminPermission,
   AdminRole,
   AdminUser,
@@ -17,6 +18,9 @@ import {
   ReportReasonId,
   ReportTargetType,
   SimulationState,
+  SponsoredAd,
+  SponsoredAdPaymentStatus,
+  SponsoredAdStatus,
   Store,
   StoreStaffMember,
   UsedAvailability,
@@ -42,6 +46,7 @@ import {
   mapDualApproval,
   mapListing,
   mapReport,
+  mapSponsoredAd,
   mapStore,
 } from '../api/mappers';
 
@@ -140,11 +145,45 @@ interface PrototypeContextValue {
     open_reports: number;
     pending_approvals: number;
     contact_leads_7d: number;
+    active_sponsored_ads?: number;
+    ad_revenue_sdg?: number;
   } | null;
   adminRoles: AdminRole[];
   adminUsers: AdminUser[];
   auditLogs: AuditLogEntry[];
   dualApprovals: DualApprovalRequest[];
+  sponsoredAds: SponsoredAd[];
+  activeOpenAds: SponsoredAd[];
+  merchantSponsoredAds: SponsoredAd[];
+  saveSponsoredAd: (
+    payload: {
+      id?: string;
+      storeId: string;
+      listingId?: string | null;
+      titleAr: string;
+      titleEn: string;
+      subtitleAr: string;
+      subtitleEn: string;
+      ctaLabelAr: string;
+      ctaLabelEn: string;
+      badgeAr?: string;
+      badgeEn?: string;
+      imageUrl: string;
+      targetCity: CityId | 'all';
+      status: SponsoredAdStatus;
+      priority: number;
+      skipDelaySec: number;
+      paidAmountSdg: number;
+      paymentStatus: SponsoredAdPaymentStatus;
+      paymentRef?: string;
+      startsAt: string;
+      endsAt: string;
+    }
+  ) => Promise<SponsoredAd>;
+  toggleSponsoredAdStatus: (adId: string, nextStatus: SponsoredAdStatus) => Promise<void>;
+  deleteSponsoredAd: (adId: string) => Promise<void>;
+  trackAdImpression: (adId: string, meta?: AdAnalyticsMetadata) => void;
+  trackAdClick: (adId: string, meta?: AdAnalyticsMetadata) => void;
   favoriteIds: string[];
   toggleFavorite: (listingId: string) => void;
   archiveListing: (listingId: string) => Promise<void>;
@@ -304,6 +343,9 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([FALLBACK_ADMIN]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [dualApprovals, setDualApprovals] = useState<DualApprovalRequest[]>([]);
+  const [sponsoredAds, setSponsoredAds] = useState<SponsoredAd[]>([]);
+  const [activeOpenAds, setActiveOpenAds] = useState<SponsoredAd[]>([]);
+  const [merchantSponsoredAds, setMerchantSponsoredAds] = useState<SponsoredAd[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>(() => {
     try {
       const raw = window.localStorage.getItem('sp_favorites_v1');
@@ -388,11 +430,12 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
 
   const refreshPublicData = useCallback(async () => {
     try {
-      const [listingsRes, storesRes, modelsRes, brandsRes] = await Promise.all([
+      const [listingsRes, storesRes, modelsRes, brandsRes, adsRes] = await Promise.all([
         api.searchListings({ limit: 100 }),
         api.getFeaturedStores(),
         api.getPublicModels({ limit: 100 }),
         api.getBrands(),
+        api.getActiveAds().catch(() => ({ data: [] })),
       ]);
       const mappedListings = (listingsRes.data || []).map(mapListing);
       const mappedStores = (storesRes.data || []).map((s: any) => mapStore(s));
@@ -400,6 +443,7 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       setListings(mappedListings);
       setStores(mappedStores);
       setBrands(loadedBrands);
+      setActiveOpenAds((adsRes.data || []).map(mapSponsoredAd));
       try {
         window.localStorage.setItem('sp_cached_brands', JSON.stringify(loadedBrands));
       } catch {
@@ -457,10 +501,11 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
 
   const refreshMerchantData = useCallback(async () => {
     try {
-      const [storeRes, staffRes, listingsRes] = await Promise.all([
+      const [storeRes, staffRes, listingsRes, adsRes] = await Promise.all([
         api.getMyStore(),
         api.getMyStaff().catch(() => ({ data: [] })),
         api.getMyListings().catch(() => ({ data: [] })),
+        api.getMyStoreAds().catch(() => ({ data: { campaigns: [] } })),
       ]);
       let dailyViews: { day: BilingualText; views: number; contacts: number }[] = [];
       let dashStats = { views: 0, contact_leads: 0 };
@@ -491,6 +536,7 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       setMerchantStore(mapped);
       setActiveMerchantStoreId(mapped.id);
       setMerchantListings((listingsRes.data || []).map(mapListing));
+      setMerchantSponsoredAds((adsRes.data?.campaigns || []).map(mapSponsoredAd));
       // Merge merchant store into stores list
       setStores((prev) => {
         const exists = prev.some((s) => s.id === mapped.id);
@@ -503,7 +549,7 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAdminData = useCallback(async () => {
     try {
-      const [overviewRes, verifRes, modRes, repRes, rolesRes, usersRes, apprRes, auditRes] = await Promise.all([
+      const [overviewRes, verifRes, modRes, repRes, rolesRes, usersRes, apprRes, auditRes, adminAdsRes] = await Promise.all([
         api.getAdminOverview().catch(() => ({ data: null })),
         api.getAdminVerifications().catch(() => ({ data: [] })),
         api.getModerationQueue().catch(() => ({ data: [] })),
@@ -512,6 +558,7 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         api.getAdminUsers().catch(() => ({ data: [] })),
         api.getDualApprovals('all').catch(() => ({ data: [] })),
         api.getAuditEvents().catch(() => ({ data: [] })),
+        api.getAdminAds().catch(() => ({ data: [] })),
       ]);
       if (overviewRes.data) setAdminOverview(overviewRes.data);
       const verifs = verifRes.data || [];
@@ -559,6 +606,7 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       }
       setDualApprovals((apprRes.data || []).map(mapDualApproval));
       setAuditLogs((auditRes.data || []).map(mapAuditLog));
+      setSponsoredAds((adminAdsRes.data || []).map(mapSponsoredAd));
     } catch {
       // ignore if not admin
     }
@@ -1182,6 +1230,130 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
     [refreshAdminData, pushToast]
   );
 
+  const saveSponsoredAd = useCallback(
+    async (payload: {
+      id?: string;
+      storeId: string;
+      listingId?: string | null;
+      titleAr: string;
+      titleEn: string;
+      subtitleAr: string;
+      subtitleEn: string;
+      ctaLabelAr: string;
+      ctaLabelEn: string;
+      badgeAr?: string;
+      badgeEn?: string;
+      imageUrl: string;
+      targetCity: CityId | 'all';
+      status: SponsoredAdStatus;
+      priority: number;
+      skipDelaySec: number;
+      paidAmountSdg: number;
+      paymentStatus: SponsoredAdPaymentStatus;
+      paymentRef?: string;
+      startsAt: string;
+      endsAt: string;
+    }) => {
+      const apiBody = {
+        store_id: Number(payload.storeId),
+        listing_id: payload.listingId ? Number(payload.listingId) : null,
+        title_ar: payload.titleAr,
+        title_en: payload.titleEn,
+        subtitle_ar: payload.subtitleAr,
+        subtitle_en: payload.subtitleEn,
+        cta_label_ar: payload.ctaLabelAr,
+        cta_label_en: payload.ctaLabelEn,
+        badge_ar: payload.badgeAr ?? '',
+        badge_en: payload.badgeEn ?? '',
+        image_url: payload.imageUrl,
+        target_city: payload.targetCity,
+        status: payload.status,
+        priority: payload.priority,
+        skip_delay_sec: payload.skipDelaySec,
+        paid_amount_sdg: payload.paidAmountSdg,
+        payment_status: payload.paymentStatus,
+        payment_ref: payload.paymentRef ?? '',
+        starts_at: payload.startsAt,
+        ends_at: payload.endsAt,
+      };
+      const res = payload.id
+        ? await api.updateAdminAd(payload.id, apiBody)
+        : await api.createAdminAd(apiBody);
+      const mapped = mapSponsoredAd(res.data);
+      await Promise.all([refreshAdminData(), refreshPublicData()]);
+      pushToast('success', {
+        ar: payload.id ? 'تم تحديث الحملة الإعلانية بنجاح.' : 'تم إنشاء وتشغيل الحملة الإعلانية.',
+        en: payload.id ? 'Sponsored ad campaign updated.' : 'Sponsored ad campaign created.',
+      });
+      return mapped;
+    },
+    [refreshAdminData, refreshPublicData, pushToast]
+  );
+
+  const toggleSponsoredAdStatus = useCallback(
+    async (adId: string, nextStatus: SponsoredAdStatus) => {
+      await api.updateAdminAd(adId, { status: nextStatus });
+      await Promise.all([refreshAdminData(), refreshPublicData()]);
+      pushToast('info', {
+        ar: nextStatus === 'active' ? 'تم تفعيل الإعلان عند فتح التطبيق.' : 'تم إيقاف الحملة مؤقتاً.',
+        en: nextStatus === 'active' ? 'App-open ad activated.' : 'Ad campaign paused.',
+      });
+    },
+    [refreshAdminData, refreshPublicData, pushToast]
+  );
+
+  const deleteSponsoredAd = useCallback(
+    async (adId: string) => {
+      await api.deleteAdminAd(adId);
+      await Promise.all([refreshAdminData(), refreshPublicData()]);
+      pushToast('info', {
+        ar: 'تم حذف الحملة الإعلانية.',
+        en: 'Sponsored ad campaign deleted.',
+      });
+    },
+    [refreshAdminData, refreshPublicData, pushToast]
+  );
+
+  const syncUpdatedAd = useCallback((updated: SponsoredAd) => {
+    setActiveOpenAds((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    setSponsoredAds((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    setMerchantSponsoredAds((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+  }, []);
+
+  const trackAdImpression = useCallback(
+    (adId: string, meta?: AdAnalyticsMetadata) => {
+      api
+        .recordAdImpression(adId, {
+          city: meta?.city,
+          locale: meta?.locale,
+          source: meta?.source || 'app_open_overlay',
+        })
+        .then((res) => {
+          syncUpdatedAd(mapSponsoredAd(res.data));
+        })
+        .catch(() => {});
+    },
+    [syncUpdatedAd]
+  );
+
+  const trackAdClick = useCallback(
+    (adId: string, meta?: AdAnalyticsMetadata) => {
+      api
+        .recordAdClick(adId, {
+          city: meta?.city,
+          locale: meta?.locale,
+          listing_id: meta?.listingId ? Number(meta.listingId) : null,
+          time_to_click_ms: meta?.timeToClickMs,
+          source: meta?.source || 'app_open_overlay',
+        })
+        .then((res) => {
+          syncUpdatedAd(mapSponsoredAd(res.data));
+        })
+        .catch(() => {});
+    },
+    [syncUpdatedAd]
+  );
+
   const reconnectAndRefresh = useCallback(() => {
     updateSim({ offlineMode: 'online' });
     hydrateSession();
@@ -1217,6 +1389,14 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         adminUsers,
         auditLogs,
         dualApprovals,
+        sponsoredAds,
+        activeOpenAds,
+        merchantSponsoredAds,
+        saveSponsoredAd,
+        toggleSponsoredAdStatus,
+        deleteSponsoredAd,
+        trackAdImpression,
+        trackAdClick,
         favoriteIds,
         toggleFavorite,
         archiveListing,

@@ -20,6 +20,7 @@ import {
   MapPin,
   Maximize2,
   MessageCircle,
+  MessageSquare,
   Navigation,
   Phone,
   Search,
@@ -920,11 +921,13 @@ export function CustomerStoreProfile({
   onBack,
   onOpenListing,
   onContactStore,
+  onChatInApp,
 }: {
   storeId: string;
   onBack: () => void;
   onOpenListing: (listingId: string) => void;
   onContactStore: (store: Store) => void;
+  onChatInApp?: (store: Store) => void;
 }) {
   const {
     lang,
@@ -1127,23 +1130,37 @@ export function CustomerStoreProfile({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => onContactStore(store)}
-              className="clay-whatsapp-btn clay-focus-ring h-12 rounded-full text-xs font-bold flex items-center justify-center gap-2"
-            >
-              <MessageCircle className="w-4 h-4" />
-              {lang === 'ar' ? 'واتساب المتجر' : 'WhatsApp'}
-            </button>
-            <button
-              type="button"
-              onClick={() => onContactStore(store)}
-              className="clay-pill clay-focus-ring h-12 rounded-full text-[#172B20] text-xs font-bold flex items-center justify-center gap-2"
-            >
-              <Phone className="w-4 h-4 text-[#2D6145]" />
-              {lang === 'ar' ? 'اتصال مباشر' : 'Call Store'}
-            </button>
+          <div className="space-y-2.5">
+            {onChatInApp && (
+              <button
+                type="button"
+                onClick={() => onChatInApp(store)}
+                className="clay-primary-btn clay-focus-ring w-full h-12 rounded-full text-xs font-bold flex items-center justify-center gap-2"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>
+                  {lang === 'ar' ? 'تواصل مع المتجر عبر التطبيق' : 'Message Store in App'}
+                </span>
+              </button>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => onContactStore(store)}
+                className="clay-whatsapp-btn clay-focus-ring h-12 rounded-full text-xs font-bold flex items-center justify-center gap-2"
+              >
+                <MessageCircle className="w-4 h-4" />
+                {lang === 'ar' ? 'واتساب المتجر' : 'WhatsApp'}
+              </button>
+              <button
+                type="button"
+                onClick={() => onContactStore(store)}
+                className="clay-pill clay-focus-ring h-12 rounded-full text-[#172B20] text-xs font-bold flex items-center justify-center gap-2"
+              >
+                <Phone className="w-4 h-4 text-[#2D6145]" />
+                {lang === 'ar' ? 'اتصال مباشر' : 'Call Store'}
+              </button>
+            </div>
           </div>
 
           <button

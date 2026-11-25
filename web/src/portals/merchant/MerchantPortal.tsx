@@ -10,14 +10,17 @@ import {
   Download,
   Edit3,
   ExternalLink,
+  Eye,
   FileSpreadsheet,
   History,
   KeyRound,
   LayoutDashboard,
   Lock,
   MapPin,
+  Megaphone,
   Menu,
   MessageCircle,
+  MousePointerClick,
   Package,
   Percent,
   Plus,
@@ -29,6 +32,7 @@ import {
   ShieldCheck,
   Store as StoreIcon,
   Trash2,
+  TrendingUp,
   Upload,
   UserPlus,
   Users,
@@ -91,6 +95,7 @@ export function MerchantPortal() {
     logoutSession,
     activeMerchantStore,
     activeMerchantRoleView,
+    merchantSponsoredAds,
     updateListingQuick,
     archiveListing,
     refreshMerchantData,
@@ -908,6 +913,209 @@ export function MerchantPortal() {
                       )}
                     </div>
                   </div>
+
+                  {/* Sponsored App-Open Ads Performance & Click-Through Rates (Store Owner View) */}
+                  {(() => {
+                    const totalAdViews = merchantSponsoredAds.reduce((sum, a) => sum + a.impressions, 0);
+                    const totalAdClicks = merchantSponsoredAds.reduce((sum, a) => sum + a.clicks, 0);
+                    const storeAdCtr =
+                      totalAdViews > 0 ? ((totalAdClicks / totalAdViews) * 100).toFixed(1) : '0.0';
+
+                    return (
+                      <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                              <Megaphone className="w-4 h-4 text-[#0F6B5D]" />
+                              {lang === 'ar'
+                                ? 'أداء الإعلانات المموّلة عند فتح التطبيق ومعدل النقر (CTR)'
+                                : 'Sponsored App-Open Ads & Click-Through Rates (CTR)'}
+                            </h3>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              {lang === 'ar'
+                                ? 'متابعة مباشرة لمرات ظهور صورة إعلانك ونقرات العملاء للانتقال إلى منتجك.'
+                                : 'Live tracking of app-open ad impressions, product clicks, and click-through rate for your store.'}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => refreshMerchantData()}
+                            className="h-8 px-3 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 inline-flex items-center gap-1.5"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            {lang === 'ar' ? 'تحديث' : 'Refresh'}
+                          </button>
+                        </div>
+
+                        {merchantSponsoredAds.length === 0 ? (
+                          <div className="p-5 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-center space-y-1.5">
+                            <p className="text-xs font-semibold text-slate-700">
+                              {lang === 'ar'
+                                ? 'لا توجد حملات إعلانية مموّلة نشطة لمتجرك حالياً.'
+                                : 'No sponsored app-open ad campaigns for your store yet.'}
+                            </p>
+                            <p className="text-[11px] text-slate-500">
+                              {lang === 'ar'
+                                ? 'عند تفعيل إعلان مموّل عبر إدارة سودان فونز، ستظهر هنا إحصائيات المشاهدات والنقرات ومعدل النقر (CTR) تلقائياً.'
+                                : 'Once an app-open ad is activated by Sudan Phones Admin, impressions, clicks, and CTR will appear here automatically.'}
+                            </p>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                <p className="text-[11px] text-slate-500 flex items-center gap-1">
+                                  <Eye className="w-3.5 h-3.5 text-slate-400" />
+                                  {lang === 'ar' ? 'مرات الظهور' : 'Ad Impressions'}
+                                </p>
+                                <p className="text-lg font-bold text-slate-900 font-mono-num mt-0.5">
+                                  {totalAdViews.toLocaleString('en-US')}
+                                </p>
+                              </div>
+                              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70">
+                                <p className="text-[11px] text-slate-500 flex items-center gap-1">
+                                  <MousePointerClick className="w-3.5 h-3.5 text-[#0F6B5D]" />
+                                  {lang === 'ar' ? 'نقرات الإعلان' : 'Ad Clicks'}
+                                </p>
+                                <p className="text-lg font-bold text-[#0F6B5D] font-mono-num mt-0.5">
+                                  {totalAdClicks.toLocaleString('en-US')}
+                                </p>
+                              </div>
+                              <div className="p-3 rounded-xl bg-teal-50/70 border border-teal-200/80">
+                                <p className="text-[11px] text-teal-900 flex items-center gap-1 font-medium">
+                                  <TrendingUp className="w-3.5 h-3.5 text-[#0F6B5D]" />
+                                  {lang === 'ar' ? 'معدل النقر (CTR)' : 'Click-Through Rate'}
+                                </p>
+                                <p className="text-lg font-extrabold text-[#0F6B5D] font-mono-num mt-0.5">
+                                  {storeAdCtr}%
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              {merchantSponsoredAds.map((ad) => {
+                                const adCtr =
+                                  ad.impressions > 0
+                                    ? ((ad.clicks / ad.impressions) * 100).toFixed(1)
+                                    : '0.0';
+                                const linkedListing = ad.listingId
+                                  ? listings.find((l) => l.id === ad.listingId)
+                                  : undefined;
+
+                                return (
+                                  <div
+                                    key={ad.id}
+                                    className="p-3.5 rounded-xl border border-slate-200 bg-white flex flex-col sm:flex-row gap-3.5 items-start sm:items-center"
+                                  >
+                                    <div className="w-16 h-20 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
+                                      <SafeImage
+                                        src={ad.imageUrl}
+                                        alt={tText(ad.title, lang)}
+                                        aspectClass="w-16 h-20"
+                                      />
+                                    </div>
+
+                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span
+                                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                                            ad.status === 'active'
+                                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                                          }`}
+                                        >
+                                          {ad.status === 'active'
+                                            ? lang === 'ar'
+                                              ? 'نشط الآن'
+                                              : 'Live Now'
+                                            : ad.status}
+                                        </span>
+                                        <span className="text-[11px] text-slate-500 font-mono-num" dir="ltr">
+                                          {ad.startsAt} → {ad.endsAt}
+                                        </span>
+                                      </div>
+
+                                      <p className="text-xs font-bold text-slate-900 truncate">
+                                        {linkedListing
+                                          ? formatListingTitle(
+                                              linkedListing.arabicBrandPrefix,
+                                              linkedListing.model,
+                                              lang
+                                            )
+                                          : tText(ad.title, lang)}
+                                      </p>
+
+                                      <div className="h-1.5 w-full max-w-xs rounded-full bg-slate-100 overflow-hidden">
+                                        <div
+                                          style={{
+                                            width: `${Math.min(100, Math.max(4, Number(adCtr) * 3))}%`,
+                                          }}
+                                          className="h-full rounded-full bg-[#0F6B5D]"
+                                        />
+                                      </div>
+
+                                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600 font-mono-num">
+                                        <span>
+                                          {ad.impressions.toLocaleString('en-US')}{' '}
+                                          {lang === 'ar' ? 'ظهور' : 'views'}
+                                        </span>
+                                        <span>·</span>
+                                        <span className="font-semibold text-slate-900">
+                                          {ad.clicks.toLocaleString('en-US')}{' '}
+                                          {lang === 'ar' ? 'نقرة' : 'clicks'}
+                                        </span>
+                                        {ad.avgTimeToClickMs != null && ad.avgTimeToClickMs > 0 && (
+                                          <>
+                                            <span>·</span>
+                                            <span>
+                                              {lang === 'ar' ? 'متوسط النقر ' : 'Avg tap '}
+                                              {(ad.avgTimeToClickMs / 1000).toFixed(1)}s
+                                            </span>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <div className="sm:text-end shrink-0 flex sm:flex-col items-center sm:items-end gap-2">
+                                      <span className="px-2.5 py-1 rounded-lg bg-teal-50 border border-teal-200 text-xs font-extrabold text-[#0F6B5D] font-mono-num">
+                                        {adCtr}% CTR
+                                      </span>
+                                      {ad.dailyStats.length > 0 && (
+                                        <div
+                                          className="flex items-end gap-1 h-8"
+                                          title={
+                                            lang === 'ar'
+                                              ? 'النقرات اليومية الأخيرة'
+                                              : 'Recent daily clicks'
+                                          }
+                                        >
+                                          {ad.dailyStats.slice(-7).map((d) => {
+                                            const maxC = Math.max(
+                                              ...ad.dailyStats.map((x) => x.clicks),
+                                              1
+                                            );
+                                            const h = Math.max(4, Math.round((d.clicks / maxC) * 28));
+                                            return (
+                                              <div
+                                                key={d.date}
+                                                title={`${d.date}: ${d.clicks} clicks / ${d.impressions} views`}
+                                                style={{ height: `${h}px` }}
+                                                className="w-2 rounded-t bg-[#0F6B5D]/80"
+                                              />
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </>
               )}
             </div>

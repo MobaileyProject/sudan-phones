@@ -9,6 +9,7 @@ import {
   Globe,
   MapPin,
   MessageCircle,
+  MessageSquare,
   Navigation,
   Phone,
   RefreshCw,
@@ -718,10 +719,12 @@ export function ContactSellerSheet({
   listing,
   store,
   onClose,
+  onOpenInAppChat,
 }: {
   listing: Listing | null;
   store: Store | null;
   onClose: () => void;
+  onOpenInAppChat?: (listing: Listing | null, store: Store) => void;
 }) {
   const { lang, recordContactClick, fetchContactMethods, pushToast, sim } = usePrototype();
   const [handoff, setHandoff] = useState<'none' | 'whatsapp' | 'call' | 'cancelled' | 'unavailable'>('none');
@@ -959,6 +962,17 @@ export function ContactSellerSheet({
 
           {/* Action Buttons */}
           <div className="space-y-3">
+            {onOpenInAppChat && (
+              <button
+                type="button"
+                onClick={() => onOpenInAppChat(listing, store)}
+                className="clay-primary-btn clay-focus-ring w-full h-13 rounded-full font-bold text-sm flex items-center justify-center gap-2"
+              >
+                <MessageSquare className="w-4.5 h-4.5" />
+                <span>{lang === 'ar' ? 'تواصل عبر التطبيق' : 'Message in App'}</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => triggerContact('whatsapp')}

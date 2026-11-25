@@ -26,7 +26,7 @@ import {
   WifiOff,
   X,
 } from 'lucide-react';
-import { BrandId, Listing, Store } from '../../types';
+import { BrandId, Listing, SponsoredAd, Store } from '../../types';
 import {
   formatCity,
   formatCondition,
@@ -57,6 +57,8 @@ import {
   CustomerListingDetails,
   CustomerStoreProfile,
 } from './CustomerDetailScreens';
+import { StoreInAppChatSheet } from './StoreInAppChatSheet';
+import { AppOpenAdOverlay } from './AppOpenAdOverlay';
 import { CustomerDetailedPhoneCompare } from './PhoneSpecsAndCompare';
 import {
   CompactStarRating,
@@ -116,6 +118,8 @@ export function CustomerApp() {
     session,
     me,
     logoutSession,
+    isLoadingLive,
+    activeOpenAds,
   } = usePrototype();
 
   const discoveryListings =
@@ -250,6 +254,46 @@ export function CustomerApp() {
     store: Store | null;
   }>({ listing: null, store: null });
 
+  // In-App Direct Store Chat Sheet
+  const [chatTarget, setChatTarget] = useState<{
+    listing: Listing | null;
+    store: Store | null;
+  }>({ listing: null, store: null });
+
+  // App-Open Sponsored Ad Overlay (runs only when the main app opens, never on the welcome/auth first screen)
+  const [openAd, setOpenAd] = useState<SponsoredAd | null>(null);
+  const hasShownOpenAdRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (hasShownOpenAdRef.current) return;
+    if (entryScreen !== null) return;
+    if (isLoadingLive || sim.startupMode !== 'ready' || sim.offlineMode === 'offline_empty') return;
+    if (customerDeepLinkListingId || customerDeepLinkStoreId) return;
+    if (activeOpenAds.length === 0) return;
+
+    const cityMatched =
+      selectedCity !== 'all'
+        ? activeOpenAds.find((a) => a.targetCity === selectedCity)
+        : undefined;
+    const chosen =
+      cityMatched ||
+      activeOpenAds.find((a) => a.targetCity === 'all') ||
+      activeOpenAds[0];
+    if (!chosen) return;
+
+    hasShownOpenAdRef.current = true;
+    setOpenAd(chosen);
+  }, [
+    entryScreen,
+    isLoadingLive,
+    sim.startupMode,
+    sim.offlineMode,
+    activeOpenAds,
+    selectedCity,
+    customerDeepLinkListingId,
+    customerDeepLinkStoreId,
+  ]);
+
   // Scroll context preservation for C-02 Search
   const searchScrollRef = useRef<HTMLDivElement | null>(null);
   const savedSearchScrollTop = useRef<number>(0);
@@ -259,6 +303,14 @@ export function CustomerApp() {
   useEffect(() => {
     let listenerHandle: { remove: () => Promise<void> } | null = null;
     const handleBack = () => {
+      if (openAd) {
+        setOpenAd(null);
+        return;
+      }
+      if (chatTarget.store) {
+        setChatTarget({ listing: null, store: null });
+        return;
+      }
       if (contactTarget.store) {
         setContactTarget({ listing: null, store: null });
         return;
@@ -317,6 +369,8 @@ export function CustomerApp() {
       }
     };
   }, [
+    openAd,
+    chatTarget.store,
     contactTarget.store,
     filterSheetOpen,
     citySheetOpen,
@@ -656,6 +710,7 @@ export function CustomerApp() {
           onBack={goBack}
           onOpenListing={(id) => navigateTo({ kind: 'listing', listingId: id })}
           onContactStore={(store) => setContactTarget({ listing: null, store })}
+          onChatInApp={(store) => setChatTarget({ listing: null, store })}
         />
       );
     }
@@ -1672,6 +1727,19 @@ export function CustomerApp() {
       <div className={`relative flex-1 min-h-0 w-full flex flex-col overflow-hidden ${bottomBarBgClass}`}>
         {renderMobileScreenBody()}
         <CustomerStartupOverlay />
+        <AppOpenAdOverlay
+          ad={openAd}
+          onDismiss={() => setOpenAd(null)}
+          onAction={(ad) => {
+            setOpenAd(null);
+            setEntryScreen(null);
+            if (ad.listingId) {
+              navigateTo({ kind: 'listing', listingId: ad.listingId });
+            } else {
+              navigateTo({ kind: 'store', storeId: ad.storeId });
+            }
+          }}
+        />
         <CitySelectorSheet open={citySheetOpen} onClose={() => setCitySheetOpen(false)} />
         <FilterBottomSheet
           open={filterSheetOpen}
@@ -1684,6 +1752,16 @@ export function CustomerApp() {
           listing={contactTarget.listing}
           store={contactTarget.store}
           onClose={() => setContactTarget({ listing: null, store: null })}
+          onOpenInAppChat={(listing, store) => {
+            setContactTarget({ listing: null, store: null });
+            setChatTarget({ listing, store });
+          }}
+        />
+        <StoreInAppChatSheet
+          listing={chatTarget.listing}
+          store={chatTarget.store}
+          onClose={() => setChatTarget({ listing: null, store: null })}
+          onSwitchToExternalContact={(listing, store) => setContactTarget({ listing, store })}
         />
       </div>
     </div>

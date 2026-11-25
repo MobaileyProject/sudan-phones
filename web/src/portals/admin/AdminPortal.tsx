@@ -13,6 +13,7 @@ import {
   Lock,
   LogOut,
   Maximize2,
+  Megaphone,
   Menu,
   Search,
   Shield,
@@ -56,8 +57,9 @@ import {
   TableRowsSkeleton,
   VerificationStatusLabel,
 } from '../../components/DesignSystem';
+import { AdminSponsoredAdsPanel } from './AdminSponsoredAdsPanel';
 
-type AdminSection = 'overview' | 'verification' | 'moderation' | 'roles' | 'audit';
+type AdminSection = 'overview' | 'verification' | 'moderation' | 'ads' | 'roles' | 'audit';
 
 const ALL_PERMISSIONS: { id: AdminPermission; group: { ar: string; en: string }; label: { ar: string; en: string } }[] = [
   { id: 'review_stores', group: { ar: 'التوثيق', en: 'Verification' }, label: { ar: 'مراجعة طلبات المتاجر واتخاذ قرارات التوثيق', en: 'Review store applications & issue verification decisions' } },
@@ -83,6 +85,7 @@ export function AdminPortal() {
     adminUsers,
     auditLogs,
     dualApprovals,
+    sponsoredAds,
     activeAdminUser,
     activeAdminRole,
     hasAdminPermission,
@@ -143,7 +146,7 @@ export function AdminPortal() {
   // Audit Logs & Dual Approval
   const [auditSearch, setAuditSearch] = useState('');
   const [auditActorFilter, setAuditActorFilter] = useState('all');
-  const [auditTargetFilter, setAuditTargetFilter] = useState<'all' | 'store' | 'listing' | 'role' | 'approval'>('all');
+  const [auditTargetFilter, setAuditTargetFilter] = useState<'all' | 'store' | 'listing' | 'role' | 'approval' | 'ad'>('all');
   const [expandedAuditId, setExpandedAuditId] = useState<string | null>(null);
   const [newDualReqOpen, setNewDualReqOpen] = useState(false);
   const [dualTargetStoreId, setDualTargetStoreId] = useState('');
@@ -160,6 +163,11 @@ export function AdminPortal() {
   const openCustomerReports = customerReports.filter((r) => r.status === 'open');
   const pendingDualCount = adminOverview?.pending_approvals ?? dualApprovals.filter((d) => d.status === 'awaiting_second_approval').length;
   const contactLeads7d = adminOverview?.contact_leads_7d ?? 0;
+  const activeSponsoredAdsCount =
+    adminOverview?.active_sponsored_ads ?? sponsoredAds.filter((a) => a.status === 'active').length;
+  const adRevenueSdg =
+    adminOverview?.ad_revenue_sdg ??
+    sponsoredAds.filter((a) => a.paymentStatus === 'paid').reduce((sum, a) => sum + a.paidAmountSdg, 0);
 
   // Filtered Verification Queue (A-02)
   const queueStores = useMemo(() => {
@@ -304,6 +312,7 @@ export function AdminPortal() {
     { id: 'overview', ar: 'نظرة عامة للمؤسس', en: 'Founder Overview', icon: LayoutGrid },
     { id: 'verification', ar: 'توثيق المتاجر', en: 'Store Verification', icon: FileSearch, count: pendingApplicationsCount },
     { id: 'moderation', ar: 'إشراف الإعلانات', en: 'Listing Moderation', icon: Flag, count: flaggedListingsCount + openCustomerReports.length },
+    { id: 'ads', ar: 'الإعلانات المموّلة', en: 'Sponsored Ads', icon: Megaphone, count: activeSponsoredAdsCount },
     { id: 'roles', ar: 'الأدوار والصلاحيات', en: 'Roles & Permissions', icon: Users },
     { id: 'audit', ar: 'التدقيق والموافقة المزدوجة', en: 'Audit & Dual Approval', icon: Shield, count: pendingDualCount },
   ];
@@ -721,6 +730,26 @@ export function AdminPortal() {
                     </div>
                     <span className="h-7 px-2.5 rounded-lg bg-orange-100 text-orange-900 text-xs font-mono-num font-bold flex items-center">
                       {flaggedListingsCount + openCustomerReports.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSection('ads')}
+                    className="w-full p-3.5 rounded-xl border border-slate-200 hover:border-blue-400 text-start flex items-center justify-between gap-3 transition-colors"
+                  >
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">
+                        {lang === 'ar' ? 'الإعلانات المموّلة عند فتح التطبيق' : 'App-Open Sponsored Ads'}
+                      </p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {lang === 'ar'
+                          ? `${activeSponsoredAdsCount} نشط · إيرادات ${formatSdg(adRevenueSdg, lang)}`
+                          : `${activeSponsoredAdsCount} live · ${formatSdg(adRevenueSdg, lang)} paid`}
+                      </p>
+                    </div>
+                    <span className="h-7 px-2.5 rounded-lg bg-blue-100 text-blue-900 text-xs font-mono-num font-bold flex items-center">
+                      {activeSponsoredAdsCount}
                     </span>
                   </button>
 
@@ -1701,12 +1730,13 @@ export function AdminPortal() {
                     </select>
                     <select
                       value={auditTargetFilter}
-                      onChange={(e) => setAuditTargetFilter(e.target.value as 'all' | 'store' | 'listing' | 'role' | 'approval')}
+                      onChange={(e) => setAuditTargetFilter(e.target.value as 'all' | 'store' | 'listing' | 'role' | 'approval' | 'ad')}
                       className="h-9 px-3 rounded-lg border border-slate-200 bg-white text-xs"
                     >
                       <option value="all">{lang === 'ar' ? 'كل الأهداف' : 'All Target Types'}</option>
                       <option value="store">{lang === 'ar' ? 'المتاجر' : 'Stores'}</option>
                       <option value="listing">{lang === 'ar' ? 'الإعلانات' : 'Listings'}</option>
+                      <option value="ad">{lang === 'ar' ? 'الإعلانات المموّلة' : 'Sponsored Ads'}</option>
                       <option value="role">{lang === 'ar' ? 'الأدوار' : 'Roles'}</option>
                       <option value="approval">{lang === 'ar' ? 'الموافقات المزدوجة' : 'Dual Approvals'}</option>
                     </select>
@@ -1761,6 +1791,9 @@ export function AdminPortal() {
               </div>
             )
           )}
+
+          {/* SPONSORED APP-OPEN ADS */}
+          {section === 'ads' && <AdminSponsoredAdsPanel />}
         </main>
       </div>
 

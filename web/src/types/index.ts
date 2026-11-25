@@ -317,12 +317,60 @@ export interface AuditLogEntry {
     | 'role_updated'
     | 'dual_approval_requested'
     | 'dual_approval_approved'
-    | 'dual_approval_rejected';
-  targetType: 'store' | 'listing' | 'role' | 'approval';
+    | 'dual_approval_rejected'
+    | 'ad_created'
+    | 'ad_updated'
+    | 'ad_deleted';
+  targetType: 'store' | 'listing' | 'role' | 'approval' | 'ad';
   targetId: string;
   targetName: BilingualText;
   ipAddress: string;
   details: BilingualText;
+}
+
+export type SponsoredAdStatus = 'active' | 'paused' | 'scheduled' | 'ended';
+export type SponsoredAdPaymentStatus = 'paid' | 'pending' | 'invoiced';
+
+export interface SponsoredAdDailyStat {
+  date: string;
+  impressions: number;
+  clicks: number;
+}
+
+export interface AdAnalyticsMetadata {
+  city?: string;
+  locale?: Language;
+  listingId?: string | null;
+  timeToClickMs?: number;
+  source?: string;
+}
+
+export interface SponsoredAd {
+  id: string;
+  storeId: string;
+  storeName: BilingualText;
+  listingId?: string | null;
+  title: BilingualText;
+  subtitle: BilingualText;
+  ctaLabel: BilingualText;
+  badgeText?: BilingualText;
+  imageUrl: string;
+  targetCity: CityId | 'all';
+  status: SponsoredAdStatus;
+  priority: number;
+  skipDelaySec: number;
+  paidAmountSdg: number;
+  paymentStatus: SponsoredAdPaymentStatus;
+  paymentRef?: string;
+  startsAt: string;
+  endsAt: string;
+  impressions: number;
+  clicks: number;
+  ctrPct: number;
+  lastClickedAt?: string | null;
+  avgTimeToClickMs?: number | null;
+  dailyStats: SponsoredAdDailyStat[];
+  createdAt: string;
 }
 
 export interface DualApprovalRequest {

@@ -251,6 +251,64 @@ export interface ApiMe {
   merchant: boolean;
 }
 
+export interface ApiStoreChatMessage {
+  id: string;
+  store_id: number;
+  sender_role: 'customer' | 'store';
+  sender_name?: string;
+  sender_phone?: string;
+  text: string;
+  listing_id?: number | null;
+  listing_title?: string;
+  listing_price_sdg?: number;
+  is_auto_reply?: boolean;
+  created_at: string;
+}
+
+export interface ApiSponsoredAd {
+  id: number;
+  store_id: number;
+  store_name: string;
+  store_name_ar?: string;
+  store_name_en?: string;
+  listing_id?: number | null;
+  title_ar: string;
+  title_en: string;
+  subtitle_ar: string;
+  subtitle_en: string;
+  cta_label_ar: string;
+  cta_label_en: string;
+  badge_ar?: string;
+  badge_en?: string;
+  image_url: string;
+  target_city: string;
+  status: 'active' | 'paused' | 'scheduled' | 'ended';
+  priority: number;
+  skip_delay_sec: number;
+  paid_amount_sdg: number;
+  payment_status: 'paid' | 'pending' | 'invoiced';
+  payment_ref?: string;
+  starts_at: string;
+  ends_at: string;
+  impressions: number;
+  clicks: number;
+  ctr_pct?: number;
+  last_clicked_at?: string | null;
+  avg_time_to_click_ms?: number | null;
+  daily_stats?: Array<{ date: string; impressions: number; clicks: number }>;
+  created_at: string;
+}
+
+const CHAT_VISITOR_KEY = 'sp_chat_visitor_id_v1';
+function getChatVisitorId(): string {
+  let id = readLocalStorage(CHAT_VISITOR_KEY);
+  if (!id) {
+    id = newUuid();
+    writeLocalStorage(CHAT_VISITOR_KEY, id);
+  }
+  return id;
+}
+
 export async function ensureCsrf(): Promise<ApiSession> {
   await initSessionStorage();
   const headers: Record<string, string> = { Accept: 'application/json' };
@@ -301,6 +359,7 @@ export async function apiRequest<T = any>(
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'Accept-Language': options.lang || 'ar',
+    'X-Chat-Visitor-Id': getChatVisitorId(),
   };
   const sessionToken = getStoredSessionToken();
   if (sessionToken) {
@@ -449,10 +508,35 @@ export const api = {
   getStoreListings: (id: string | number) => apiRequest(`/api/v1/stores/${id}/listings`, { query: { limit: 100 } }),
   getContactMethods: (listingId: string | number) =>
     apiRequest<{ data: { phone_url: string; whatsapp_url: string } }>(`/api/v1/listings/${listingId}/contact-methods`),
-  recordContactEvent: (listingId: string | number, method: 'whatsapp' | 'phone') =>
+  recordContactEvent: (listingId: string | number, method: 'whatsapp' | 'phone' | 'in_app') =>
     apiRequest(`/api/v1/listings/${listingId}/contact-events`, {
       method: 'POST',
       body: { event_id: newUuid(), method },
+    }),
+  getStoreMessages: (storeId: string | number) =>
+    apiRequest<{ data: ApiStoreChatMessage[] }>(`/api/v1/stores/${storeId}/messages`),
+  sendStoreMessage: (
+    storeId: string | number,
+    payload: {
+      text: string;
+      sender_name?: string;
+      sender_phone?: string;
+      listing_id?: number | null;
+      listing_title?: string;
+      listing_price_sdg?: number;
+    },
+    lang?: 'ar' | 'en'
+  ) =>
+    apiRequest<{
+      data: {
+        message: ApiStoreChatMessage;
+        reply: ApiStoreChatMessage | null;
+        messages: ApiStoreChatMessage[];
+      };
+    }>(`/api/v1/stores/${storeId}/messages`, {
+      method: 'POST',
+      body: payload,
+      lang,
     }),
 
   // Ratings & Reports
@@ -576,4 +660,52 @@ export const api = {
     }),
   getAuditEvents: (query?: Record<string, string | number | undefined>) =>
     apiRequest('/api/v1/admin/audit-events', { query: { limit: 100, ...query } }),
+
+  // Sponsored App-Open Ads (Public + Merchant + Admin)
+  getActiveAds: (city?: string) =>
+    apiRequest<{ data: ApiSponsoredAd[] }>('/api/v1/ads/active', {
+      query: city && city !== 'all' ? { city } : undefined,
+    }),
+  recordAdImpression: (
+    adId: string | number,
+    meta?: { city?: string; locale?: 'ar' | 'en'; source?: string }
+  ) =>
+    apiRequest<{ data: ApiSponsoredAd }>(`/api/v1/ads/${adId}/impression`, {
+      method: 'POST',
+      body: meta || {},
+    }),
+  recordAdClick: (
+    adId: string | number,
+    meta?: {
+      city?: string;
+      locale?: 'ar' | 'en';
+      listing_id?: number | null;
+      time_to_click_ms?: number;
+      source?: string;
+    }
+  ) =>
+    apiRequest<{ data: ApiSponsoredAd }>(`/api/v1/ads/${adId}/click`, {
+      method: 'POST',
+      body: meta || {},
+    }),
+  getMyStoreAds: () =>
+    apiRequest<{
+      data: {
+        campaigns: ApiSponsoredAd[];
+        summary: {
+          total_campaigns: number;
+          active_campaigns: number;
+          total_impressions: number;
+          total_clicks: number;
+          overall_ctr_pct: number;
+        };
+      };
+    }>('/api/v1/stores/me/ads'),
+  getAdminAds: () => apiRequest<{ data: ApiSponsoredAd[] }>('/api/v1/admin/ads'),
+  createAdminAd: (payload: Record<string, unknown>) =>
+    apiRequest<{ data: ApiSponsoredAd }>('/api/v1/admin/ads', { method: 'POST', body: payload }),
+  updateAdminAd: (adId: string | number, payload: Record<string, unknown>) =>
+    apiRequest<{ data: ApiSponsoredAd }>(`/api/v1/admin/ads/${adId}`, { method: 'PATCH', body: payload }),
+  deleteAdminAd: (adId: string | number) =>
+    apiRequest<{ data: { deleted: boolean } }>(`/api/v1/admin/ads/${adId}`, { method: 'DELETE' }),
 };

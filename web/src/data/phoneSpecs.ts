@@ -405,6 +405,82 @@ export const PHONE_SPECIFICATIONS_BY_MODEL: Record<string, PhoneSpecifications> 
       source_url: 'internal://catalog/tec-camon-30-pro',
     },
   },
+  'iPhone 14 Pro': {
+    release_year: 2022,
+    series: 'iPhone Pro',
+    display: {
+      size_inches: 6.1,
+      type: 'LTPO Super Retina XDR OLED',
+      resolution: '1179x2556',
+      refresh_rate_hz: 120,
+    },
+    performance: {
+      chipset: 'Apple A16 Bionic',
+      os: 'iOS 16 (Upgradable to iOS 18)',
+    },
+    camera: {
+      rear_main_mp: 48,
+      rear: '48 MP (wide) + 12 MP (3x telephoto) + 12 MP (ultrawide)',
+      rear_ois: true,
+      front: '12 MP (TrueDepth)',
+      video: '4K@60fps ProRes',
+    },
+    battery: {
+      capacity_mah: 3200,
+      charging_wired_w: 23,
+      charging_wireless_w: 15,
+    },
+    connectivity: {
+      network: '5G / 4G LTE',
+      sim: 'Nano-SIM + eSIM',
+      nfc: true,
+      usb: 'Lightning (USB 2.0)',
+      headphone_jack: false,
+      microsd: false,
+    },
+    build: {
+      fingerprint: 'Face ID',
+      ip_rating: 'IP68',
+    },
+  },
+  'Redmi Note 13 Pro': {
+    release_year: 2024,
+    series: 'Redmi Note',
+    display: {
+      size_inches: 6.67,
+      type: 'AMOLED (1.5K CrystalRes)',
+      resolution: '1220x2712',
+      refresh_rate_hz: 120,
+    },
+    performance: {
+      chipset: 'Snapdragon 7s Gen 2',
+      os: 'Android 13, MIUI 14',
+    },
+    camera: {
+      rear_main_mp: 200,
+      rear: '200 MP (wide) + 8 MP (ultrawide) + 2 MP (macro)',
+      rear_ois: true,
+      front: '16 MP',
+      video: '4K@30fps / 1080p@60fps',
+    },
+    battery: {
+      capacity_mah: 5100,
+      charging_wired_w: 67,
+      charging_wireless_w: 0,
+    },
+    connectivity: {
+      network: '5G / 4G LTE',
+      sim: 'Dual SIM (Nano-SIM + eSIM)',
+      nfc: true,
+      usb: 'USB Type-C 2.0',
+      headphone_jack: true,
+      microsd: false,
+    },
+    build: {
+      fingerprint: 'Under-display (optical)',
+      ip_rating: 'IP54',
+    },
+  },
   'Note 40 Pro': {
     release_year: 2024,
     series: 'Note',
@@ -461,16 +537,22 @@ const BRAND_DEFAULT_SERIES: Record<BrandId, string> = {
   infinix: 'Note',
 };
 
+function parseFirstNumber(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const m = value.match(/(\d+(?:\.\d+)?)/);
+    if (m) return Number(m[1]);
+  }
+  return null;
+}
+
 /**
- * Always returns complete structured specifications for any listing, falling back gracefully
- * for newly created merchant listings not yet in the static catalog map.
+ * Always returns complete structured specifications for any listing, normalizing partial or
+ * legacy backend payloads and falling back gracefully to catalog defaults.
  */
 export function getPhoneSpecifications(listing: Listing): PhoneSpecifications {
-  if (listing.specifications) return listing.specifications;
   const direct = PHONE_SPECIFICATIONS_BY_MODEL[listing.model];
-  if (direct) return direct;
-
-  return {
+  const fallback: PhoneSpecifications = direct ?? {
     release_year: 2024,
     series: BRAND_DEFAULT_SERIES[listing.brand] ?? 'Smartphone',
     display: {
@@ -506,6 +588,111 @@ export function getPhoneSpecifications(listing: Listing): PhoneSpecifications {
     build: {
       fingerprint: listing.brand === 'apple' ? 'Face ID' : 'Under-display',
       ip_rating: 'IP54',
+    },
+  };
+
+  const raw = listing.specifications as Record<string, any> | undefined;
+  if (!raw || typeof raw !== 'object') return fallback;
+
+  const rawDisplay = raw.display ?? {};
+  const rawPerf = raw.performance ?? raw.platform ?? {};
+  const rawCam = raw.camera ?? {};
+  const rawBat = raw.battery ?? {};
+  const rawConn = raw.connectivity ?? {};
+  const rawBuild = raw.build ?? {};
+
+  return {
+    release_year: parseFirstNumber(raw.release_year) ?? fallback.release_year,
+    series: typeof raw.series === 'string' && raw.series.trim() ? raw.series : fallback.series,
+    display: {
+      size_inches:
+        parseFirstNumber(rawDisplay.size_inches) ??
+        parseFirstNumber(rawDisplay.size) ??
+        fallback.display.size_inches,
+      type:
+        typeof rawDisplay.type === 'string' && rawDisplay.type.trim()
+          ? rawDisplay.type
+          : fallback.display.type,
+      resolution:
+        typeof rawDisplay.resolution === 'string' && rawDisplay.resolution.trim()
+          ? rawDisplay.resolution
+          : fallback.display.resolution,
+      refresh_rate_hz:
+        parseFirstNumber(rawDisplay.refresh_rate_hz) ?? fallback.display.refresh_rate_hz,
+    },
+    performance: {
+      chipset:
+        typeof rawPerf.chipset === 'string' && rawPerf.chipset.trim()
+          ? rawPerf.chipset
+          : fallback.performance.chipset,
+      os:
+        typeof rawPerf.os === 'string' && rawPerf.os.trim()
+          ? rawPerf.os
+          : fallback.performance.os,
+    },
+    camera: {
+      rear_main_mp:
+        parseFirstNumber(rawCam.rear_main_mp) ??
+        parseFirstNumber(rawCam.main) ??
+        fallback.camera.rear_main_mp,
+      rear:
+        typeof rawCam.rear === 'string' && rawCam.rear.trim()
+          ? rawCam.rear
+          : typeof rawCam.main === 'string' && rawCam.main.trim()
+            ? rawCam.main
+            : fallback.camera.rear,
+      rear_ois: typeof rawCam.rear_ois === 'boolean' ? rawCam.rear_ois : fallback.camera.rear_ois,
+      front:
+        typeof rawCam.front === 'string' && rawCam.front.trim()
+          ? rawCam.front
+          : typeof rawCam.selfie === 'string' && rawCam.selfie.trim()
+            ? rawCam.selfie
+            : fallback.camera.front,
+      video:
+        typeof rawCam.video === 'string' && rawCam.video.trim()
+          ? rawCam.video
+          : fallback.camera.video,
+    },
+    battery: {
+      capacity_mah:
+        parseFirstNumber(rawBat.capacity_mah) ??
+        parseFirstNumber(rawBat.capacity) ??
+        fallback.battery.capacity_mah,
+      charging_wired_w:
+        parseFirstNumber(rawBat.charging_wired_w) ?? fallback.battery.charging_wired_w,
+      charging_wireless_w:
+        parseFirstNumber(rawBat.charging_wireless_w) ?? fallback.battery.charging_wireless_w,
+    },
+    connectivity: {
+      network:
+        typeof rawConn.network === 'string' && rawConn.network.trim()
+          ? rawConn.network
+          : fallback.connectivity.network,
+      sim:
+        typeof rawConn.sim === 'string' && rawConn.sim.trim()
+          ? rawConn.sim
+          : fallback.connectivity.sim,
+      nfc: typeof rawConn.nfc === 'boolean' ? rawConn.nfc : fallback.connectivity.nfc,
+      usb:
+        typeof rawConn.usb === 'string' && rawConn.usb.trim()
+          ? rawConn.usb
+          : fallback.connectivity.usb,
+      headphone_jack:
+        typeof rawConn.headphone_jack === 'boolean'
+          ? rawConn.headphone_jack
+          : fallback.connectivity.headphone_jack,
+      microsd:
+        typeof rawConn.microsd === 'boolean' ? rawConn.microsd : fallback.connectivity.microsd,
+    },
+    build: {
+      fingerprint:
+        typeof rawBuild.fingerprint === 'string' && rawBuild.fingerprint.trim()
+          ? rawBuild.fingerprint
+          : fallback.build.fingerprint,
+      ip_rating:
+        typeof rawBuild.ip_rating === 'string' && rawBuild.ip_rating.trim()
+          ? rawBuild.ip_rating
+          : fallback.build.ip_rating,
     },
   };
 }
