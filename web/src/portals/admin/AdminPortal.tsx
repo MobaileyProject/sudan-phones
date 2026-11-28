@@ -9,6 +9,7 @@ import {
   FileSearch,
   FileText,
   Flag,
+  Globe,
   LayoutGrid,
   Lock,
   LogOut,
@@ -20,6 +21,8 @@ import {
   ShieldAlert,
   ShieldCheck,
   Slash,
+  Smartphone,
+  Store as StoreIcon,
   Trash2,
   UserCheck,
   Users,
@@ -58,8 +61,9 @@ import {
   VerificationStatusLabel,
 } from '../../components/DesignSystem';
 import { AdminSponsoredAdsPanel } from './AdminSponsoredAdsPanel';
+import { AdminCatalogPanel } from './AdminCatalogPanel';
 
-type AdminSection = 'overview' | 'verification' | 'moderation' | 'ads' | 'roles' | 'audit';
+type AdminSection = 'overview' | 'verification' | 'moderation' | 'catalog' | 'ads' | 'roles' | 'audit';
 
 const ALL_PERMISSIONS: { id: AdminPermission; group: { ar: string; en: string }; label: { ar: string; en: string } }[] = [
   { id: 'review_stores', group: { ar: 'التوثيق', en: 'Verification' }, label: { ar: 'مراجعة طلبات المتاجر واتخاذ قرارات التوثيق', en: 'Review store applications & issue verification decisions' } },
@@ -74,6 +78,8 @@ const ALL_PERMISSIONS: { id: AdminPermission; group: { ar: string; en: string };
 export function AdminPortal() {
   const {
     lang,
+    setLang,
+    setPortal,
     session,
     me,
     loginWithBackend,
@@ -312,6 +318,7 @@ export function AdminPortal() {
     { id: 'overview', ar: 'نظرة عامة للمؤسس', en: 'Founder Overview', icon: LayoutGrid },
     { id: 'verification', ar: 'توثيق المتاجر', en: 'Store Verification', icon: FileSearch, count: pendingApplicationsCount },
     { id: 'moderation', ar: 'إشراف الإعلانات', en: 'Listing Moderation', icon: Flag, count: flaggedListingsCount + openCustomerReports.length },
+    { id: 'catalog', ar: 'كتالوج الهواتف', en: 'Phone Catalog', icon: Smartphone },
     { id: 'ads', ar: 'الإعلانات المموّلة', en: 'Sponsored Ads', icon: Megaphone, count: activeSponsoredAdsCount },
     { id: 'roles', ar: 'الأدوار والصلاحيات', en: 'Roles & Permissions', icon: Users },
     { id: 'audit', ar: 'التدقيق والموافقة المزدوجة', en: 'Audit & Dual Approval', icon: Shield, count: pendingDualCount },
@@ -421,7 +428,7 @@ export function AdminPortal() {
 
   if (!session.authenticated || session.role !== 'admin') {
     return (
-      <div className="min-h-[calc(100vh-52px)] bg-slate-100/80 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-100/80 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-5">
           {session.authenticated && session.role !== 'admin' ? (
             <div className="py-4 text-center space-y-3">
@@ -545,9 +552,9 @@ export function AdminPortal() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-52px)] flex bg-slate-100/70">
+    <div className="min-h-screen flex bg-slate-100/70">
       {/* Desktop Admin Sidebar */}
-      <aside className="hidden lg:flex w-64 flex-col shrink-0 sticky top-[52px] h-[calc(100vh-52px)]">
+      <aside className="hidden lg:flex w-64 flex-col shrink-0 sticky top-0 h-screen">
         {SidebarContent}
       </aside>
 
@@ -571,7 +578,7 @@ export function AdminPortal() {
       <div className="flex-1 min-w-0 flex flex-col">
         <OfflineBanner />
 
-        <header className="h-14 px-4 lg:px-6 bg-white border-b border-slate-200 flex items-center justify-between gap-4 sticky top-[52px] z-20">
+        <header className="h-14 px-4 lg:px-6 bg-white border-b border-slate-200 flex items-center justify-between gap-4 sticky top-0 z-20">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
@@ -592,9 +599,22 @@ export function AdminPortal() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <span className="hidden sm:inline text-[11px] font-medium text-slate-500">
-              {lang === 'ar' ? 'مساحة إدارية منفصلة' : 'Isolated Admin Workspace'}
-            </span>
+            <button
+              type="button"
+              onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
+              className="h-9 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <Globe className="w-3.5 h-3.5 text-slate-500" />
+              <span>{lang === 'ar' ? 'EN' : 'عربي'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPortal('customer')}
+              className="h-9 px-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <StoreIcon className="w-3.5 h-3.5 text-blue-700" />
+              <span className="hidden sm:inline">{lang === 'ar' ? 'السوق' : 'Marketplace'}</span>
+            </button>
           </div>
         </header>
 
@@ -1372,6 +1392,9 @@ export function AdminPortal() {
               </div>
             )
           )}
+
+          {/* PHONE CATALOG MANAGER */}
+          {section === 'catalog' && <AdminCatalogPanel />}
 
           {/* A-06: ROLES AND PERMISSIONS */}
           {section === 'roles' && (

@@ -2,17 +2,21 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { motion, useReducedMotion } from 'motion/react';
 import {
-  ArrowLeftRight,
+  Bell,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Clock,
   GitCompareArrows,
   Grid2x2,
   Heart,
   Home,
   KeyRound,
+  List,
   LogIn,
+  Map as MapIcon,
   MapPin,
+  MessageSquare,
   RefreshCw,
   Search,
   Settings,
@@ -26,13 +30,12 @@ import {
   WifiOff,
   X,
 } from 'lucide-react';
-import { BrandId, Listing, SponsoredAd, Store } from '../../types';
+import { BrandId, CustomerNotification, Listing, PriceAlert, SponsoredAd, Store } from '../../types';
 import {
   formatCity,
   formatCondition,
   formatListingTitle,
   formatSdg,
-  formatUsedGrade,
   tText,
 } from '../../i18n/translations';
 import { usePrototype } from '../../store/PrototypeContext';
@@ -59,18 +62,20 @@ import {
 } from './CustomerDetailScreens';
 import { StoreInAppChatSheet } from './StoreInAppChatSheet';
 import { AppOpenAdOverlay } from './AppOpenAdOverlay';
+import { DiscountsOffersScreen, HomeStorefrontSections } from './HomeStorefrontSections';
 import { CustomerDetailedPhoneCompare } from './PhoneSpecsAndCompare';
-import {
-  CompactStarRating,
-  RateTargetSheet,
-} from './RatingsComponents';
+import { CompactStarRating } from './RatingsComponents';
 import {
   AuthThemeMode,
   MobileAppAuthScreens,
   MobileEntryScreen,
 } from './MobileAppAuthScreens';
+import { StoreMapExplorer } from './StoreMapExplorer';
+import { CustomerNotificationsSheet } from './CustomerNotificationsSheet';
+import { UnifiedMessagesView } from '../../components/UnifiedMessagesView';
+import { mergeRecentSearches } from '../../utils/marketplaceHelpers';
 
-type CustomerTab = 'home' | 'search' | 'brands' | 'stores';
+type CustomerTab = 'home' | 'search' | 'messages' | 'brands' | 'stores';
 
 type CustomerSubScreen =
   | { kind: 'none' }
@@ -79,6 +84,7 @@ type CustomerSubScreen =
   | { kind: 'compare'; variantKey: string }
   | { kind: 'compare_phones'; primaryListingId: string; secondaryListingId?: string }
   | { kind: 'brand_models'; brandId: BrandId }
+  | { kind: 'discounts' }
   | { kind: 'favorites' }
   | { kind: 'account_settings' };
 
@@ -103,8 +109,8 @@ export function CustomerApp() {
     cachedPublicListings,
     getStoreById,
     getStoreRatingSummary,
-    getPhoneModelRatingSummary,
-    submitPhoneModelRating,
+    getProductRatingSummary,
+    getModelRatingFromProducts,
     sim,
     updateSim,
     reconnectAndRefresh,
@@ -153,9 +159,8 @@ export function CustomerApp() {
     },
   };
 
-  const [entryScreen, setEntryScreen] = useState<MobileEntryScreen | null>(() =>
-    session.authenticated || hasStoredSessionToken() ? null : 'welcome'
-  );
+  // Guest-first instant browsing (sign-in remains accessible in top bar & settings)
+  const [entryScreen, setEntryScreen] = useState<MobileEntryScreen | null>(null);
   const authTheme: AuthThemeMode = 'light';
   const [signedInUser, setSignedInUser] = useState<{ name: string; phone: string } | null>(() =>
     session.authenticated && me
@@ -193,6 +198,204 @@ export function CustomerApp() {
   const [liveBrandModels, setLiveBrandModels] = useState<any[]>([]);
   const [loadingBrandModels, setLoadingBrandModels] = useState(false);
 
+  // Recent searches, Quick Compare Tray, Stores Map/List mode, Notifications & Price Alerts
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    try {
+      const raw = window.localStorage.getItem('sp_recent_searches_v1');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [compareTrayIds, setCompareTrayIds] = useState<string[]>([]);
+  const [storesViewMode, setStoresViewMode] = useState<'list' | 'map'>('list');
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<CustomerNotification[]>([]);
+  const [priceAlerts, setPriceAlerts] = useState<PriceAlert[]>([]);
+  const [messagesUnreadCount, setMessagesUnreadCount] = useState<number>(0);
+  const [pendingMessageThreadKey, setPendingMessageThreadKey] = useState<string | null>(null);
+
+  const isMerchantAccount = Boolean(
+    session.authenticated && (session.merchant || session.role === 'merchant')
+  );
+
+  const refreshNotificationsAndMessages = async () => {
+    try {
+      const [notifsRes, alertsRes, chatsRes] = await Promise.all([
+        api.getNotifications().catch(() => ({ data: [] })),
+        api.getPriceAlerts().catch(() => ({ data: [] })),
+        isMerchantAccount
+          ? api.getMyStoreChats().catch(() => ({ data: [] }))
+          : Promise.resolve({ data: [] }),
+      ]);
+      const mappedNotifs: CustomerNotification[] = (notifsRes.data || []).map((n: any) => ({
+        id: String(n.id),
+        type: n.type || 'system',
+        titleAr: n.title_ar || n.titleAr || '',
+        titleEn: n.title_en || n.titleEn || '',
+        bodyAr: n.body_ar || n.bodyAr || '',
+        bodyEn: n.body_en || n.bodyEn || '',
+        listingId: n.listing_id != null ? String(n.listing_id) : undefined,
+        storeId: n.store_id != null ? String(n.store_id) : undefined,
+        threadKey: n.thread_key ? String(n.thread_key) : undefined,
+        read: Boolean(n.read),
+        createdAt: n.created_at || new Date().toISOString(),
+      }));
+      const mappedAlerts: PriceAlert[] = (alertsRes.data || []).map((a: any) => ({
+        id: String(a.id),
+        listingId: String(a.listing_id),
+        model: a.model || a.model_title || '',
+        targetPriceSdg: a.target_price_sdg != null ? Number(a.target_price_sdg) : null,
+        initialPriceSdg: Number(a.initial_price_sdg ?? a.current_price_sdg ?? 0),
+        createdAt: a.created_at || new Date().toISOString(),
+      }));
+      setNotifications(mappedNotifs);
+      setPriceAlerts(mappedAlerts);
+      if (isMerchantAccount) {
+        const unread = (chatsRes.data || []).reduce(
+          (sum: number, t: any) => sum + Number(t.unread_count || 0),
+          0
+        );
+        setMessagesUnreadCount(unread);
+      } else {
+        const unreadChatNotifs = mappedNotifs.filter(
+          (n) => !n.read && n.type === 'chat_reply'
+        ).length;
+        setMessagesUnreadCount(unreadChatNotifs);
+      }
+    } catch {
+      // ignore transient refresh failure
+    }
+  };
+
+  useEffect(() => {
+    refreshNotificationsAndMessages();
+  }, [session.authenticated, session.user_id, isMerchantAccount]);
+
+  const unreadNotificationsCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications]
+  );
+
+  const recordRecentSearch = (query: string) => {
+    setRecentSearches((prev) => {
+      const next = mergeRecentSearches(prev, query, 6);
+      try {
+        window.localStorage.setItem('sp_recent_searches_v1', JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  const handleToggleCompareTray = (listingId: string) => {
+    if (compareTrayIds.includes(listingId)) {
+      setCompareTrayIds(compareTrayIds.filter((id) => id !== listingId));
+      return;
+    }
+    if (compareTrayIds.length >= 2) {
+      setCompareTrayIds([compareTrayIds[0], listingId]);
+      pushToast('info', {
+        ar: 'تم استبدال الهاتف الثاني في قائمة المقارنة.',
+        en: 'Replaced the second phone in your compare tray.',
+      });
+      return;
+    }
+    const nextLength = compareTrayIds.length;
+    setCompareTrayIds([...compareTrayIds, listingId]);
+    pushToast('success', {
+      ar:
+        nextLength === 0
+          ? 'تمت الإضافة لقائمة المقارنة — اختر هاتفاً ثانياً للمقارنة.'
+          : 'جاهز للمقارنة! اضغط "قارن الآن" بالأسفل.',
+      en:
+        nextLength === 0
+          ? 'Added to compare tray — pick one more phone to compare.'
+          : 'Ready to compare! Tap "Compare Now" below.',
+    });
+  };
+
+  const handleTogglePriceAlert = async (listing: Listing) => {
+    const existing = priceAlerts.find((a) => a.listingId === listing.id);
+    if (existing) {
+      try {
+        await api.deletePriceAlert(existing.id);
+      } catch {
+        // ignore
+      }
+      setPriceAlerts((prev) => prev.filter((a) => a.id !== existing.id));
+      pushToast('info', {
+        ar: 'تم إيقاف تنبيه انخفاض السعر لهذا الهاتف.',
+        en: 'Price drop alert removed.',
+      });
+      return;
+    }
+    const targetPrice = Math.max(1000, Math.round((listing.priceSdg * 0.95) / 1000) * 1000);
+    try {
+      const res = await api.createPriceAlert({
+        listing_id: Number(listing.id),
+        target_price_sdg: targetPrice,
+      });
+      const a = res.data;
+      setPriceAlerts((prev) => [
+        {
+          id: String(a.id),
+          listingId: String(a.listing_id),
+          model: a.model || a.model_title || listing.model,
+          targetPriceSdg: Number(a.target_price_sdg || targetPrice),
+          initialPriceSdg: Number(a.initial_price_sdg ?? listing.priceSdg),
+          createdAt: a.created_at || new Date().toISOString(),
+        },
+        ...prev,
+      ]);
+      pushToast('success', {
+        ar: 'تم تفعيل تنبيه انخفاض السعر! سنخبرك فوراً عند تخفيض هذا الهاتف.',
+        en: 'Price drop alert active! You will be notified if the store lowers the price.',
+      });
+    } catch {
+      pushToast('error', {
+        ar: 'تعذر حفظ تنبيه السعر حالياً.',
+        en: 'Could not save price alert right now.',
+      });
+    }
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    try {
+      await api.markNotificationsRead();
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleDeletePriceAlert = async (alertId: string) => {
+    setPriceAlerts((prev) => prev.filter((a) => a.id !== alertId));
+    try {
+      await api.deletePriceAlert(alertId);
+    } catch {
+      // ignore
+    }
+  };
+
+  const searchSuggestions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const l of discoveryListings) {
+      const label = l.model;
+      const key = label.toLowerCase();
+      if (key.includes(q) && !seen.has(key) && key !== q) {
+        seen.add(key);
+        out.push(label);
+        if (out.length >= 4) break;
+      }
+    }
+    return out;
+  }, [searchQuery, discoveryListings]);
+
   useEffect(() => {
     if (subScreen.kind !== 'brand_models') return;
     let active = true;
@@ -223,11 +426,6 @@ export function CustomerApp() {
       window.clearTimeout(timer);
     };
   }, [subScreen, brands, brandModelSearch]);
-  const [rateModelTarget, setRateModelTarget] = useState<{
-    brand: BrandId;
-    model: string;
-    arabicBrandPrefix: string;
-  } | null>(null);
 
   // Progressive pagination (respects Low-Data mode — loads 8 vs 12 at a time)
   const pageSize = sim.lowDataMode ? 8 : 12;
@@ -323,10 +521,6 @@ export function CustomerApp() {
         setCitySheetOpen(false);
         return;
       }
-      if (rateModelTarget) {
-        setRateModelTarget(null);
-        return;
-      }
       if (entryScreen !== null) {
         if (entryScreen === 'signin' || entryScreen === 'register') {
           setEntryScreen(null);
@@ -374,7 +568,6 @@ export function CustomerApp() {
     contactTarget.store,
     filterSheetOpen,
     citySheetOpen,
-    rateModelTarget,
     entryScreen,
     subScreen.kind,
     tab,
@@ -494,15 +687,6 @@ export function CustomerApp() {
     filters.acceptsTradeIn,
   ].filter(Boolean).length;
 
-  // Group counts of offers per variantKey so cards can show "Compare 3 offers"
-  const variantOfferCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const l of discoveryListings) {
-      counts[l.variantKey] = (counts[l.variantKey] ?? 0) + 1;
-    }
-    return counts;
-  }, [discoveryListings]);
-
   const openSearchWith = (patch: Partial<CustomerFilterState>, q = '') => {
     setSearchQuery(q);
     setFilters({ ...DEFAULT_FILTERS, city: selectedCity, ...patch });
@@ -513,12 +697,10 @@ export function CustomerApp() {
 
   const ForwardChevron = lang === 'ar' ? ChevronLeft : ChevronRight;
 
-  // Reusable Minimalist Claymorphism Phone Listing Card
+  // Clean, Uncluttered Product Card
   const renderPhoneCard = (listing: Listing) => {
     const store = getStoreById(listing.storeId);
-    const offerCount = variantOfferCounts[listing.variantKey] ?? 1;
-    const isNew = listing.condition === 'new';
-    const modelRating = getPhoneModelRatingSummary(listing.brand, listing.model);
+    const productRating = getProductRatingSummary(listing.id);
 
     return (
       <div
@@ -532,17 +714,17 @@ export function CustomerApp() {
             navigateTo({ kind: 'listing', listingId: listing.id });
           }
         }}
-        className="group clay-card-interactive clay-focus-ring rounded-[26px] p-2.5 text-start cursor-pointer flex flex-col"
+        className="group clay-card-interactive clay-focus-ring rounded-[24px] p-2.5 text-start cursor-pointer flex flex-col"
       >
-        {/* Recessed Soft Clay Photo Stage */}
-        <div className="relative overflow-hidden rounded-[19px] bg-[#E5EDE8] ring-1 ring-[#172B20]/[0.05]">
+        {/* Clean Product Photo Stage */}
+        <div className="relative overflow-hidden rounded-[18px] bg-[#E5EDE8] ring-1 ring-[#172B20]/[0.05]">
           <SafeImage
             clay
             src={listing.photos[0]?.url}
             alt={listing.model}
-            aspectClass="aspect-[1/0.88]"
+            aspectClass="aspect-[4/3]"
             label={listing.model}
-            className="group-hover:scale-[1.035] transition-transform duration-300 ease-out"
+            className="group-hover:scale-[1.03] transition-transform duration-300 ease-out"
           />
           <button
             type="button"
@@ -557,97 +739,47 @@ export function CustomerApp() {
           >
             <Heart className={`w-3.5 h-3.5 ${favoriteIds.includes(listing.id) ? 'fill-current' : ''}`} />
           </button>
-          <div className="absolute top-2 start-2 flex flex-col gap-1 items-start pointer-events-none">
-            {listing.priceDropped && listing.previousPriceSdg && listing.previousPriceSdg > listing.priceSdg && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-bold shadow-sm">
-                <TrendingDown className="w-2.5 h-2.5" />
-                {lang === 'ar' ? 'انخفض السعر' : 'Drop'}
-              </span>
-            )}
-            {(listing.acceptsTradeIn || store?.acceptsTradeIn) && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#0F6B5D]/90 text-white text-[9px] font-bold shadow-sm">
-                <ArrowLeftRight className="w-2.5 h-2.5" />
-                {lang === 'ar' ? 'استبدال' : 'Trade-In'}
-              </span>
-            )}
-          </div>
         </div>
 
-        {/* Sculpted Content Hierarchy */}
-        <div className="px-1 pt-2.5 pb-0.5 flex-1 flex flex-col justify-between gap-2.5">
+        {/* Clean Typographic Hierarchy */}
+        <div className="px-1.5 pt-3 pb-1 flex-1 flex flex-col justify-between">
           <div>
-            {/* Model Title */}
-            <h3 className="text-[13px] font-bold text-[#14281E] leading-[1.3] line-clamp-2 min-h-[2.6em]">
+            <h3 className="text-[13px] font-bold text-[#14281E] leading-snug truncate">
               {formatListingTitle(listing.arabicBrandPrefix, listing.model, lang)}
             </h3>
 
-            {/* Minimalist Condition & Storage Spec Line */}
-            <p className="mt-1 flex items-center gap-1.5 text-[10.5px] font-medium text-[#60786B] truncate">
-              <span
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                  isNew ? 'bg-[#2D6145]' : 'bg-[#8AA093]'
-                }`}
-              />
-              <span className={isNew ? 'text-[#245A3D] font-semibold' : 'text-[#445C50] font-semibold'}>
-                {formatCondition(listing.condition, lang)}
-                {!isNew && listing.usedGrade ? ` (${formatUsedGrade(listing.usedGrade, lang)})` : ''}
-              </span>
-              <span className="text-[#A4B7AD]">·</span>
-              <span dir="ltr" className="font-mono-num text-[#4E6659] shrink-0">
-                {listing.storageGb} GB
-              </span>
-            </p>
-
-            {/* Primary Price Anchor + Shared Phone Model Rating */}
-            <div className="mt-2 flex items-center justify-between gap-1.5">
-              <div className="min-w-0">
-                <p className="text-[13.5px] font-extrabold text-[#1E5637] font-mono-num tracking-tight truncate">
-                  {formatSdg(listing.priceSdg, lang)}
-                </p>
-                {listing.priceDropped && listing.previousPriceSdg && listing.previousPriceSdg > listing.priceSdg && (
-                  <p className="text-[10px] text-[#7D9186] line-through font-mono-num truncate">
-                    {formatSdg(listing.previousPriceSdg, lang)}
-                  </p>
-                )}
-              </div>
-              <CompactStarRating
-                average={modelRating.average}
-                count={modelRating.count}
-                size="xs"
-              />
+            <div className="mt-1 flex items-center justify-between gap-1.5 text-[10.5px] text-[#60786B]">
+              <p className="truncate">
+                <span className="font-medium text-[#4A6457]">
+                  {formatCondition(listing.condition, lang)}
+                </span>
+                <span className="mx-1 text-[#A4B7AD]" aria-hidden="true">·</span>
+                <span dir="ltr" className="font-mono-num">
+                  {listing.storageGb} GB
+                </span>
+              </p>
+              {productRating.count > 0 && (
+                <CompactStarRating
+                  average={productRating.average}
+                  count={productRating.count}
+                  size="xs"
+                />
+              )}
             </div>
+
+            <p className="mt-2 text-[14px] font-extrabold text-[#1E5637] font-mono-num tracking-tight truncate">
+              {formatSdg(listing.priceSdg, lang)}
+            </p>
           </div>
 
-          {/* Debossed Store Name Footer (Store Name Only) + Optional Compare Action */}
-          <div className="space-y-1.5">
-            {store && (
-              <div className="clay-inset rounded-[14px] px-2.5 py-1.5 flex items-center gap-1.5 min-w-0">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#2D6145] shrink-0" />
-                <span className="text-[11px] font-semibold text-[#213B2D] truncate">
-                  {tText(store.name, lang)}
-                </span>
-              </div>
-            )}
-
-            {offerCount > 1 && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigateTo({ kind: 'compare', variantKey: listing.variantKey });
-                }}
-                className="w-full flex items-center justify-between px-1.5 pt-0.5 text-[10.5px] font-semibold text-[#265B3E] hover:text-[#14281E] transition-colors"
-              >
-                <span className="inline-flex items-center gap-1.5 truncate">
-                  <GitCompareArrows className="w-3 h-3 shrink-0" />
-                  <span className="truncate">
-                    {lang === 'ar' ? `قارن ${offerCount} عروض` : `Compare ${offerCount} offers`}
-                  </span>
-                </span>
-                <ForwardChevron className="w-3 h-3 text-[#658072] shrink-0" />
-              </button>
-            )}
-          </div>
+          {store && (
+            <div className="mt-2.5 pt-2 border-t border-[#172B20]/[0.06] flex items-center gap-1.5 min-w-0">
+              <ShieldCheck className="w-3 h-3 text-[#2D6145] shrink-0" />
+              <span className="text-[10.5px] font-medium text-[#526B5E] truncate">
+                {tText(store.name, lang)}
+              </span>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -699,6 +831,10 @@ export function CustomerApp() {
           }
           onOpenListing={(id) => navigateTo({ kind: 'listing', listingId: id })}
           onContactSeller={(listing, store) => setContactTarget({ listing, store })}
+          hasPriceAlert={priceAlerts.some((a) => a.listingId === subScreen.listingId)}
+          onTogglePriceAlert={handleTogglePriceAlert}
+          inCompareTray={compareTrayIds.includes(subScreen.listingId)}
+          onToggleCompareTray={handleToggleCompareTray}
         />
       );
     }
@@ -776,12 +912,26 @@ export function CustomerApp() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {savedListings.map(renderPhoneCard)}
               </div>
             )}
           </div>
         </div>
+      );
+    }
+
+    if (subScreen.kind === 'discounts') {
+      return (
+        <DiscountsOffersScreen
+          lang={lang}
+          listings={discoveryListings}
+          favoriteIds={favoriteIds}
+          toggleFavorite={toggleFavorite}
+          getStoreById={getStoreById}
+          onBack={goBack}
+          onOpenListing={(listingId) => navigateTo({ kind: 'listing', listingId })}
+        />
       );
     }
 
@@ -890,10 +1040,13 @@ export function CustomerApp() {
                   : matching.length > 0
                     ? Math.min(...matching.map((x) => x.priceSdg))
                     : null;
+                const liveAggModelRating = getModelRatingFromProducts(brandSlug, m.name);
                 const modelRating =
-                  m.rating_count > 0
-                    ? { average: Number(m.rating_average || 0), count: Number(m.rating_count || 0) }
-                    : getPhoneModelRatingSummary(brandSlug, m.name);
+                  liveAggModelRating.count > 0
+                    ? { average: liveAggModelRating.average, count: liveAggModelRating.count }
+                    : m.rating_count > 0
+                      ? { average: Number(m.rating_average || 0), count: Number(m.rating_count || 0) }
+                      : { average: 0, count: 0 };
                 const yr = m.specifications?.release_year;
                 const bat = m.specifications?.battery?.capacity_mah;
                 const photoUrl = matching[0]?.photos?.[0]?.url || '';
@@ -933,26 +1086,21 @@ export function CustomerApp() {
                             {[yr ? String(yr) : '', bat ? `${bat}mAh` : ''].filter(Boolean).join(' · ')}
                           </p>
                         )}
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           <CompactStarRating
                             average={modelRating.average}
                             count={modelRating.count}
                             size="xs"
                           />
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setRateModelTarget({
-                                brand: brandSlug,
-                                model: m.name,
-                                arabicBrandPrefix: arPrefix,
-                              });
-                            }}
-                            className="clay-pill-active px-2 py-0.5 rounded-full text-[10px] font-bold text-[#17462C]"
-                          >
-                            {lang === 'ar' ? 'قيّم' : 'Rate'}
-                          </button>
+                          <span className="text-[10px] text-[#5F776A]">
+                            {modelRating.count > 0
+                              ? lang === 'ar'
+                                ? 'من تقييمات المنتجات'
+                                : 'from product ratings'
+                              : lang === 'ar'
+                                ? 'لا توجد تقييمات منتجات بعد'
+                                : 'no product ratings yet'}
+                          </span>
                         </div>
                         <p className="text-[11px] text-[#5D7568] mt-1">
                           {liveCount > 0 && lowest ? (
@@ -981,42 +1129,6 @@ export function CustomerApp() {
               })
             )}
           </div>
-
-          {(() => {
-            const targetTitle = rateModelTarget
-              ? formatListingTitle(rateModelTarget.arabicBrandPrefix, rateModelTarget.model, lang)
-              : '';
-            return (
-              <RateTargetSheet
-                open={rateModelTarget !== null}
-                title={lang === 'ar' ? `تقييم ${targetTitle}` : `Rate ${targetTitle}`}
-                subtitle={
-                  lang === 'ar'
-                    ? 'قيّم هذا الموديل بناءً على تجربتك'
-                    : 'Rate this specific phone model based on your experience'
-                }
-                helperNote={
-                  lang === 'ar'
-                    ? `تقييمك يرتبط بموديل ${targetTitle} نفسه ويظهر تلقائياً في جميع المتاجر التي تبيعه.`
-                    : `This rating applies to ${targetTitle} and automatically syncs across every store selling it.`
-                }
-                defaultAuthorName={signedInUser?.name ?? ''}
-                onClose={() => setRateModelTarget(null)}
-                onSubmit={({ rating, authorName, comment }) => {
-                  if (rateModelTarget) {
-                    submitPhoneModelRating(
-                      rateModelTarget.brand,
-                      rateModelTarget.model,
-                      rateModelTarget.arabicBrandPrefix,
-                      rating,
-                      authorName,
-                      comment
-                    );
-                  }
-                }}
-              />
-            );
-          })()}
         </div>
       );
     }
@@ -1029,50 +1141,68 @@ export function CustomerApp() {
         {/* TAB 1: C-01 CUSTOMER HOMEPAGE */}
         {tab === 'home' && (
           <div className="flex-1 overflow-y-auto thin-scroll pb-24">
-            {/* Minimalist Soft Clay Top App Bar */}
-            <div className="sticky top-0 z-20 clay-topbar px-4 py-3 flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => setEntryScreen('welcome')}
-                className="clay-focus-ring flex items-center gap-2.5 min-w-0 rounded-2xl"
-              >
-                <div className="clay-primary-btn w-10 h-10 rounded-[16px] flex items-center justify-center shrink-0">
-                  <Smartphone className="w-4.5 h-4.5 stroke-[2.2]" />
-                </div>
-                <div className="text-start min-w-0">
-                  <span className="block text-[14.5px] font-bold text-[#172B20] leading-none whitespace-nowrap">
-                    {lang === 'ar' ? 'سودان فونز' : 'Sudan Phones'}
-                  </span>
-                  <span className="block text-[10.5px] text-[#5B7366] mt-1 truncate">
-                    {signedInUser
-                      ? signedInUser.name
-                      : lang === 'ar'
-                        ? 'متاجر فعلية موثّقة'
-                        : 'Verified stores'}
-                  </span>
-                </div>
-              </button>
-
-              <div className="flex items-center gap-2 shrink-0">
+            {/* Clean, Uncluttered Sticky Top App Bar */}
+            <header className="sticky top-0 z-20 clay-topbar border-b border-[#1E3B2B]/[0.07] px-4 py-2.5 flex items-center justify-between gap-3">
+              {/* Start: Brand mark + Wordmark & Inline City Selector */}
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
                 <button
                   type="button"
-                  onClick={() => setCitySheetOpen(true)}
-                  className="clay-pill clay-focus-ring inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-xs font-semibold text-[#172B20] whitespace-nowrap shrink-0"
+                  onClick={() => setEntryScreen('welcome')}
+                  aria-label={lang === 'ar' ? 'سودان فونز' : 'Sudan Phones'}
+                  className="clay-primary-btn clay-focus-ring w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                 >
-                  <MapPin className="w-3.5 h-3.5 text-[#2D6145]" />
-                  <span>{formatCity(selectedCity, lang)}</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-[#6D8478]" />
+                  <Smartphone className="w-4 h-4 stroke-[2.2]" />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => setEntryScreen('welcome')}
+                    className="block text-[14px] font-bold text-[#172B20] leading-tight truncate text-start hover:text-[#0F6B5D] transition-colors"
+                  >
+                    {lang === 'ar' ? 'سودان فونز' : 'Sudan Phones'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCitySheetOpen(true)}
+                    className="clay-focus-ring -mx-1 px-1 py-0.5 mt-0.5 rounded-md inline-flex items-center gap-1 max-w-full text-[11.5px] font-medium text-[#2D6145] hover:text-[#0F6B5D] transition-colors whitespace-nowrap"
+                  >
+                    <MapPin className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{formatCity(selectedCity, lang)}</span>
+                    <ChevronDown className="w-3 h-3 text-[#6D8478] shrink-0" />
+                  </button>
+                </div>
+              </div>
+
+              {/* End: Quiet Icon Actions (No Heavy Pill Clutter) */}
+              <div className="flex items-center gap-0.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setNotificationsOpen(true)}
+                  aria-label={lang === 'ar' ? 'الإشعارات وتنبيهات الأسعار' : 'Notifications & Price Alerts'}
+                  title={lang === 'ar' ? 'الإشعارات وتنبيهات الأسعار' : 'Notifications & Price Alerts'}
+                  className="relative clay-focus-ring w-10 h-10 rounded-xl flex items-center justify-center text-[#1E3B2B] hover:bg-[#1E3B2B]/[0.06] active:bg-[#1E3B2B]/[0.1] transition-colors shrink-0"
+                >
+                  <Bell className="w-[19px] h-[19px] stroke-[1.9]" />
+                  {unreadNotificationsCount > 0 && (
+                    <span className="absolute top-1.5 end-1.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[#0F6B5D] text-white text-[9px] font-bold font-mono-num flex items-center justify-center ring-2 ring-[#EEF3F0]">
+                      {unreadNotificationsCount}
+                    </span>
+                  )}
                 </button>
                 <button
                   type="button"
                   onClick={() => navigateTo({ kind: 'favorites' })}
                   aria-label={lang === 'ar' ? 'المفضلة' : 'Saved Favorites'}
                   title={lang === 'ar' ? 'المفضلة' : 'Saved Favorites'}
-                  className="relative clay-pill clay-focus-ring w-10 h-10 rounded-full flex items-center justify-center text-[#C81E3A] shrink-0"
+                  className="relative clay-focus-ring w-10 h-10 rounded-xl flex items-center justify-center text-[#1E3B2B] hover:bg-[#1E3B2B]/[0.06] active:bg-[#1E3B2B]/[0.1] transition-colors shrink-0"
                 >
-                  <Heart className={`w-4 h-4 ${favoriteIds.length > 0 ? 'fill-current' : ''}`} />
+                  <Heart
+                    className={`w-[19px] h-[19px] stroke-[1.9] ${
+                      favoriteIds.length > 0 ? 'text-[#C81E3A] fill-current' : ''
+                    }`}
+                  />
                   {favoriteIds.length > 0 && (
-                    <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[#C81E3A] text-white text-[9px] font-bold font-mono-num flex items-center justify-center">
+                    <span className="absolute top-1.5 end-1.5 min-w-[15px] h-[15px] px-1 rounded-full bg-[#C81E3A] text-white text-[9px] font-bold font-mono-num flex items-center justify-center ring-2 ring-[#EEF3F0]">
                       {favoriteIds.length}
                     </span>
                   )}
@@ -1087,17 +1217,23 @@ export function CustomerApp() {
                         ? `إعدادات الحساب (${signedInUser.name})`
                         : `Account Settings (${signedInUser.name})`
                       : lang === 'ar'
-                        ? 'الإعدادات (وضع توفير البيانات واللغة)'
-                        : 'Settings (Data Saver & Language)'
+                        ? 'الإعدادات والحساب'
+                        : 'Settings & Account'
                   }
-                  className={`clay-focus-ring w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                    signedInUser ? 'clay-pill-active text-[#18432C]' : 'clay-pill text-[#2D6145]'
+                  className={`clay-focus-ring w-10 h-10 rounded-xl flex items-center justify-center transition-colors shrink-0 ${
+                    signedInUser
+                      ? 'bg-[#0F6B5D]/12 text-[#0F6B5D] hover:bg-[#0F6B5D]/18'
+                      : 'text-[#1E3B2B] hover:bg-[#1E3B2B]/[0.06] active:bg-[#1E3B2B]/[0.1]'
                   }`}
                 >
-                  {signedInUser ? <UserRound className="w-4 h-4" /> : <Settings className="w-4 h-4" />}
+                  {signedInUser ? (
+                    <UserRound className="w-[19px] h-[19px] stroke-[1.9]" />
+                  ) : (
+                    <Settings className="w-[19px] h-[19px] stroke-[1.9]" />
+                  )}
                 </button>
               </div>
-            </div>
+            </header>
 
             <motion.div
               key={`home-hero-${selectedCity}`}
@@ -1169,44 +1305,23 @@ export function CustomerApp() {
                 </div>
               </motion.div>
 
-              {/* Featured & Latest Arrivals */}
+              {/* Curated Storefront Merchandising Sections + Mid-Feed Ads */}
               <motion.div variants={heroItemVariants} className="will-change-transform">
-                <div className="flex items-end justify-between mb-3.5 px-0.5">
-                  <div>
-                    <h2 className="text-[15px] font-bold text-[#172B20]">
-                      {lang === 'ar' ? 'أحدث العروض الموثقة' : 'Latest Verified Phones'}
-                    </h2>
-                    <p className="text-[11px] text-[#657D70] mt-0.5">
-                      {selectedCity === 'all'
-                        ? lang === 'ar'
-                          ? 'جميع المدن · بدون إعلانات ممولة'
-                          : 'All cities · Organic verified listings'
-                        : lang === 'ar'
-                          ? `عروض متاجر ${formatCity(selectedCity, 'ar')} الموثقة`
-                          : `Verified stores in ${formatCity(selectedCity, 'en')}`}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => openSearchWith({})}
-                    className="text-[11.5px] font-semibold text-[#2A6043] hover:text-[#172B20] whitespace-nowrap transition-colors"
-                  >
-                    {lang === 'ar' ? 'عرض الكل' : 'View all'}
-                  </button>
-                </div>
-
-                {sim.skeletonLoading ? (
-                  <div className="grid grid-cols-2 gap-3.5">
-                    <PhoneCardSkeleton clay />
-                    <PhoneCardSkeleton clay />
-                    <PhoneCardSkeleton clay />
-                    <PhoneCardSkeleton clay />
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3.5">
-                    {homeListings.slice(0, 6).map(renderPhoneCard)}
-                  </div>
-                )}
+                <HomeStorefrontSections
+                  lang={lang}
+                  selectedCity={selectedCity}
+                  homeListings={homeListings}
+                  activeOpenAds={activeOpenAds}
+                  skeletonLoading={sim.skeletonLoading}
+                  favoriteIds={favoriteIds}
+                  toggleFavorite={toggleFavorite}
+                  getStoreById={getStoreById}
+                  renderPhoneCard={renderPhoneCard}
+                  onOpenListing={(listingId) => navigateTo({ kind: 'listing', listingId })}
+                  onOpenStore={(storeId) => navigateTo({ kind: 'store', storeId })}
+                  onOpenDiscounts={() => navigateTo({ kind: 'discounts' })}
+                  onOpenSearchWith={openSearchWith}
+                />
               </motion.div>
 
               {/* Verified Store Spotlights */}
@@ -1285,6 +1400,11 @@ export function CustomerApp() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && searchQuery.trim().length >= 2) {
+                        recordRecentSearch(searchQuery);
+                      }
+                    }}
                     placeholder={
                       lang === 'ar' ? 'ابحث باسم الهاتف أو الماركة...' : 'Search model, brand, store...'
                     }
@@ -1315,6 +1435,127 @@ export function CustomerApp() {
                   )}
                 </button>
               </div>
+
+              {/* Instant Model Suggestions while Typing */}
+              {searchSuggestions.length > 0 && (
+                <div className="flex items-center gap-1.5 overflow-x-auto thin-scroll py-0.5">
+                  {searchSuggestions.map((modelName) => (
+                    <button
+                      key={modelName}
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery(modelName);
+                        recordRecentSearch(modelName);
+                      }}
+                      className="h-7 px-3 rounded-full bg-white border border-[#172B20]/10 text-[11px] font-semibold text-[#172B20] hover:border-[#0F6B5D] whitespace-nowrap shrink-0"
+                    >
+                      {modelName}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Quick 1-Tap Filter Chips */}
+              <div className="flex items-center gap-2 overflow-x-auto thin-scroll py-0.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFilters((f) => ({
+                      ...f,
+                      maxPrice: f.maxPrice === '1000000' ? '' : '1000000',
+                    }))
+                  }
+                  className={`h-8 px-3 rounded-full text-[11px] font-bold whitespace-nowrap shrink-0 transition-colors ${
+                    filters.maxPrice === '1000000' ? 'clay-pill-active' : 'clay-pill text-[#2C4739]'
+                  }`}
+                >
+                  {lang === 'ar' ? 'تحت 1 مليون ج.س' : 'Under 1M SDG'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFilters((f) => ({
+                      ...f,
+                      condition: f.condition === 'new' ? 'all' : 'new',
+                    }))
+                  }
+                  className={`h-8 px-3 rounded-full text-[11px] font-bold whitespace-nowrap shrink-0 transition-colors ${
+                    filters.condition === 'new' ? 'clay-pill-active' : 'clay-pill text-[#2C4739]'
+                  }`}
+                >
+                  {lang === 'ar' ? 'جديد مختوم' : 'New Sealed'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFilters((f) => ({
+                      ...f,
+                      condition: f.condition === 'used' ? 'all' : 'used',
+                    }))
+                  }
+                  className={`h-8 px-3 rounded-full text-[11px] font-bold whitespace-nowrap shrink-0 transition-colors ${
+                    filters.condition === 'used' ? 'clay-pill-active' : 'clay-pill text-[#2C4739]'
+                  }`}
+                >
+                  {lang === 'ar' ? 'مستعمل مفحوص' : 'Used Inspected'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFilters((f) => ({
+                      ...f,
+                      acceptsTradeIn: !f.acceptsTradeIn,
+                    }))
+                  }
+                  className={`h-8 px-3 rounded-full text-[11px] font-bold whitespace-nowrap shrink-0 transition-colors ${
+                    filters.acceptsTradeIn ? 'clay-pill-active' : 'clay-pill text-[#2C4739]'
+                  }`}
+                >
+                  {lang === 'ar' ? 'يقبل الاستبدال' : 'Trade-In'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigateTo({ kind: 'discounts' })}
+                  className="clay-pill h-8 px-3 rounded-full text-[11px] font-bold text-[#1E5637] inline-flex items-center gap-1 whitespace-nowrap shrink-0"
+                >
+                  <TrendingDown className="w-3 h-3" />
+                  {lang === 'ar' ? 'عروض وتخفيضات' : 'Price Drops'}
+                </button>
+              </div>
+
+              {/* Recent Searches Strip */}
+              {!searchQuery.trim() && recentSearches.length > 0 && (
+                <div className="flex items-center gap-1.5 overflow-x-auto thin-scroll py-0.5">
+                  <span className="text-[10.5px] font-semibold text-[#637B6E] inline-flex items-center gap-1 shrink-0">
+                    <Clock className="w-3 h-3" />
+                    {lang === 'ar' ? 'الأخيرة:' : 'Recent:'}
+                  </span>
+                  {recentSearches.map((term) => (
+                    <button
+                      key={term}
+                      type="button"
+                      onClick={() => setSearchQuery(term)}
+                      className="h-7 px-2.5 rounded-full bg-white/80 border border-[#172B20]/10 text-[11px] font-medium text-[#2C4739] hover:border-[#0F6B5D] whitespace-nowrap shrink-0"
+                    >
+                      {term}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecentSearches([]);
+                      try {
+                        window.localStorage.removeItem('sp_recent_searches_v1');
+                      } catch {
+                        // ignore
+                      }
+                    }}
+                    className="text-[10.5px] font-semibold text-[#7A9084] hover:text-[#172B20] px-1.5 whitespace-nowrap shrink-0"
+                  >
+                    {lang === 'ar' ? 'مسح' : 'Clear'}
+                  </button>
+                </div>
+              )}
 
               {/* Active Filter Chips (Interactive removal controls) */}
               {activeFilterCount > 0 && (
@@ -1446,7 +1687,7 @@ export function CustomerApp() {
                 </motion.div>
               ) : (
                 <div className={`space-y-3.5 transition-opacity ${slowRefreshing ? 'opacity-70' : 'opacity-100'}`}>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
                     {searchResults.slice(0, visibleSearchCount).map(renderPhoneCard)}
                   </div>
                   {searchResults.length > visibleSearchCount && (
@@ -1514,7 +1755,7 @@ export function CustomerApp() {
                 }
 
                 return (
-                  <div className="grid grid-cols-2 gap-3.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5">
                     {filteredBrands.map((brand) => {
                       const slug = (brand.slug || brand.name.toLowerCase()) as BrandId;
                       const brandListings = publicListings.filter(
@@ -1571,95 +1812,198 @@ export function CustomerApp() {
           </div>
         )}
 
-        {/* TAB 4: VERIFIED STORES DIRECTORY */}
+        {/* TAB 4: VERIFIED STORES DIRECTORY (LIST + INTERACTIVE MAP) */}
         {tab === 'stores' && (
           <div className="flex-1 flex flex-col min-h-0">
-            <div className="clay-topbar px-4 pt-3.5 pb-3 flex items-center justify-between gap-2 shrink-0">
-              <div>
-                <h1 className="text-base font-bold text-[#172B20]">
-                  {lang === 'ar' ? 'المتاجر الموثّقة' : 'Verified Stores'}
-                </h1>
-                <p className="text-xs text-[#637B6E] mt-0.5">
-                  {lang === 'ar'
-                    ? 'متاجر فعلية تم التحقق من هويتها وعناوينها'
-                    : 'Physical retail stores verified by Sudan Phones'}
-                </p>
+            <div className="clay-topbar px-4 pt-3.5 pb-3 space-y-2.5 shrink-0">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h1 className="text-base font-bold text-[#172B20]">
+                    {lang === 'ar' ? 'المتاجر الموثّقة' : 'Verified Stores'}
+                  </h1>
+                  <p className="text-xs text-[#637B6E] mt-0.5">
+                    {lang === 'ar'
+                      ? 'متاجر فعلية تم التحقق من هويتها وعناوينها'
+                      : 'Physical retail stores verified by Sudan Phones'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCitySheetOpen(true)}
+                  className="clay-pill clay-focus-ring h-9 px-3.5 rounded-full text-[11px] font-semibold text-[#172B20] whitespace-nowrap"
+                >
+                  {formatCity(selectedCity, lang)}
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setCitySheetOpen(true)}
-                className="clay-pill clay-focus-ring h-9 px-3.5 rounded-full text-[11px] font-semibold text-[#172B20] whitespace-nowrap"
-              >
-                {formatCity(selectedCity, lang)}
-              </button>
+
+              {/* List / Map Segmented Switch */}
+              <div className="grid grid-cols-2 gap-1.5 p-1 rounded-full clay-inset text-xs">
+                <button
+                  type="button"
+                  onClick={() => setStoresViewMode('list')}
+                  className={`h-9 rounded-full font-bold flex items-center justify-center gap-1.5 transition-colors ${
+                    storesViewMode === 'list' ? 'clay-pill text-[#172B20]' : 'text-[#5E7669]'
+                  }`}
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span>{lang === 'ar' ? 'قائمة المتاجر' : 'List View'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStoresViewMode('map')}
+                  className={`h-9 rounded-full font-bold flex items-center justify-center gap-1.5 transition-colors ${
+                    storesViewMode === 'map' ? 'clay-pill text-[#172B20]' : 'text-[#5E7669]'
+                  }`}
+                >
+                  <MapIcon className="w-3.5 h-3.5" />
+                  <span>{lang === 'ar' ? 'الخريطة والأقرب إليك' : 'Map & Near Me'}</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto thin-scroll px-4 pt-2 pb-24 space-y-4">
-              {verifiedStores.map((st) => {
-                const count = publicListings.filter((l) => l.storeId === st.id).length;
-                const stRating = getStoreRatingSummary(st.id);
-                return (
-                  <button
-                    key={st.id}
-                    type="button"
-                    onClick={() => navigateTo({ kind: 'store', storeId: st.id })}
-                    className="w-full clay-card-interactive clay-focus-ring rounded-[26px] p-2.5 text-start"
-                  >
-                    <div className="relative overflow-hidden rounded-[18px]">
-                      <SafeImage
-                        clay
-                        src={st.bannerImage}
-                        alt={tText(st.name, lang)}
-                        aspectClass="aspect-[16/7]"
-                      />
-                    </div>
-                    <div className="px-2 pt-3 pb-1.5 space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <h3 className="text-sm font-bold text-[#172B20] truncate">
-                            {tText(st.name, lang)}
-                          </h3>
-                          <ShieldCheck className="w-4 h-4 text-[#2D6145] shrink-0" />
+            <div className="flex-1 overflow-y-auto thin-scroll px-4 pt-2 pb-24">
+              {storesViewMode === 'map' ? (
+                <StoreMapExplorer
+                  stores={verifiedStores}
+                  listings={publicListings}
+                  selectedCity={selectedCity}
+                  onOpenStore={(storeId) => navigateTo({ kind: 'store', storeId })}
+                />
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {verifiedStores.map((st) => {
+                    const count = publicListings.filter((l) => l.storeId === st.id).length;
+                    const stRating = getStoreRatingSummary(st.id);
+                    return (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() => navigateTo({ kind: 'store', storeId: st.id })}
+                        className="w-full clay-card-interactive clay-focus-ring rounded-[26px] p-2.5 text-start"
+                      >
+                        <div className="relative overflow-hidden rounded-[18px]">
+                          <SafeImage
+                            clay
+                            src={st.bannerImage}
+                            alt={tText(st.name, lang)}
+                            aspectClass="aspect-[16/7]"
+                          />
                         </div>
-                        <CompactStarRating
-                          average={stRating.average}
-                          count={stRating.count}
-                          size="xs"
-                        />
-                      </div>
-                      <p className="text-xs text-[#546B5F] line-clamp-1">
-                        {formatCity(st.city, lang)} · {tText(st.address, lang)}
-                      </p>
-                      <div className="flex items-center justify-between gap-2 text-[11px]">
-                        <p className="text-[#758C80] truncate">{tText(st.openingHours, lang)}</p>
-                        <span className="font-bold text-[#245A3D] font-mono-num whitespace-nowrap shrink-0">
-                          {count} {lang === 'ar' ? 'جهاز' : 'phones'}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
+                        <div className="px-2 pt-3 pb-1.5 space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <h3 className="text-sm font-bold text-[#172B20] truncate">
+                                {tText(st.name, lang)}
+                              </h3>
+                              <ShieldCheck className="w-4 h-4 text-[#2D6145] shrink-0" />
+                            </div>
+                            <CompactStarRating
+                              average={stRating.average}
+                              count={stRating.count}
+                              size="xs"
+                            />
+                          </div>
+                          <p className="text-xs text-[#546B5F] line-clamp-1">
+                            {formatCity(st.city, lang)} · {tText(st.address, lang)}
+                          </p>
+                          <div className="flex items-center justify-between gap-2 text-[11px]">
+                            <p className="text-[#758C80] truncate">{tText(st.openingHours, lang)}</p>
+                            <span className="font-bold text-[#245A3D] font-mono-num whitespace-nowrap shrink-0">
+                              {count} {lang === 'ar' ? 'جهاز' : 'phones'}
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Floating Sculpted Clay 4-Tab Mobile Navigation Dock (Natural Thumb Zone) */}
+        {/* TAB 5: MESSAGES (OUTSIDE STORE PORTAL — PEOPLE LIST FIRST, FULL-SCREEN CHAT ON CLICK) */}
+        {tab === 'messages' && (
+          <div className="flex-1 overflow-y-auto thin-scroll px-4 pt-4 pb-24">
+            <UnifiedMessagesView
+              mode={isMerchantAccount ? 'merchant' : 'buyer'}
+              initialThreadKey={pendingMessageThreadKey}
+              onInitialThreadConsumed={() => setPendingMessageThreadKey(null)}
+              onUnreadCountChange={(count) => setMessagesUnreadCount(count)}
+              onNotificationsChanged={refreshNotificationsAndMessages}
+              embeddedInCustomerApp
+            />
+          </div>
+        )}
+
+        {/* Floating Quick Compare Tray (when 1-2 phones are queued) */}
+        {compareTrayIds.length > 0 && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-[78px] z-30 px-3">
+            <div className="pointer-events-auto max-w-md mx-auto bg-[#172B20] text-white rounded-2xl px-3.5 py-2.5 shadow-xl flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <GitCompareArrows className="w-4 h-4 text-emerald-300 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold truncate">
+                    {compareTrayIds
+                      .map((id) => discoveryListings.find((l) => l.id === id)?.model || `#${id}`)
+                      .join(' vs ')}
+                  </p>
+                  <p className="text-[10px] text-emerald-200/90">
+                    {compareTrayIds.length === 1
+                      ? lang === 'ar'
+                        ? 'اختر هاتفاً ثانياً أو قارن مباشرة'
+                        : 'Pick a 2nd phone or compare now'
+                      : lang === 'ar'
+                        ? 'جاهز للمقارنة التفصيلية'
+                        : 'Ready for side-by-side compare'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigateTo({
+                      kind: 'compare_phones',
+                      primaryListingId: compareTrayIds[0],
+                      secondaryListingId: compareTrayIds[1],
+                    })
+                  }
+                  className="h-8 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-[#0B1E14] text-[11px] font-extrabold whitespace-nowrap"
+                >
+                  {lang === 'ar' ? 'قارن الآن' : 'Compare'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCompareTrayIds([])}
+                  aria-label={lang === 'ar' ? 'مسح المقارنة' : 'Clear compare tray'}
+                  className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Floating Sculpted Clay 5-Tab Mobile Navigation Dock (Natural Thumb Zone) */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 px-3 pb-2.5 pt-2 bg-gradient-to-t from-[#EEF3F0] via-[#EEF3F0]/80 to-transparent">
           <nav
             aria-label={lang === 'ar' ? 'تنقل تطبيق العملاء' : 'Customer app navigation'}
-            className="pointer-events-auto h-[62px] rounded-[26px] clay-dock px-1.5 grid grid-cols-4 items-center gap-1"
+            className="pointer-events-auto max-w-md mx-auto h-[62px] rounded-[26px] clay-dock px-1.5 grid grid-cols-5 items-center gap-0.5"
           >
             {(
               [
                 { id: 'home', ar: 'الرئيسية', en: 'Home', icon: Home },
                 { id: 'search', ar: 'بحث', en: 'Search', icon: Search },
+                { id: 'messages', ar: 'الرسائل', en: 'Messages', icon: MessageSquare },
                 { id: 'brands', ar: 'الماركات', en: 'Brands', icon: Grid2x2 },
                 { id: 'stores', ar: 'المتاجر', en: 'Stores', icon: StoreIcon },
               ] as const
             ).map((item) => {
               const Icon = item.icon;
               const active = tab === item.id;
+              const showBadge = item.id === 'messages' && messagesUnreadCount > 0;
               return (
                 <button
                   key={item.id}
@@ -1680,7 +2024,14 @@ export function CustomerApp() {
                       className="absolute inset-0 rounded-[20px] clay-pill-active"
                     />
                   )}
-                  <Icon className={`relative z-10 w-[19px] h-[19px] ${active ? 'stroke-[2.4]' : 'stroke-[1.9]'}`} />
+                  <span className="relative z-10">
+                    <Icon className={`w-[19px] h-[19px] ${active ? 'stroke-[2.4]' : 'stroke-[1.9]'}`} />
+                    {showBadge && (
+                      <span className="absolute -top-1.5 -end-2 min-w-[16px] h-4 px-1 rounded-full bg-[#0F6B5D] text-white text-[9px] font-bold font-mono-num flex items-center justify-center ring-2 ring-[#EEF3F0]">
+                        {messagesUnreadCount}
+                      </span>
+                    )}
+                  </span>
                   <span className="relative z-10 text-[10px] font-bold whitespace-nowrap">
                     {lang === 'ar' ? item.ar : item.en}
                   </span>
@@ -1693,24 +2044,10 @@ export function CustomerApp() {
     );
   };
 
-  const isAuthDarkTop =
-    entryScreen !== null &&
-    (entryScreen === 'launch' ||
-      entryScreen === 'welcome' ||
-      entryScreen === 'signin');
   const isAuthDarkBottom =
     entryScreen !== null &&
     (entryScreen === 'launch' ||
       entryScreen === 'welcome');
-
-  const topBarBgClass =
-    entryScreen === null
-      ? 'bg-[#EEF3F0]'
-      : isAuthDarkTop
-        ? entryScreen === 'welcome' || entryScreen === 'signin' || entryScreen === 'launch'
-          ? 'bg-[#0A130E]'
-          : 'bg-[#0C1511]'
-        : 'bg-white';
 
   const bottomBarBgClass =
     entryScreen === null
@@ -1723,8 +2060,10 @@ export function CustomerApp() {
 
   return (
     <div className={`fixed inset-0 w-full h-[100dvh] overflow-hidden flex flex-col ${bottomBarBgClass}`}>
-      {/* Full-Screen Native App Viewport */}
-      <div className={`relative flex-1 min-h-0 w-full flex flex-col overflow-hidden ${bottomBarBgClass}`}>
+      {/* Desktop-Responsive Centered App Container (full-bleed on mobile, max-w-5xl centered on desktop) */}
+      <div
+        className={`relative flex-1 min-h-0 w-full max-w-5xl mx-auto flex flex-col overflow-hidden ${bottomBarBgClass} lg:shadow-xl lg:border-x lg:border-[#172B20]/[0.06]`}
+      >
         {renderMobileScreenBody()}
         <CustomerStartupOverlay />
         <AppOpenAdOverlay
@@ -1747,6 +2086,29 @@ export function CustomerApp() {
           onApply={(next) => setFilters(next)}
           onReset={() => setFilters(DEFAULT_FILTERS)}
           onClose={() => setFilterSheetOpen(false)}
+        />
+        <CustomerNotificationsSheet
+          open={notificationsOpen}
+          notifications={notifications}
+          alerts={priceAlerts}
+          onClose={() => setNotificationsOpen(false)}
+          onMarkAllRead={handleMarkAllNotificationsRead}
+          onDeleteAlert={handleDeletePriceAlert}
+          onOpenListing={(listingId) => {
+            setNotificationsOpen(false);
+            navigateTo({ kind: 'listing', listingId });
+          }}
+          onOpenStore={(storeId) => {
+            setNotificationsOpen(false);
+            navigateTo({ kind: 'store', storeId });
+          }}
+          onOpenMessageThread={(threadKey) => {
+            setNotificationsOpen(false);
+            setSubScreen({ kind: 'none' });
+            setHistoryStack([]);
+            setTab('messages');
+            if (threadKey) setPendingMessageThreadKey(threadKey);
+          }}
         />
         <ContactSellerSheet
           listing={contactTarget.listing}

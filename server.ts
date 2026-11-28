@@ -109,6 +109,13 @@ interface ListingRecord {
   warranty_type: string;
   is_sealed: boolean;
   has_original_box: boolean;
+  used_checklist?: {
+    biometrics_working: boolean;
+    original_screen: boolean;
+    network_unlocked: boolean;
+    clean_imei: boolean;
+    accessories_included: boolean;
+  };
   featured: boolean;
   status: string;
   moderation: string;
@@ -712,8 +719,8 @@ const listings: ListingRecord[] = [
     color: 'Awesome Navy',
     condition: 'new',
     price: '960000.00',
-    previous_price: null,
-    price_dropped: false,
+    previous_price: '1020000.00',
+    price_dropped: true,
     usd_price: 395,
     accepts_trade_in: false,
     quantity: 8,
@@ -891,16 +898,214 @@ const storeRatings: Array<{ id: number; store_id: number; stars: number; author_
   },
 ];
 
-const modelRatings: Array<{ id: number; model_id: number; stars: number; author_name: string; comment: string; created_at: string }> = [
+interface ProductRatingRecord {
+  id: number;
+  listing_id: number;
+  model_id: number;
+  brand_slug: string;
+  model_name: string;
+  store_id: number;
+  store_name: string;
+  stars: number;
+  author_name: string;
+  comment: string;
+  created_at: string;
+}
+
+function resolveListingModel(listing: ListingRecord): ModelRecord | undefined {
+  const variant = variants.find((v) => v.id === listing.variant_id);
+  if (variant) {
+    const byVariant = models.find((m) => m.id === variant.model_id);
+    if (byVariant) return byVariant;
+  }
+  return models.find(
+    (m) =>
+      m.brand_slug.toLowerCase() === listing.brand_slug.toLowerCase() &&
+      m.name.toLowerCase() === listing.model.toLowerCase()
+  );
+}
+
+// Product-only ratings: every rating belongs to a specific store listing/product,
+// and links to its single phone model so the model's rating is computed from all linked products.
+const productRatings: ProductRatingRecord[] = [
+  // Model 1: Apple iPhone 15 Pro Max (Listing #1 at Store 1 & Listing #5 at Store 2)
   {
     id: 1,
+    listing_id: 1,
     model_id: 1,
+    brand_slug: 'apple',
+    model_name: 'iPhone 15 Pro Max',
+    store_id: 1,
+    store_name: 'متجر النيل للهواتف — Nile Mobile Hub',
     stars: 5,
-    author_name: 'Ahmed Al-Tayeb',
-    comment: 'أداء ممتاز وكاميرا احترافية وبطارية تصمد طوال اليوم.',
+    author_name: 'أحمد الطيب',
+    comment: 'الجهاز مختوم بضمان الوكيل والأداء والكاميرا ممتازان جداً.',
+    created_at: dayAgoIso(4),
+  },
+  {
+    id: 2,
+    listing_id: 1,
+    model_id: 1,
+    brand_slug: 'apple',
+    model_name: 'iPhone 15 Pro Max',
+    store_id: 1,
+    store_name: 'متجر النيل للهواتف — Nile Mobile Hub',
+    stars: 5,
+    author_name: 'Nadia Ali',
+    comment: 'Sealed Natural Titanium unit, smooth 120Hz display and all-day battery.',
     created_at: dayAgoIso(2),
   },
+  {
+    id: 3,
+    listing_id: 5,
+    model_id: 1,
+    brand_slug: 'apple',
+    model_name: 'iPhone 15 Pro Max',
+    store_id: 2,
+    store_name: 'هواتف البحر الأحمر — Red Sea Phones',
+    stars: 4,
+    author_name: 'هشام دفع الله',
+    comment: 'سعر ممتاز في بورتسودان وجهاز أصلي لكن الشحن السلكي متوسط السرعة.',
+    created_at: dayAgoIso(1),
+  },
+  // Model 3: Samsung Galaxy S24 Ultra (Listing #2 at Store 1 & Listing #7 at Store 2)
+  {
+    id: 4,
+    listing_id: 2,
+    model_id: 3,
+    brand_slug: 'samsung',
+    model_name: 'Galaxy S24 Ultra',
+    store_id: 1,
+    store_name: 'متجر النيل للهواتف — Nile Mobile Hub',
+    stars: 5,
+    author_name: 'أنس ميرغني',
+    comment: 'كاميرا 200MP وشاشة مقاومة للانعكاس، الجهاز جديد ومطابق تماماً للوصف.',
+    created_at: dayAgoIso(3),
+  },
+  {
+    id: 5,
+    listing_id: 7,
+    model_id: 3,
+    brand_slug: 'samsung',
+    model_name: 'Galaxy S24 Ultra',
+    store_id: 2,
+    store_name: 'هواتف البحر الأحمر — Red Sea Phones',
+    stars: 5,
+    author_name: 'Kareem Salah',
+    comment: 'Used unit in like-new condition with S-Pen, original box, and 96% battery health.',
+    created_at: dayAgoIso(1),
+  },
+  // Model 2: Apple iPhone 14 Pro (Listing #3 at Store 1)
+  {
+    id: 6,
+    listing_id: 3,
+    model_id: 2,
+    brand_slug: 'apple',
+    model_name: 'iPhone 14 Pro',
+    store_id: 1,
+    store_name: 'متجر النيل للهواتف — Nile Mobile Hub',
+    stars: 4,
+    author_name: 'تسنيم علي',
+    comment: 'جهاز مستعمل نظيف جداً وصحة البطارية 91% كما ذُكر في الإعلان.',
+    created_at: dayAgoIso(2),
+  },
+  // Model 4: Samsung Galaxy A55 5G (Listing #6 at Store 2)
+  {
+    id: 7,
+    listing_id: 6,
+    model_id: 4,
+    brand_slug: 'samsung',
+    model_name: 'Galaxy A55 5G',
+    store_id: 2,
+    store_name: 'هواتف البحر الأحمر — Red Sea Phones',
+    stars: 5,
+    author_name: 'معاذ الطيب',
+    comment: 'شاشة Super AMOLED ممتازة وخامة ألومنيوم فخمة مقابل السعر.',
+    created_at: dayAgoIso(2),
+  },
+  // Model 5: Xiaomi Redmi Note 13 Pro (Listing #4 at Store 1 & Listing #9 at Store 3)
+  {
+    id: 8,
+    listing_id: 4,
+    model_id: 5,
+    brand_slug: 'xiaomi',
+    model_name: 'Redmi Note 13 Pro',
+    store_id: 1,
+    store_name: 'متجر النيل للهواتف — Nile Mobile Hub',
+    stars: 5,
+    author_name: 'مصطفى كمال',
+    comment: 'شحن 67W سريع جداً وكاميرا 200MP ممتازة في هذه الفئة السعرية.',
+    created_at: dayAgoIso(2),
+  },
+  {
+    id: 9,
+    listing_id: 9,
+    model_id: 5,
+    brand_slug: 'xiaomi',
+    model_name: 'Redmi Note 13 Pro',
+    store_id: 3,
+    store_name: 'مركز أمدرمان للموبايل — Omdurman Mobile Center',
+    stars: 4,
+    author_name: 'منى عوض',
+    comment: 'أداء ثابت وسعر منافس جداً في أمدرمان مع ضمان 12 شهراً.',
+    created_at: dayAgoIso(1),
+  },
+  // Model 6: Tecno Camon 30 Pro 5G (Listing #8 at Store 3)
+  {
+    id: 10,
+    listing_id: 8,
+    model_id: 6,
+    brand_slug: 'tecno',
+    model_name: 'Camon 30 Pro 5G',
+    store_id: 3,
+    store_name: 'مركز أمدرمان للموبايل — Omdurman Mobile Center',
+    stars: 5,
+    author_name: 'أمل يوسف',
+    comment: 'شاشة 144Hz وكاميرا سيلفي 50MP وشحن 70W ممتازة جداً.',
+    created_at: dayAgoIso(1),
+  },
 ];
+
+function computeModelRatingAggregate(model: ModelRecord) {
+  const linked = productRatings.filter(
+    (r) =>
+      r.model_id === model.id ||
+      (r.brand_slug.toLowerCase() === model.brand_slug.toLowerCase() &&
+        r.model_name.toLowerCase() === model.name.toLowerCase())
+  );
+  const count = linked.length;
+  const average =
+    count > 0 ? Math.round((linked.reduce((acc, r) => acc + r.stars, 0) / count) * 10) / 10 : 0;
+  const ratedListingsCount = new Set(linked.map((r) => r.listing_id)).size;
+  return {
+    rating_average: average,
+    rating_count: count,
+    rated_listings_count: ratedListingsCount,
+  };
+}
+
+function enrichModelWithProductRatings(model: ModelRecord) {
+  const verifiedStoreIds = new Set(stores.filter((s) => s.verified).map((s) => s.id));
+  const activeModelListings = listings.filter(
+    (l) =>
+      l.status === 'published' &&
+      l.moderation !== 'removed' &&
+      verifiedStoreIds.has(l.store_id) &&
+      l.brand_slug.toLowerCase() === model.brand_slug.toLowerCase() &&
+      l.model.toLowerCase() === model.name.toLowerCase()
+  );
+  const minPrice =
+    activeModelListings.length > 0
+      ? Math.min(...activeModelListings.map((l) => Number(l.price)))
+      : null;
+  const agg = computeModelRatingAggregate(model);
+  return {
+    ...model,
+    listing_count: activeModelListings.length,
+    min_price: minPrice,
+    ...agg,
+  };
+}
 
 const reports: Array<{
   id: number;
@@ -1028,7 +1233,184 @@ interface StoreChatMessageRecord {
 const sessions = new Map<string, number>(); // token -> userId
 const favoritesByUser = new Map<number, Set<number>>([[2, new Set([1, 2])]]);
 const uploadedMedia = new Map<string, { id: string; kind: string; url: string }>();
-const storeMessagesByThread = new Map<string, StoreChatMessageRecord[]>();
+
+interface PriceAlertRecord {
+  id: number;
+  user_key: string;
+  listing_id: number;
+  model: string;
+  target_price_sdg: number | null;
+  initial_price_sdg: number;
+  created_at: string;
+}
+
+interface CustomerNotificationRecord {
+  id: string;
+  user_key: string;
+  type: 'price_drop' | 'chat_reply' | 'new_message' | 'back_in_stock' | 'system';
+  title_ar: string;
+  title_en: string;
+  body_ar: string;
+  body_en: string;
+  listing_id?: number | null;
+  store_id?: number | null;
+  thread_key?: string | null;
+  read: boolean;
+  created_at: string;
+}
+
+let nextPriceAlertId = 2;
+const priceAlerts: PriceAlertRecord[] = [
+  {
+    id: 1,
+    user_key: 'guest',
+    listing_id: 1,
+    model: 'iPhone 15 Pro Max',
+    target_price_sdg: 2750000,
+    initial_price_sdg: 2950000,
+    created_at: dayAgoIso(2),
+  },
+];
+
+const customerNotifications: CustomerNotificationRecord[] = [
+  {
+    id: 'notif-seed-merchant-1',
+    user_key: 'u_3',
+    type: 'new_message',
+    title_ar: 'رسالة جديدة من عثمان حسن',
+    title_en: 'New message from Osman Hassan',
+    body_ar: 'كم صحة البطارية الفعلية لجهاز Galaxy S24 Ultra المستعمل وهل معه العلبة؟',
+    body_en: 'What is the actual battery health on the used Galaxy S24 Ultra and does it include the box?',
+    listing_id: 2,
+    store_id: 1,
+    thread_key: '1:v_demo_osman',
+    read: false,
+    created_at: dayAgoIso(0),
+  },
+  {
+    id: 'notif-seed-merchant-2',
+    user_key: 'u_3',
+    type: 'new_message',
+    title_ar: 'رسالة جديدة من Ahmed Al-Tayeb',
+    title_en: 'New message from Ahmed Al-Tayeb',
+    body_ar: 'السلام عليكم، هل يتوفر iPhone 15 Pro Max باللون التيتانيوم؟',
+    body_en: 'Hi, is the iPhone 15 Pro Max available in Natural Titanium?',
+    listing_id: 1,
+    store_id: 1,
+    thread_key: '1:u_2',
+    read: false,
+    created_at: dayAgoIso(0),
+  },
+  {
+    id: 'notif-seed-merchant-3',
+    user_key: 'u_4',
+    type: 'new_message',
+    title_ar: 'رسالة جديدة من منى عبدالله',
+    title_en: 'New message from Mona Abdullah',
+    body_ar: 'هل يوجد ضمان على Galaxy A55 5G وهل التوصيل متاح داخل بورتسودان؟',
+    body_en: 'Does Galaxy A55 5G come with warranty and delivery in Port Sudan?',
+    listing_id: 6,
+    store_id: 2,
+    thread_key: '2:v_demo_mona',
+    read: false,
+    created_at: dayAgoIso(0),
+  },
+  {
+    id: 'notif-seed-1',
+    user_key: 'guest',
+    type: 'price_drop',
+    title_ar: 'انخفاض سعر iPhone 15 Pro Max',
+    title_en: 'Price Drop: iPhone 15 Pro Max',
+    body_ar: 'خفض متجر النيل للهواتف السعر إلى 2,850,000 ج.س (وفر 100,000 ج.س).',
+    body_en: 'Nile Mobile Hub lowered the price to 2,850,000 SDG (save 100,000 SDG).',
+    listing_id: 1,
+    store_id: 1,
+    read: false,
+    created_at: dayAgoIso(0),
+  },
+  {
+    id: 'notif-seed-2',
+    user_key: 'guest',
+    type: 'price_drop',
+    title_ar: 'عرض خاص على Galaxy A55 5G',
+    title_en: 'Special Offer: Galaxy A55 5G',
+    body_ar: 'السعر الجديد 940,000 ج.س بدلاً من 1,020,000 ج.س.',
+    body_en: 'New price 940,000 SDG down from 1,020,000 SDG.',
+    listing_id: 6,
+    store_id: 2,
+    read: false,
+    created_at: dayAgoIso(1),
+  },
+];
+
+const threadUnreadByMerchant = new Map<string, number>([
+  ['1:u_2', 1],
+  ['1:v_demo_osman', 1],
+  ['2:v_demo_mona', 1],
+]);
+
+const storeMessagesByThread = new Map<string, StoreChatMessageRecord[]>([
+  [
+    '1:u_2',
+    [
+      {
+        id: 'msg-seed-101',
+        store_id: 1,
+        sender_role: 'customer',
+        sender_name: 'Ahmed Al-Tayeb',
+        sender_phone: '+249911111111',
+        text: 'السلام عليكم، هل جهاز iPhone 15 Pro Max 256GB متوفر حالياً في الفرع بالخرطوم؟ وهل تقبلون الاستبدال؟',
+        listing_id: 1,
+        listing_title: 'آبل iPhone 15 Pro Max · 256 GB',
+        listing_price_sdg: 2850000,
+        created_at: new Date(Date.now() - 42 * 60000).toISOString(),
+      },
+      {
+        id: 'msg-seed-102',
+        store_id: 1,
+        sender_role: 'store',
+        sender_name: 'متجر النيل للهواتف — Nile Mobile Hub',
+        text: 'شكراً لتواصلك مع متجر النيل للهواتف. تم استلام رسالتك وسيرد عليك فريق المتجر في أقرب وقت.',
+        is_auto_reply: true,
+        created_at: new Date(Date.now() - 41 * 60000).toISOString(),
+      },
+    ],
+  ],
+  [
+    '1:v_demo_osman',
+    [
+      {
+        id: 'msg-seed-103',
+        store_id: 1,
+        sender_role: 'customer',
+        sender_name: 'عثمان حسن',
+        sender_phone: '+249914455667',
+        text: 'كم صحة البطارية الفعلية لجهاز Galaxy S24 Ultra المستعمل وهل معه العلبة؟',
+        listing_id: 7,
+        listing_title: 'سامسونج Galaxy S24 Ultra · 256 GB',
+        listing_price_sdg: 2290000,
+        created_at: new Date(Date.now() - 18 * 60000).toISOString(),
+      },
+    ],
+  ],
+  [
+    '2:v_demo_mona',
+    [
+      {
+        id: 'msg-seed-201',
+        store_id: 2,
+        sender_role: 'customer',
+        sender_name: 'منى إبراهيم',
+        sender_phone: '+249918822334',
+        text: 'Hello, is the Galaxy A55 5G in stock today in Port Sudan?',
+        listing_id: 6,
+        listing_title: 'Samsung Galaxy A55 5G · 128 GB',
+        listing_price_sdg: 940000,
+        created_at: new Date(Date.now() - 25 * 60000).toISOString(),
+      },
+    ],
+  ],
+]);
 
 interface SponsoredAdDailyStatRecord {
   date: string;
@@ -1476,6 +1858,109 @@ function createApiRouter() {
     res.json({ data: { ok: true } });
   });
 
+  // Customer Price Alerts & Notifications
+  const getCustomerKey = (req: Request) => {
+    const user = getSessionUser(req);
+    return user ? `u_${user.id}` : 'guest';
+  };
+
+  router.get('/me/alerts', (req, res) => {
+    const key = getCustomerKey(req);
+    res.json({
+      data: priceAlerts.filter((a) => a.user_key === key || a.user_key === 'guest'),
+    });
+  });
+
+  router.post('/me/alerts', (req, res) => {
+    const key = getCustomerKey(req);
+    const listingId = Number(req.body?.listing_id);
+    const item = listings.find((l) => l.id === listingId);
+    if (!item) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Listing not found' } });
+      return;
+    }
+    const existing = priceAlerts.find(
+      (a) => a.listing_id === listingId && (a.user_key === key || a.user_key === 'guest')
+    );
+    if (existing) {
+      res.json({ data: existing });
+      return;
+    }
+    const created: PriceAlertRecord = {
+      id: nextPriceAlertId++,
+      user_key: key,
+      listing_id: listingId,
+      model: item.model,
+      target_price_sdg: req.body?.target_price_sdg ? Number(req.body.target_price_sdg) : null,
+      initial_price_sdg: Math.round(Number(item.price)),
+      created_at: nowIso(),
+    };
+    priceAlerts.unshift(created);
+    res.status(201).json({ data: created });
+  });
+
+  router.delete('/me/alerts/:id', (req, res) => {
+    const id = Number(req.params.id);
+    const idx = priceAlerts.findIndex((a) => a.id === id || a.listing_id === id);
+    if (idx !== -1) priceAlerts.splice(idx, 1);
+    res.json({ data: { deleted: true } });
+  });
+
+  router.get('/me/notifications', (req, res) => {
+    const user = getSessionUser(req);
+    const key = getCustomerKey(req);
+    const isMerchant = Boolean(user && (user.merchant || user.role === 'merchant'));
+    res.json({
+      data: customerNotifications.filter((n) =>
+        isMerchant ? n.user_key === key : n.user_key === key || n.user_key === 'guest'
+      ),
+    });
+  });
+
+  router.post('/me/notifications/read', (req, res) => {
+    const user = getSessionUser(req);
+    const key = getCustomerKey(req);
+    const isMerchant = Boolean(user && (user.merchant || user.role === 'merchant'));
+    for (const n of customerNotifications) {
+      if (isMerchant ? n.user_key === key : n.user_key === key || n.user_key === 'guest') {
+        n.read = true;
+      }
+    }
+    res.json({ data: { read: true } });
+  });
+
+  // Buyer/Guest Chats List (all stores the current buyer/visitor has messaged)
+  router.get('/me/chats', (req, res) => {
+    const user = getSessionUser(req);
+    const visitorId = String(req.header('X-Chat-Visitor-Id') || req.query.visitor_id || 'guest').trim();
+    const mySuffix = user ? `u_${user.id}` : `v_${visitorId}`;
+    const threads: Array<Record<string, unknown>> = [];
+    for (const [threadKey, msgs] of storeMessagesByThread.entries()) {
+      if (!threadKey.endsWith(`:${mySuffix}`) || msgs.length === 0) continue;
+      const storeId = Number(threadKey.split(':')[0]);
+      const store = stores.find((s) => s.id === storeId);
+      const lastMsg = msgs[msgs.length - 1];
+      const withListing = [...msgs].reverse().find((m) => m.listing_id);
+      threads.push({
+        thread_key: threadKey,
+        store_id: storeId,
+        store_name: store?.name || `Store #${storeId}`,
+        store_phone: store?.phone || '',
+        customer_name: store?.name || `Store #${storeId}`,
+        customer_phone: store?.phone || '',
+        listing_id: withListing?.listing_id ?? null,
+        listing_title: withListing?.listing_title,
+        listing_price_sdg: withListing?.listing_price_sdg,
+        unread_count: 0,
+        last_message_at: lastMsg.created_at,
+        last_message_text: lastMsg.text,
+        messages: msgs,
+      });
+    }
+    threads.sort((a, b) => String(b.last_message_at).localeCompare(String(a.last_message_at)));
+    res.json({ data: threads });
+  });
+
   // Public Discovery & Catalog
   router.get('/config', (_req, res) => {
     res.json({
@@ -1513,7 +1998,7 @@ function createApiRouter() {
     if (brandParam) result = result.filter((m) => m.brand_slug === brandParam || m.brand.toLowerCase() === brandParam);
     if (brandIdParam) result = result.filter((m) => m.brand_id === brandIdParam);
     if (q) result = result.filter((m) => m.name.toLowerCase().includes(q) || m.brand.toLowerCase().includes(q));
-    res.json({ data: result });
+    res.json({ data: result.map(enrichModelWithProductRatings) });
   });
 
   router.get('/listings', (req, res) => {
@@ -1697,6 +2182,16 @@ function createApiRouter() {
       warranty_type: String(body.warranty_type || 'ضمان المتجر'),
       is_sealed: Boolean(body.is_sealed),
       has_original_box: Boolean(body.has_original_box),
+      used_checklist:
+        body.condition === 'used'
+          ? {
+              biometrics_working: Boolean(body.used_checklist?.biometrics_working ?? true),
+              original_screen: Boolean(body.used_checklist?.original_screen ?? true),
+              network_unlocked: Boolean(body.used_checklist?.network_unlocked ?? true),
+              clean_imei: Boolean(body.used_checklist?.clean_imei ?? true),
+              accessories_included: Boolean(body.used_checklist?.accessories_included ?? body.has_original_box),
+            }
+          : undefined,
       featured: false,
       status: body.publish === false ? 'draft' : 'published',
       moderation: 'approved',
@@ -1714,6 +2209,28 @@ function createApiRouter() {
     res.status(201).json({ data: created });
   });
 
+  const emitPriceDropNotification = (item: ListingRecord, oldPrice: number, newPrice: number) => {
+    if (newPrice >= oldPrice) return;
+    const store = stores.find((s) => s.id === item.store_id);
+    const matchingAlerts = priceAlerts.filter((a) => a.listing_id === item.id);
+    const recipients = matchingAlerts.length > 0 ? matchingAlerts.map((a) => a.user_key) : ['guest'];
+    for (const userKey of new Set(recipients)) {
+      customerNotifications.unshift({
+        id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        user_key: userKey,
+        type: 'price_drop',
+        title_ar: `انخفاض سعر ${item.model}`,
+        title_en: `Price Drop: ${item.model}`,
+        body_ar: `خفض ${store?.name || 'المتجر'} السعر إلى ${Math.round(newPrice).toLocaleString()} ج.س.`,
+        body_en: `${store?.name || 'Store'} lowered the price to ${Math.round(newPrice).toLocaleString()} SDG.`,
+        listing_id: item.id,
+        store_id: item.store_id,
+        read: false,
+        created_at: nowIso(),
+      });
+    }
+  };
+
   router.patch('/stores/me/listings/:id/price', (req, res) => {
     const item = listings.find((l) => l.id === Number(req.params.id));
     if (!item) {
@@ -1727,6 +2244,7 @@ function createApiRouter() {
     item.price_dropped = newPrice < oldPrice;
     item.version += 1;
     item.price_history.unshift({ id: Date.now(), price: item.price, changed_by: 'Merchant', created_at: nowIso() });
+    emitPriceDropNotification(item, oldPrice, newPrice);
     res.json({ data: item });
   });
 
@@ -1748,9 +2266,80 @@ function createApiRouter() {
       res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Listing not found' } });
       return;
     }
-    Object.assign(item, req.body || {});
+    const body = req.body || {};
+    const oldPrice = Number(item.price);
+    if (body.price !== undefined && Number(body.price) > 0) {
+      const nextPrice = Number(body.price);
+      if (nextPrice !== oldPrice) {
+        item.previous_price = item.price;
+        item.price = nextPrice.toFixed(2);
+        item.price_dropped = nextPrice < oldPrice;
+        item.price_history.unshift({ id: Date.now(), price: item.price, changed_by: 'Merchant', created_at: nowIso() });
+        emitPriceDropNotification(item, oldPrice, nextPrice);
+      }
+    }
+    if (body.usd_price !== undefined) item.usd_price = body.usd_price === null || body.usd_price === '' ? null : Number(body.usd_price);
+    if (body.storage_gb !== undefined) item.storage_gb = Number(body.storage_gb);
+    if (body.ram_gb !== undefined) item.ram_gb = Number(body.ram_gb);
+    if (body.color !== undefined) item.color = String(body.color);
+    if (body.quantity !== undefined) item.quantity = Number(body.quantity);
+    if (body.accepts_trade_in !== undefined) item.accepts_trade_in = Boolean(body.accepts_trade_in);
+    if (body.warranty_months !== undefined) item.warranty_months = Number(body.warranty_months);
+    if (body.warranty_days !== undefined) item.warranty_days = Number(body.warranty_days);
+    if (body.warranty_type !== undefined) item.warranty_type = String(body.warranty_type);
+    if (body.is_sealed !== undefined) item.is_sealed = Boolean(body.is_sealed);
+    if (body.has_original_box !== undefined) item.has_original_box = Boolean(body.has_original_box);
+    if (body.grade !== undefined) item.grade = String(body.grade);
+    if (body.battery_health !== undefined) item.battery_health = body.battery_health === null ? null : Number(body.battery_health);
+    if (body.defects !== undefined) item.defects = String(body.defects);
+    if (body.replaced_parts !== undefined) item.replaced_parts = String(body.replaced_parts);
+    if (body.used_unit_code !== undefined) item.used_unit_code = String(body.used_unit_code);
+    if (body.used_availability !== undefined) item.used_availability = String(body.used_availability);
+    if (body.used_checklist !== undefined) {
+      item.used_checklist = {
+        biometrics_working: Boolean(body.used_checklist.biometrics_working),
+        original_screen: Boolean(body.used_checklist.original_screen),
+        network_unlocked: Boolean(body.used_checklist.network_unlocked),
+        clean_imei: Boolean(body.used_checklist.clean_imei),
+        accessories_included: Boolean(body.used_checklist.accessories_included),
+      };
+    }
+    if (Array.isArray(body.media) && body.media.length > 0 && typeof body.media[0] === 'object') {
+      item.media = body.media;
+    }
+    if (body.status) item.status = String(body.status);
+    if (body.moderation) item.moderation = String(body.moderation);
     item.version += 1;
     res.json({ data: item });
+  });
+
+  router.post('/stores/me/listings/:id/duplicate', (req, res) => {
+    const user = getSessionUser(req);
+    const source = listings.find((l) => l.id === Number(req.params.id));
+    if (!source) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Listing not found' } });
+      return;
+    }
+    const newId = nextListingId++;
+    const cloned: ListingRecord = {
+      ...source,
+      id: newId,
+      used_unit_code: source.condition === 'used' ? `SD-${source.store_id}${newId}` : '',
+      views: 0,
+      contact_leads: 0,
+      version: 1,
+      featured: false,
+      previous_price: null,
+      price_dropped: false,
+      media: source.media.map((m, idx) => ({ ...m, id: `m-${newId}-${idx}` })),
+      price_history: [
+        { id: Date.now(), price: source.price, changed_by: user?.name || 'Merchant', created_at: nowIso() },
+      ],
+      created_at: nowIso(),
+      published_at: nowIso(),
+    };
+    listings.unshift(cloned);
+    res.status(201).json({ data: cloned });
   });
 
   router.delete('/stores/me/listings/:id', (req, res) => {
@@ -1762,7 +2351,8 @@ function createApiRouter() {
   router.post('/stores/me/listings/bulk-price', (req, res) => {
     const user = getSessionUser(req);
     const storeId = user?.store_id || 1;
-    const { mode, percent, usd_rate, condition } = req.body || {};
+    const { mode, percent, usd_rate, round_to, condition } = req.body || {};
+    const step = Number(round_to) > 0 ? Number(round_to) : 1000;
     let updated = 0;
     for (const item of listings) {
       if (item.store_id !== storeId) continue;
@@ -1770,15 +2360,17 @@ function createApiRouter() {
       const prev = Number(item.price);
       let next = prev;
       if (mode === 'percent' && typeof percent === 'number') {
-        next = Math.round(prev * (1 + percent / 100));
+        next = Math.round((prev * (1 + percent / 100)) / step) * step;
       } else if (mode === 'usd_rate' && typeof usd_rate === 'number' && item.usd_price) {
-        next = Math.round(item.usd_price * usd_rate);
+        next = Math.round((item.usd_price * usd_rate) / step) * step;
       }
-      if (next !== prev) {
+      if (next > 0 && next !== prev) {
         item.previous_price = item.price;
         item.price = next.toFixed(2);
         item.price_dropped = next < prev;
         item.version += 1;
+        item.price_history.unshift({ id: Date.now() + updated, price: item.price, changed_by: user?.name || 'Merchant', created_at: nowIso() });
+        emitPriceDropNotification(item, prev, next);
         updated += 1;
       }
     }
@@ -1811,11 +2403,13 @@ function createApiRouter() {
     const user = getSessionUser(req);
     const storeId = user?.store_id || 1;
     const list = staffByStore.get(storeId) || [];
+    const inviteCode = `SP-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
     const member = {
       id: Date.now(),
-      name: String(req.body?.phone || 'Staff Member'),
-      phone: String(req.body?.phone || ''),
+      name: String(req.body?.name || req.body?.phone || 'Staff Member').trim(),
+      phone: String(req.body?.phone || '').trim(),
       role: String(req.body?.role || 'clerk'),
+      invite_code: inviteCode,
       created_at: nowIso(),
     };
     list.push(member);
@@ -1829,6 +2423,113 @@ function createApiRouter() {
     const list = (staffByStore.get(storeId) || []).filter((m) => m.id !== Number(req.params.id));
     staffByStore.set(storeId, list);
     res.json({ data: { deleted: true } });
+  });
+
+  // Two-Way Merchant Chat Inbox
+  router.get('/stores/me/chats', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || !(user.merchant || user.role === 'merchant' || user.role === 'admin')) {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Merchant privileges required' } });
+      return;
+    }
+    const storeId = user.store_id || 1;
+    const threads: Array<Record<string, unknown>> = [];
+    for (const [threadKey, msgs] of storeMessagesByThread.entries()) {
+      if (!threadKey.startsWith(`${storeId}:`) || msgs.length === 0) continue;
+      const firstCust = msgs.find((m) => m.sender_role === 'customer');
+      const lastMsg = msgs[msgs.length - 1];
+      const withListing = [...msgs].reverse().find((m) => m.listing_id);
+      threads.push({
+        thread_key: threadKey,
+        store_id: storeId,
+        customer_name: firstCust?.sender_name || 'عميل سودان فونز',
+        customer_phone: firstCust?.sender_phone || '',
+        listing_id: withListing?.listing_id ?? null,
+        listing_title: withListing?.listing_title,
+        listing_price_sdg: withListing?.listing_price_sdg,
+        unread_count: threadUnreadByMerchant.get(threadKey) || 0,
+        last_message_at: lastMsg.created_at,
+        last_message_text: lastMsg.text,
+        messages: msgs,
+      });
+    }
+    threads.sort((a, b) => String(b.last_message_at).localeCompare(String(a.last_message_at)));
+    res.json({ data: threads });
+  });
+
+  router.post('/stores/me/chats/:threadKey/reply', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || !(user.merchant || user.role === 'merchant' || user.role === 'admin')) {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Merchant privileges required' } });
+      return;
+    }
+    const storeId = user.store_id || 1;
+    const threadKey = decodeURIComponent(req.params.threadKey);
+    if (!threadKey.startsWith(`${storeId}:`)) {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Cannot reply to another store thread' } });
+      return;
+    }
+    const text = String(req.body?.text || '').trim();
+    if (!text) {
+      res.status(400).json({ error: { code: 'EMPTY_MESSAGE', message: 'Reply text is required' } });
+      return;
+    }
+    const store = stores.find((s) => s.id === storeId);
+    const thread = storeMessagesByThread.get(threadKey) || [];
+    const replyMsg: StoreChatMessageRecord = {
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      store_id: storeId,
+      sender_role: 'store',
+      sender_name: store?.name || user.name,
+      text,
+      is_auto_reply: false,
+      created_at: nowIso(),
+    };
+    thread.push(replyMsg);
+    storeMessagesByThread.set(threadKey, thread);
+    threadUnreadByMerchant.set(threadKey, 0);
+
+    // Mark merchant notifications for this thread as read
+    for (const n of customerNotifications) {
+      if (n.user_key === `u_${user.id}` && n.thread_key === threadKey) n.read = true;
+    }
+
+    // Notify customer
+    const customerKey = threadKey.split(':')[1] || 'guest';
+    customerNotifications.unshift({
+      id: `notif-chat-${Date.now()}`,
+      user_key: customerKey.startsWith('u_') || customerKey.startsWith('v_') ? customerKey : 'guest',
+      type: 'chat_reply',
+      title_ar: `رد جديد من ${store?.name || 'المتجر'}`,
+      title_en: `New reply from ${store?.name || 'Store'}`,
+      body_ar: text.slice(0, 90),
+      body_en: text.slice(0, 90),
+      store_id: storeId,
+      thread_key: threadKey,
+      read: false,
+      created_at: nowIso(),
+    });
+
+    res.status(201).json({ data: { message: replyMsg, messages: thread } });
+  });
+
+  router.post('/stores/me/chats/:threadKey/read', (req, res) => {
+    const user = getSessionUser(req);
+    if (!user || !(user.merchant || user.role === 'merchant' || user.role === 'admin')) {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Merchant privileges required' } });
+      return;
+    }
+    const storeId = user.store_id || 1;
+    const threadKey = decodeURIComponent(req.params.threadKey);
+    if (!threadKey.startsWith(`${storeId}:`)) {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Cannot access another store thread' } });
+      return;
+    }
+    threadUnreadByMerchant.set(threadKey, 0);
+    for (const n of customerNotifications) {
+      if (n.user_key === `u_${user.id}` && n.thread_key === threadKey) n.read = true;
+    }
+    res.json({ data: { read: true } });
   });
 
   // Public Store detail & listings
@@ -1919,6 +2620,29 @@ function createApiRouter() {
     }
 
     storeMessagesByThread.set(key, thread);
+    threadUnreadByMerchant.set(key, (threadUnreadByMerchant.get(key) || 0) + 1);
+
+    // Emit a real notification to the store owner(s) so they see incoming buyer messages immediately
+    const storeOwners = users.filter((u) => u.store_id === storeId);
+    const senderLabel = customerMessage.sender_name || 'عميل جديد';
+    const senderLabelEn = customerMessage.sender_name || 'New Customer';
+    for (const owner of storeOwners) {
+      customerNotifications.unshift({
+        id: `notif-msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        user_key: `u_${owner.id}`,
+        type: 'new_message',
+        title_ar: `رسالة جديدة من ${senderLabel}`,
+        title_en: `New message from ${senderLabelEn}`,
+        body_ar: text.slice(0, 100),
+        body_en: text.slice(0, 100),
+        listing_id: listingId,
+        store_id: storeId,
+        thread_key: key,
+        read: false,
+        created_at: nowIso(),
+      });
+    }
+
     res.status(201).json({ data: { message: customerMessage, reply: autoReply, messages: thread } });
   });
 
@@ -1942,23 +2666,73 @@ function createApiRouter() {
     res.status(201).json({ data: item });
   });
 
-  router.get('/models/:id/ratings', (req, res) => {
-    const modelId = Number(req.params.id);
-    res.json({ data: modelRatings.filter((r) => r.model_id === modelId) });
+  // Product Ratings (all ratings are submitted on individual products/listings
+  // and automatically aggregated per linked phone model)
+  router.get('/ratings/products', (_req, res) => {
+    res.json({ data: productRatings });
   });
 
-  router.post('/models/:id/ratings', (req, res) => {
+  router.get('/listings/:id/ratings', (req, res) => {
+    const listingId = Number(req.params.id);
+    const items = productRatings.filter((r) => r.listing_id === listingId);
+    const count = items.length;
+    const average =
+      count > 0 ? Math.round((items.reduce((acc, r) => acc + r.stars, 0) / count) * 10) / 10 : 0;
+    res.json({ data: items, meta: { rating_average: average, rating_count: count } });
+  });
+
+  router.post('/listings/:id/ratings', (req, res) => {
+    const listingId = Number(req.params.id);
+    const listing = listings.find((l) => l.id === listingId);
+    if (!listing) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Product listing not found' } });
+      return;
+    }
     const user = getSessionUser(req);
-    const item = {
-      id: modelRatings.length + 1,
-      model_id: Number(req.params.id),
-      stars: Number(req.body?.stars || 5),
-      author_name: user?.name || 'Customer',
-      comment: String(req.body?.comment || ''),
+    const rawStars = Number(req.body?.stars ?? 5);
+    const stars = Number.isFinite(rawStars) ? Math.min(5, Math.max(1, Math.round(rawStars))) : 5;
+    const rawAuthor = String(req.body?.author_name || '').trim().slice(0, 80);
+    const comment = String(req.body?.comment || '').trim().slice(0, 600);
+    const model = resolveListingModel(listing);
+    const store = stores.find((s) => s.id === listing.store_id);
+
+    const item: ProductRatingRecord = {
+      id: productRatings.length + 1,
+      listing_id: listing.id,
+      model_id: model?.id ?? 0,
+      brand_slug: model?.brand_slug || listing.brand_slug,
+      model_name: model?.name || listing.model,
+      store_id: listing.store_id,
+      store_name: store?.name || '',
+      stars,
+      author_name: rawAuthor || user?.name || 'Customer',
+      comment,
       created_at: nowIso(),
     };
-    modelRatings.unshift(item);
-    res.status(201).json({ data: item });
+    productRatings.unshift(item);
+
+    const modelAggregate = model
+      ? computeModelRatingAggregate(model)
+      : { rating_average: stars, rating_count: 1, rated_listings_count: 1 };
+
+    res.status(201).json({ data: item, meta: { model_rating: modelAggregate } });
+  });
+
+  // Read-only aggregated model ratings derived exclusively from linked product ratings
+  router.get('/models/:id/ratings', (req, res) => {
+    const modelId = Number(req.params.id);
+    const model = models.find((m) => m.id === modelId);
+    if (!model) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Phone model not found' } });
+      return;
+    }
+    const linked = productRatings.filter(
+      (r) =>
+        r.model_id === model.id ||
+        (r.brand_slug.toLowerCase() === model.brand_slug.toLowerCase() &&
+          r.model_name.toLowerCase() === model.name.toLowerCase())
+    );
+    res.json({ data: linked, meta: computeModelRatingAggregate(model) });
   });
 
   router.post('/reports', (req, res) => {
@@ -1990,7 +2764,7 @@ function createApiRouter() {
     let result = models;
     if (brandId) result = result.filter((m) => m.brand_id === brandId);
     if (q) result = result.filter((m) => m.name.toLowerCase().includes(q));
-    res.json({ data: result });
+    res.json({ data: result.map(enrichModelWithProductRatings) });
   });
 
   router.get('/catalog/variants', (req, res) => {
@@ -2471,6 +3245,265 @@ function createApiRouter() {
       actor_ip: req.ip || '127.0.0.1',
       created_at: nowIso(),
     });
+    res.json({ data: { deleted: true } });
+  });
+
+  // Merchant Self-Serve Sponsored Ad Request
+  router.post('/stores/me/ads/request', (req, res) => {
+    const actor = getSessionUser(req);
+    if (!actor || !(actor.merchant || actor.role === 'merchant' || actor.role === 'admin')) {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Merchant privileges required' } });
+      return;
+    }
+    const storeId = actor.store_id || 1;
+    const store = stores.find((s) => s.id === storeId);
+    if (!store) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Store not found' } });
+      return;
+    }
+    const body = req.body || {};
+    const titleAr = String(body.title_ar || '').trim();
+    const titleEn = String(body.title_en || titleAr).trim();
+    if (!titleAr && !titleEn) {
+      res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Ad headline is required' } });
+      return;
+    }
+    const durationDays = Math.max(1, Math.min(60, Number(body.duration_days || 7)));
+    const created: SponsoredAdRecord = {
+      id: nextSponsoredAdId++,
+      store_id: store.id,
+      store_name: store.name,
+      listing_id: body.listing_id ? Number(body.listing_id) : null,
+      title_ar: titleAr || titleEn,
+      title_en: titleEn || titleAr,
+      subtitle_ar: String(body.subtitle_ar || '').trim(),
+      subtitle_en: String(body.subtitle_en || body.subtitle_ar || '').trim(),
+      cta_label_ar: 'شاهد العرض',
+      cta_label_en: 'View Offer',
+      badge_ar: 'طلب إعلان متجر',
+      badge_en: 'Merchant Request',
+      image_url: String(body.image_url || store.banner_url || IMG_STORE).trim(),
+      target_city: String(body.target_city || store.city || 'all'),
+      status: 'scheduled',
+      priority: 50,
+      skip_delay_sec: 3,
+      paid_amount_sdg: Math.max(0, Math.round(Number(body.paid_amount_sdg || durationDays * 25000))),
+      payment_status: 'pending',
+      payment_ref: String(body.payment_ref || '').trim(),
+      starts_at: dateOffsetStr(0),
+      ends_at: dateOffsetStr(durationDays),
+      impressions: 0,
+      clicks: 0,
+      last_clicked_at: null,
+      total_time_to_click_ms: 0,
+      timed_clicks: 0,
+      daily_stats: [],
+      created_at: nowIso(),
+    };
+    sponsoredAds.unshift(created);
+    auditEvents.unshift({
+      id: auditEvents.length + 1,
+      actor_id: actor.id,
+      actor_name: actor.name,
+      action: 'ad_requested_by_merchant',
+      resource: `ad:${created.id}`,
+      metadata: {
+        store_id: store.id,
+        store_name: store.name,
+        payment_ref: created.payment_ref,
+        paid_amount_sdg: created.paid_amount_sdg,
+      },
+      actor_ip: req.ip || '127.0.0.1',
+      created_at: nowIso(),
+    });
+    res.status(201).json({ data: serializeSponsoredAd(created) });
+  });
+
+  // Admin Phone Catalog Management (Brands & Models)
+  router.post('/admin/catalog/brands', (req, res) => {
+    const actor = getSessionUser(req);
+    if (!actor || actor.role !== 'admin') {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin privileges required' } });
+      return;
+    }
+    const name = String(req.body?.name || '').trim();
+    const nameAr = String(req.body?.name_ar || name).trim();
+    if (!name) {
+      res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Brand name is required' } });
+      return;
+    }
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `brand-${Date.now()}`;
+    if (brands.some((b) => b.slug === slug)) {
+      res.status(409).json({ error: { code: 'DUPLICATE_BRAND', message: 'Brand already exists' } });
+      return;
+    }
+    const created: BrandRecord = {
+      id: Math.max(0, ...brands.map((b) => b.id)) + 1,
+      name,
+      slug,
+      name_ar: nameAr,
+      model_count: 0,
+    };
+    brands.push(created);
+    auditEvents.unshift({
+      id: auditEvents.length + 1,
+      actor_id: actor.id,
+      actor_name: actor.name,
+      action: 'catalog_brand_created',
+      resource: `brand:${created.id}`,
+      metadata: { name: created.name, name_ar: created.name_ar },
+      actor_ip: req.ip || '127.0.0.1',
+      created_at: nowIso(),
+    });
+    res.status(201).json({ data: created });
+  });
+
+  router.post('/admin/catalog/models', (req, res) => {
+    const actor = getSessionUser(req);
+    if (!actor || actor.role !== 'admin') {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin privileges required' } });
+      return;
+    }
+    const body = req.body || {};
+    const brand = brands.find((b) => b.id === Number(body.brand_id));
+    if (!brand) {
+      res.status(400).json({ error: { code: 'INVALID_BRAND', message: 'Valid brand_id is required' } });
+      return;
+    }
+    const name = String(body.name || '').trim();
+    if (!name) {
+      res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Model name is required' } });
+      return;
+    }
+    const newModelId = Math.max(0, ...models.map((m) => m.id)) + 1;
+    const created: ModelRecord = {
+      id: newModelId,
+      brand_id: brand.id,
+      brand: brand.name,
+      brand_slug: brand.slug,
+      name,
+      specifications: {
+        release_year: Number(body.release_year || 2025),
+        series: body.series || brand.name,
+        display: {
+          size_inches: Number(body.display_size || 6.7),
+          type: String(body.display_type || 'AMOLED'),
+          resolution: '1080 x 2400',
+          refresh_rate_hz: 120,
+        },
+        performance: {
+          chipset: String(body.chipset || 'Snapdragon 8 Gen 3'),
+          os: brand.slug === 'apple' ? 'iOS 18' : 'Android 15',
+        },
+        camera: {
+          rear_main_mp: Number(body.camera_mp || 50),
+          rear: `${Number(body.camera_mp || 50)}MP Main`,
+          rear_ois: true,
+          front: '16MP',
+          video: '4K@60fps',
+        },
+        battery: {
+          capacity_mah: Number(body.battery_mah || 5000),
+          charging_wired_w: 45,
+          charging_wireless_w: 15,
+        },
+        connectivity: {
+          network: '5G / 4G LTE',
+          sim: 'Dual SIM',
+          nfc: true,
+          usb: 'USB-C',
+          headphone_jack: false,
+          microsd: false,
+        },
+        build: {
+          fingerprint: 'In-display',
+          ip_rating: 'IP68',
+        },
+      },
+    };
+    models.push(created);
+    brand.model_count += 1;
+
+    const variantSpecs =
+      Array.isArray(body.variants) && body.variants.length > 0
+        ? body.variants
+        : [
+            { storage_gb: 128, ram_gb: 8, color: 'Black' },
+            { storage_gb: 256, ram_gb: 12, color: 'Titanium' },
+          ];
+    let nextVarId = Math.max(0, ...variants.map((v) => v.id)) + 1;
+    for (const v of variantSpecs) {
+      variants.push({
+        id: nextVarId++,
+        model_id: created.id,
+        storage_gb: Number(v.storage_gb || 128),
+        ram_gb: Number(v.ram_gb || 8),
+        color: String(v.color || 'Black'),
+      });
+    }
+
+    auditEvents.unshift({
+      id: auditEvents.length + 1,
+      actor_id: actor.id,
+      actor_name: actor.name,
+      action: 'catalog_model_created',
+      resource: `model:${created.id}`,
+      metadata: { brand: brand.name, name: created.name },
+      actor_ip: req.ip || '127.0.0.1',
+      created_at: nowIso(),
+    });
+    res.status(201).json({ data: enrichModelWithProductRatings(created) });
+  });
+
+  router.patch('/admin/catalog/models/:id', (req, res) => {
+    const actor = getSessionUser(req);
+    if (!actor || actor.role !== 'admin') {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin privileges required' } });
+      return;
+    }
+    const model = models.find((m) => m.id === Number(req.params.id));
+    if (!model) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Model not found' } });
+      return;
+    }
+    const body = req.body || {};
+    if (body.name) model.name = String(body.name).trim();
+    if (body.release_year) (model.specifications as any).release_year = Number(body.release_year);
+    if (body.chipset) {
+      (model.specifications as any).performance = {
+        ...((model.specifications as any).performance || {}),
+        chipset: String(body.chipset),
+      };
+    }
+    if (body.battery_mah) {
+      (model.specifications as any).battery = {
+        ...((model.specifications as any).battery || {}),
+        capacity_mah: Number(body.battery_mah),
+      };
+    }
+    if (body.camera_mp) {
+      (model.specifications as any).camera = {
+        ...((model.specifications as any).camera || {}),
+        rear_main_mp: Number(body.camera_mp),
+      };
+    }
+    res.json({ data: enrichModelWithProductRatings(model) });
+  });
+
+  router.delete('/admin/catalog/models/:id', (req, res) => {
+    const actor = getSessionUser(req);
+    if (!actor || actor.role !== 'admin') {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin privileges required' } });
+      return;
+    }
+    const idx = models.findIndex((m) => m.id === Number(req.params.id));
+    if (idx === -1) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Model not found' } });
+      return;
+    }
+    const [removed] = models.splice(idx, 1);
+    const brand = brands.find((b) => b.id === removed.brand_id);
+    if (brand && brand.model_count > 0) brand.model_count -= 1;
     res.json({ data: { deleted: true } });
   });
 

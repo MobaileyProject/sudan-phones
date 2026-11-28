@@ -26,7 +26,11 @@ import {
   UsedAvailability,
   VerificationDocument,
 } from '../types';
-import { computeRatingSummary, getPhoneModelRatingKey } from '../data/ratingsData';
+import {
+  computeAggregatedModelRatingSummary,
+  computeRatingSummary,
+  getPhoneModelRatingKey,
+} from '../data/ratingsData';
 import {
   api,
   ApiBrand,
@@ -207,12 +211,11 @@ interface PrototypeContextValue {
 
   reviews: RatingReview[];
   getStoreRatingSummary: (storeId: string) => RatingSummary;
-  getPhoneModelRatingSummary: (brand: BrandId, model: string) => RatingSummary;
+  getProductRatingSummary: (listingId: string) => RatingSummary;
+  getModelRatingFromProducts: (brand: BrandId, model: string) => RatingSummary;
   submitStoreRating: (storeId: string, rating: number, authorName: string, comment?: string) => void;
-  submitPhoneModelRating: (
-    brand: BrandId,
-    model: string,
-    arabicBrandPrefix: string,
+  submitProductRating: (
+    listingId: string,
     rating: number,
     authorName: string,
     comment?: string
@@ -356,7 +359,6 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   });
   const [reviews, setReviews] = useState<RatingReview[]>([]);
   const [customerReports, setCustomerReports] = useState<CustomerReport[]>([]);
-  const [modelIdByKey, setModelIdByKey] = useState<Record<string, number>>({});
 
   const [activeMerchantStoreId, setActiveMerchantStoreId] = useState<string>('0');
   const [activeAdminUserId, setActiveAdminUserId] = useState<string>('0');
@@ -430,12 +432,12 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
 
   const refreshPublicData = useCallback(async () => {
     try {
-      const [listingsRes, storesRes, modelsRes, brandsRes, adsRes] = await Promise.all([
+      const [listingsRes, storesRes, brandsRes, adsRes, productRatingsRes] = await Promise.all([
         api.searchListings({ limit: 100 }),
         api.getFeaturedStores(),
-        api.getPublicModels({ limit: 100 }),
         api.getBrands(),
         api.getActiveAds().catch(() => ({ data: [] })),
+        api.getAllProductRatings().catch(() => ({ data: [] })),
       ]);
       const mappedListings = (listingsRes.data || []).map(mapListing);
       const mappedStores = (storesRes.data || []).map((s: any) => mapStore(s));
@@ -450,18 +452,27 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         // ignore storage quota
       }
 
-      const mMap: Record<string, number> = {};
-      for (const m of modelsRes.data || []) {
-        const key = getPhoneModelRatingKey(
-          (m.brand || '').toLowerCase() as BrandId,
-          m.name || ''
-        );
-        mMap[key] = m.id;
-      }
-      setModelIdByKey(mMap);
-
-      // Load live ratings for visible stores and models
+      // Load live ratings for stores and all individual products (aggregated per model in UI)
       const loadedReviews: RatingReview[] = [];
+      for (const item of productRatingsRes.data || []) {
+        const listingIdStr = String(item.listing_id);
+        const brandSlug = String(item.brand_slug || '').toLowerCase();
+        const modelName = String(item.model_name || '');
+        loadedReviews.push({
+          id: `pr-${item.id}`,
+          targetType: 'product',
+          targetId: listingIdStr,
+          listingId: listingIdStr,
+          modelKey: brandSlug && modelName ? getPhoneModelRatingKey(brandSlug, modelName) : undefined,
+          storeId: item.store_id ? String(item.store_id) : undefined,
+          storeName: item.store_name || undefined,
+          rating: Number(item.stars || 5),
+          authorName: item.author_name || 'Customer',
+          comment: item.comment || undefined,
+          createdAt: String(item.created_at || '').slice(0, 10),
+        });
+      }
+
       await Promise.all(
         mappedStores.slice(0, 10).map(async (st: Store) => {
           try {
@@ -474,7 +485,7 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
                 rating: item.stars,
                 authorName: item.author_name || 'Customer',
                 comment: item.comment || undefined,
-                createdAt: item.created_at || '',
+                createdAt: String(item.created_at || '').slice(0, 10),
               });
             }
           } catch {
@@ -791,12 +802,15 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
     [reviews]
   );
 
-  const getPhoneModelRatingSummary = useCallback(
-    (brand: BrandId, model: string) => {
-      const key = getPhoneModelRatingKey(brand, model);
-      return computeRatingSummary(reviews, 'phone_model', key);
-    },
+  const getProductRatingSummary = useCallback(
+    (listingId: string) => computeRatingSummary(reviews, 'product', listingId),
     [reviews]
+  );
+
+  const getModelRatingFromProducts = useCallback(
+    (brand: BrandId, model: string) =>
+      computeAggregatedModelRatingSummary(reviews, listings, brand, model),
+    [reviews, listings]
   );
 
   const submitStoreRating = useCallback(
@@ -808,8 +822,9 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         });
         return;
       }
+      const resolvedAuthor = authorName.trim() || me?.name || 'Customer';
       api
-        .submitStoreRating(storeId, rating, comment || '')
+        .submitStoreRating(storeId, rating, comment || '', resolvedAuthor)
         .then(() => {
           setReviews((prev) => [
             {
@@ -817,11 +832,11 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
               targetType: 'store',
               targetId: storeId,
               rating,
-              authorName: me?.name || authorName || 'Customer',
+              authorName: resolvedAuthor,
               comment: comment?.trim() || undefined,
-              createdAt: new Date().toISOString(),
+              createdAt: new Date().toISOString().slice(0, 10),
             },
-            ...prev.filter((r) => !(r.targetType === 'store' && r.targetId === storeId && r.authorName === (me?.name || authorName))),
+            ...prev.filter((r) => !(r.targetType === 'store' && r.targetId === storeId && r.authorName === resolvedAuthor)),
           ]);
           pushToast('success', { ar: 'تم حفظ تقييم المتجر في قاعدة البيانات.', en: 'Store rating saved to database.' });
         })
@@ -832,43 +847,49 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
     [session.authenticated, me, pushToast]
   );
 
-  const submitPhoneModelRating = useCallback(
-    (brand: BrandId, model: string, _arabicBrandPrefix: string, rating: number, authorName: string, comment?: string) => {
-      if (!session.authenticated) {
-        pushToast('warning', {
-          ar: 'يرجى تسجيل الدخول بحسابك أولاً لإضافة تقييم للهاتف.',
-          en: 'Please sign in with your account first to rate this phone.',
-        });
-        return;
-      }
-      const key = getPhoneModelRatingKey(brand, model);
-      const modelId = modelIdByKey[key];
-      if (!modelId) {
-        pushToast('error', { ar: 'تعذر تحديد معرف الموديل في الخادم.', en: 'Could not resolve phone model ID.' });
-        return;
-      }
+  const submitProductRating = useCallback(
+    (listingId: string, rating: number, authorName: string, comment?: string) => {
+      const targetListing = listings.find((l) => l.id === listingId);
+      const targetStore = targetListing ? stores.find((s) => s.id === targetListing.storeId) : undefined;
+      const resolvedAuthor = authorName.trim() || me?.name || 'Customer';
+
       api
-        .submitModelRating(modelId, rating, comment || '')
-        .then(() => {
+        .submitProductRating(listingId, rating, comment || '', resolvedAuthor)
+        .then((res) => {
+          const saved = res?.data;
+          const modelKey =
+            saved?.brand_slug && saved?.model_name
+              ? getPhoneModelRatingKey(saved.brand_slug, saved.model_name)
+              : targetListing
+                ? getPhoneModelRatingKey(targetListing.brand, targetListing.model)
+                : undefined;
+
           setReviews((prev) => [
             {
-              id: `mr-${Date.now()}`,
-              targetType: 'phone_model',
-              targetId: key,
-              rating,
-              authorName: me?.name || authorName || 'Customer',
+              id: saved?.id ? `pr-${saved.id}` : `pr-${Date.now()}`,
+              targetType: 'product',
+              targetId: listingId,
+              listingId,
+              modelKey,
+              storeId: targetListing?.storeId,
+              storeName: saved?.store_name || (targetStore ? `${targetStore.name.ar} — ${targetStore.name.en}` : undefined),
+              rating: saved?.stars ?? rating,
+              authorName: saved?.author_name || resolvedAuthor,
               comment: comment?.trim() || undefined,
-              createdAt: new Date().toISOString(),
+              createdAt: String(saved?.created_at || new Date().toISOString()).slice(0, 10),
             },
             ...prev,
           ]);
-          pushToast('success', { ar: 'تم حفظ تقييم الهاتف في قاعدة البيانات.', en: 'Phone rating saved to database.' });
+          pushToast('success', {
+            ar: 'تم حفظ تقييم المنتج وتحديث تقييم الموديل تلقائياً.',
+            en: 'Product rating saved and linked model rating updated automatically.',
+          });
         })
         .catch((err: ApiError) => {
           pushToast('error', { ar: err.message, en: err.message });
         });
     },
-    [session.authenticated, me, modelIdByKey, pushToast]
+    [listings, stores, me, pushToast]
   );
 
   const submitCustomerReport = useCallback(
@@ -1043,12 +1064,21 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
     (_storeId: string, member: Omit<StoreStaffMember, 'id' | 'addedAt' | 'active'>) => {
       api
         .addStaff({
+          name: member.name.ar || member.name.en,
           phone: normalizeSudanPhone(member.phone),
           role: member.role === 'manager' ? 'manager' : 'clerk',
         })
-        .then(() => {
+        .then((res: any) => {
           refreshMerchantData();
-          pushToast('success', { ar: 'تمت إضافة الموظف لفريق المتجر.', en: 'Staff member added.' });
+          const code = res?.data?.invite_code;
+          pushToast('success', {
+            ar: code
+              ? `تمت إضافة الموظف لفريق المتجر. رمز الدعوة: ${code}`
+              : 'تمت إضافة الموظف لفريق المتجر.',
+            en: code
+              ? `Staff member added. Invite code: ${code}`
+              : 'Staff member added.',
+          });
         })
         .catch((err: ApiError) => pushToast('error', { ar: err.message, en: err.message }));
     },
@@ -1417,9 +1447,10 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         getStoreById,
         reviews,
         getStoreRatingSummary,
-        getPhoneModelRatingSummary,
+        getProductRatingSummary,
+        getModelRatingFromProducts,
         submitStoreRating,
-        submitPhoneModelRating,
+        submitProductRating,
         customerReports,
         submitCustomerReport,
         resolveCustomerReport,

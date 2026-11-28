@@ -84,12 +84,17 @@ export interface StoreStaffMember {
 
 export interface RatingReview {
   id: string;
-  targetType: 'store' | 'phone_model';
-  targetId: string; // Store ID (for 'store') or normalized phoneModelKey (for 'phone_model')
+  targetType: 'store' | 'product';
+  targetId: string; // Store ID (for 'store') or Listing/Product ID (for 'product')
   authorName: string;
   rating: number; // 1..5
   comment?: string;
   createdAt: string;
+  /** For 'product' ratings: links this product rating to its single phone model key (`brand::model`). */
+  modelKey?: string;
+  listingId?: string;
+  storeId?: string;
+  storeName?: string;
 }
 
 export interface RatingSummary {
@@ -97,6 +102,8 @@ export interface RatingSummary {
   count: number;
   breakdown: [number, number, number, number, number]; // [5★, 4★, 3★, 2★, 1★]
   reviews: RatingReview[];
+  /** For model summaries aggregated from product ratings: number of distinct products with ratings. */
+  linkedProductCount?: number;
 }
 
 export type ReportTargetType = 'listing' | 'store';
@@ -219,6 +226,37 @@ export interface PhoneSpecifications {
   };
 }
 
+export interface UsedChecklist {
+  biometricsWorking: boolean;
+  originalScreen: boolean;
+  networkUnlocked: boolean;
+  cleanImei: boolean;
+  accessoriesIncluded: boolean;
+}
+
+export interface PriceAlert {
+  id: string;
+  listingId: string;
+  model: string;
+  targetPriceSdg?: number | null;
+  initialPriceSdg: number;
+  createdAt: string;
+}
+
+export interface CustomerNotification {
+  id: string;
+  type: 'price_drop' | 'chat_reply' | 'new_message' | 'back_in_stock' | 'system';
+  titleAr: string;
+  titleEn: string;
+  bodyAr: string;
+  bodyEn: string;
+  listingId?: string | null;
+  storeId?: string | null;
+  threadKey?: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface Listing {
   id: string;
   storeId: string;
@@ -249,6 +287,7 @@ export interface Listing {
   replacedParts?: BilingualText;
   originalBox?: boolean;
   inspectionWarrantyDays?: number;
+  usedChecklist?: UsedChecklist;
   // Detailed hardware specifications (optional override; resolved via catalog specs by model)
   specifications?: PhoneSpecifications;
   // Common fields

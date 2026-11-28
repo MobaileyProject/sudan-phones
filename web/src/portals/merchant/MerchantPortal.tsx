@@ -7,11 +7,14 @@ import {
   BarChart3,
   CheckCircle2,
   Clock,
+  Copy,
+  DollarSign,
   Download,
   Edit3,
   ExternalLink,
   Eye,
   FileSpreadsheet,
+  Globe,
   History,
   KeyRound,
   LayoutDashboard,
@@ -20,6 +23,7 @@ import {
   Megaphone,
   Menu,
   MessageCircle,
+  MessageSquare,
   MousePointerClick,
   Package,
   Percent,
@@ -30,6 +34,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  SlidersHorizontal,
   Store as StoreIcon,
   Trash2,
   TrendingUp,
@@ -76,10 +81,15 @@ import {
   MerchantVerificationTracker,
 } from './MerchantOnboarding';
 import { MerchantListingWizard } from './MerchantListingWizard';
+import { MerchantInboxPanel } from './MerchantInboxPanel';
+import { MerchantListingEditModal } from './MerchantListingEditModal';
+import { MerchantAdRequestModal } from './MerchantAdRequestModal';
+import { computeUsdRatePriceUpdates } from '../../utils/marketplaceHelpers';
 
 type MerchantSection =
   | 'dashboard'
   | 'inventory'
+  | 'inbox'
   | 'create_listing'
   | 'verification'
   | 'onboarding'
@@ -89,6 +99,7 @@ type MerchantSection =
 export function MerchantPortal() {
   const {
     lang,
+    setLang,
     listings,
     session,
     me,
@@ -148,6 +159,15 @@ export function MerchantPortal() {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
 
+  // Full Edit Modal, Duplicate Busy, Ad Request Modal, Inbox Unread, Quick USD Rate Updater
+  const [fullEditListing, setFullEditListing] = useState<Listing | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [adRequestOpen, setAdRequestOpen] = useState(false);
+  const [inboxUnread, setInboxUnread] = useState<number>(0);
+  const [quickUsdRate, setQuickUsdRate] = useState<string>('2700');
+  const [quickUsdBusy, setQuickUsdBusy] = useState(false);
+  const [qrSharedDone, setQrSharedDone] = useState(false);
+
   // Protected verified identity re-verification modal state
   const [reverifyOpen, setReverifyOpen] = useState(false);
   const [reverifyNote, setReverifyNote] = useState('');
@@ -177,6 +197,26 @@ export function MerchantPortal() {
       setSection('dashboard');
     }
   }, [session.authenticated]);
+
+  React.useEffect(() => {
+    if (!session.authenticated || session.role !== 'merchant') {
+      setInboxUnread(0);
+      return;
+    }
+    let active = true;
+    api
+      .getMyStoreChats()
+      .then((res) => {
+        if (!active) return;
+        const threads = res.data || [];
+        const total = threads.reduce((acc: number, t: any) => acc + Number(t.unread_count || 0), 0);
+        setInboxUnread(total);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [session.authenticated, session.role, activeMerchantStore.id]);
 
   React.useEffect(() => {
     setSCity(activeMerchantStore.city);
@@ -404,9 +444,61 @@ export function MerchantPortal() {
         color: { dark: '#0F172A', light: '#FFFFFF' },
       });
       setQrDataUrl(url);
+      setQrSharedDone(true);
       setQrModalOpen(true);
     } catch {
       pushToast('error', { ar: 'تعذر توليد رمز QR.', en: 'Failed to generate QR code.' });
+    }
+  };
+
+  const handleDuplicateListing = async (item: Listing) => {
+    setDuplicatingId(item.id);
+    try {
+      await api.duplicateListing(item.id);
+      await Promise.all([refreshMerchantData(), refreshPublicData()]);
+      pushToast('success', {
+        ar: `تم نسخ "${item.model}" بنجاح — يمكنك تعديل السعة أو اللون الآن.`,
+        en: `Duplicated "${item.model}" — you can now edit its storage or color.`,
+      });
+    } catch (err: any) {
+      pushToast('error', {
+        ar: err?.message || 'تعذر نسخ الإعلان.',
+        en: err?.message || 'Could not duplicate listing.',
+      });
+    } finally {
+      setDuplicatingId(null);
+    }
+  };
+
+  const usdRatePreview = useMemo(() => {
+    const r = Number(quickUsdRate);
+    if (!r || r <= 0) return [];
+    return computeUsdRatePriceUpdates(storeListings, r, 1000);
+  }, [storeListings, quickUsdRate]);
+
+  const handleApplyQuickUsdRate = async () => {
+    const r = Number(quickUsdRate);
+    if (!r || r <= 0 || usdRatePreview.length === 0) return;
+    setQuickUsdBusy(true);
+    try {
+      const res = await api.bulkUpdatePrices({
+        mode: 'usd_rate',
+        usd_rate: r,
+        round_to: 1000,
+        condition: 'all',
+      });
+      await Promise.all([refreshMerchantData(), refreshPublicData()]);
+      pushToast('success', {
+        ar: `تم تحديث أسعار ${res.data.updated_count} هاتف تلقائياً حسب سعر صرف ${r.toLocaleString('en-US')} ج.س/$.`,
+        en: `Updated ${res.data.updated_count} phones automatically at ${r.toLocaleString('en-US')} SDG/USD.`,
+      });
+    } catch (err: any) {
+      pushToast('error', {
+        ar: err?.message || 'فشل تحديث الأسعار بسعر الصرف.',
+        en: err?.message || 'Failed to apply USD exchange rate.',
+      });
+    } finally {
+      setQuickUsdBusy(false);
     }
   };
 
@@ -473,9 +565,10 @@ export function MerchantPortal() {
     setAddStaffOpen(false);
   };
 
-  const navItems: { id: MerchantSection; ar: string; en: string; icon: React.ComponentType<{ className?: string }>; badge?: number }[] = [
+  const navItems: { id: MerchantSection; ar: string; en: string; icon: React.ComponentType<{ className?: string }>; badge?: number; highlightBadge?: boolean }[] = [
     { id: 'dashboard', ar: 'لوحة المتجر', en: 'Dashboard', icon: LayoutDashboard },
     { id: 'inventory', ar: 'المخزون والإعلانات', en: 'Inventory', icon: Package, badge: storeListings.length },
+    { id: 'inbox', ar: 'رسائل العملاء', en: 'Inbox', icon: MessageSquare, badge: inboxUnread > 0 ? inboxUnread : undefined, highlightBadge: inboxUnread > 0 },
     { id: 'create_listing', ar: 'إضافة هاتف', en: 'Add Phone', icon: Plus },
     { id: 'verification', ar: 'حالة التوثيق', en: 'Verification', icon: ShieldCheck },
     { id: 'onboarding', ar: 'بيانات وتوثيق المتجر', en: 'Store Onboarding', icon: StoreIcon },
@@ -529,7 +622,15 @@ export function MerchantPortal() {
                 <span className="truncate">{lang === 'ar' ? item.ar : item.en}</span>
               </span>
               {item.badge !== undefined && (
-                <span className="text-[11px] font-mono-num text-slate-500">{item.badge}</span>
+                <span
+                  className={`text-[11px] font-mono-num ${
+                    item.highlightBadge
+                      ? 'px-1.5 py-0.5 rounded-full bg-rose-600 text-white font-bold'
+                      : 'text-slate-500'
+                  }`}
+                >
+                  {item.badge}
+                </span>
               )}
             </button>
           );
@@ -565,9 +666,9 @@ export function MerchantPortal() {
   );
 
   return (
-    <div className="min-h-[calc(100vh-52px)] flex bg-slate-50">
+    <div className="min-h-screen flex bg-slate-50">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 bg-white border-e border-slate-200 flex-col shrink-0 sticky top-[52px] h-[calc(100vh-52px)]">
+      <aside className="hidden lg:flex w-64 bg-white border-e border-slate-200 flex-col shrink-0 sticky top-0 h-screen">
         {SidebarContent}
       </aside>
 
@@ -594,7 +695,7 @@ export function MerchantPortal() {
         <OfflineBanner />
 
         {/* Merchant Top Context Bar */}
-        <header className="h-14 px-4 lg:px-6 bg-white border-b border-slate-200 flex items-center justify-between gap-4 sticky top-[52px] z-20">
+        <header className="h-14 px-4 lg:px-6 bg-white border-b border-slate-200 flex items-center justify-between gap-4 sticky top-0 z-20">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
@@ -621,7 +722,41 @@ export function MerchantPortal() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setSection('inbox')}
+              aria-label={lang === 'ar' ? 'رسائل العملاء' : 'Customer Messages'}
+              title={lang === 'ar' ? 'رسائل العملاء' : 'Customer Messages'}
+              className={`relative h-9 w-9 rounded-xl border flex items-center justify-center transition-colors shrink-0 ${
+                section === 'inbox'
+                  ? 'border-[#0F6B5D] bg-teal-50 text-[#0F6B5D]'
+                  : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              {inboxUnread > 0 && (
+                <span className="absolute -top-1 -end-1 min-w-[17px] h-[17px] px-1 rounded-full bg-[#C81E3A] text-white text-[9px] font-bold font-mono-num flex items-center justify-center ring-2 ring-white">
+                  {inboxUnread}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
+              className="h-9 px-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <Globe className="w-3.5 h-3.5 text-slate-500" />
+              <span>{lang === 'ar' ? 'EN' : 'عربي'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPortal('customer')}
+              className="h-9 px-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <StoreIcon className="w-3.5 h-3.5 text-[#0F6B5D]" />
+              <span className="hidden md:inline">{lang === 'ar' ? 'السوق' : 'Storefront'}</span>
+            </button>
             <button
               type="button"
               onClick={() => setSection('create_listing')}
@@ -662,6 +797,10 @@ export function MerchantPortal() {
             />
           )}
 
+          {section === 'inbox' && (
+            <MerchantInboxPanel onUnreadCountChange={setInboxUnread} />
+          )}
+
           {/* M-05: MERCHANT DASHBOARD */}
           {section === 'dashboard' && (
             <div className="space-y-6">
@@ -698,6 +837,114 @@ export function MerchantPortal() {
                   </p>
                 </div>
               </div>
+
+              {/* Guided 3-Step Store Launch Checklist */}
+              {(() => {
+                const step1Done = activeMerchantStore.verificationStatus === 'verified';
+                const step2Done = storeListings.length >= 3;
+                const step3Done = qrSharedDone || activeMerchantStore.stats.views7d > 0;
+                const doneCount = [step1Done, step2Done, step3Done].filter(Boolean).length;
+                return (
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 space-y-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900">
+                          {lang === 'ar' ? 'قائمة انطلاقة متجرك (3 خطوات)' : 'Store Launch Checklist (3 Steps)'}
+                        </h3>
+                        <p className="text-[11px] text-slate-500">
+                          {lang === 'ar'
+                            ? `أكملت ${doneCount} من 3 خطوات أساسية لظهور متجرك بقوة للمشترين.`
+                            : `${doneCount} of 3 essential setup steps completed for buyer visibility.`}
+                        </p>
+                      </div>
+                      <span className="text-xs font-bold text-[#0F6B5D] tabular-nums">
+                        {Math.round((doneCount / 3) * 100)}%
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setSection('verification')}
+                        className={`p-3 rounded-xl border text-start flex items-start gap-2.5 transition-colors ${
+                          step1Done
+                            ? 'bg-emerald-50/50 border-emerald-200'
+                            : 'bg-slate-50 border-slate-200 hover:border-[#0F6B5D]'
+                        }`}
+                      >
+                        <CheckCircle2
+                          className={`w-4 h-4 mt-0.5 shrink-0 ${
+                            step1Done ? 'text-emerald-600' : 'text-slate-300'
+                          }`}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-900">
+                            {lang === 'ar' ? '1. توثيق المتجر الفعلي' : '1. Verify Physical Store'}
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            {step1Done
+                              ? lang === 'ar'
+                                ? 'تم الاعتماد بنجاح'
+                                : 'Verified & live'
+                              : lang === 'ar'
+                                ? 'أكمل ملف التوثيق الآن'
+                                : 'Complete verification docs'}
+                          </p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setSection('create_listing')}
+                        className={`p-3 rounded-xl border text-start flex items-start gap-2.5 transition-colors ${
+                          step2Done
+                            ? 'bg-emerald-50/50 border-emerald-200'
+                            : 'bg-slate-50 border-slate-200 hover:border-[#0F6B5D]'
+                        }`}
+                      >
+                        <CheckCircle2
+                          className={`w-4 h-4 mt-0.5 shrink-0 ${
+                            step2Done ? 'text-emerald-600' : 'text-slate-300'
+                          }`}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-900">
+                            {lang === 'ar' ? '2. أضف أول 3 هواتف' : '2. Publish First 3 Phones'}
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-0.5 tabular-nums">
+                            {lang === 'ar'
+                              ? `${Math.min(storeListings.length, 3)} / 3 هواتف في مخزونك`
+                              : `${Math.min(storeListings.length, 3)} / 3 phones listed`}
+                          </p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={openQrPoster}
+                        className={`p-3 rounded-xl border text-start flex items-start gap-2.5 transition-colors ${
+                          step3Done
+                            ? 'bg-emerald-50/50 border-emerald-200'
+                            : 'bg-slate-50 border-slate-200 hover:border-[#0F6B5D]'
+                        }`}
+                      >
+                        <CheckCircle2
+                          className={`w-4 h-4 mt-0.5 shrink-0 ${
+                            step3Done ? 'text-emerald-600' : 'text-slate-300'
+                          }`}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-900">
+                            {lang === 'ar' ? '3. شارك رابط وملصق QR المتجر' : '3. Share Store Link & QR'}
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            {lang === 'ar' ? 'اطبع الكود أو شاركه في واتساب' : 'Print poster or share on WhatsApp'}
+                          </p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {storeListings.length === 0 && activeMerchantStore.stats.views7d === 0 ? (
                 <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center space-y-3">
@@ -914,6 +1161,75 @@ export function MerchantPortal() {
                     </div>
                   </div>
 
+                  {/* Smart USD <-> SDG Exchange Rate Quick-Updater */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                          <DollarSign className="w-4 h-4 text-[#0F6B5D]" />
+                          {lang === 'ar'
+                            ? 'تحديث الأسعار السريع بسعر صرف الدولار (USD → SDG)'
+                            : 'Smart USD ↔ SDG Exchange Rate Quick-Updater'}
+                        </h3>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          {lang === 'ar'
+                            ? 'أدخل سعر صرف اليوم ليتم تعديل جميع الهواتف المربوطة بسعر مرجعي بالدولار بضغطة واحدة (مقرّبة لأقرب 1,000 ج.س).'
+                            : 'Enter today’s SDG/USD rate to recalculate all USD-linked listings in one click (rounded to nearest 1,000 SDG).'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min={100}
+                            step={10}
+                            dir="ltr"
+                            value={quickUsdRate}
+                            onChange={(e) => setQuickUsdRate(e.target.value)}
+                            aria-label="USD to SDG rate"
+                            className="w-32 h-9 px-3 rounded-xl border border-slate-200 text-xs font-mono-num font-bold text-slate-900 focus:outline-none focus:border-[#0F6B5D]"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          disabled={quickUsdBusy || usdRatePreview.length === 0}
+                          onClick={handleApplyQuickUsdRate}
+                          className="h-9 px-4 rounded-xl bg-[#0F6B5D] hover:bg-[#0B5348] disabled:opacity-45 text-white text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap"
+                        >
+                          {quickUsdBusy && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                          {lang === 'ar'
+                            ? `تطبيق على ${usdRatePreview.length} هاتف`
+                            : `Apply to ${usdRatePreview.length} Phones`}
+                        </button>
+                      </div>
+                    </div>
+                    {usdRatePreview.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
+                        {usdRatePreview.slice(0, 3).map((u) => {
+                          const item = storeListings.find((l) => l.id === u.listingId);
+                          if (!item) return null;
+                          return (
+                            <div
+                              key={u.listingId}
+                              className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2 text-xs"
+                            >
+                              <span className="font-semibold text-slate-800 truncate">{item.model}</span>
+                              <span className="font-mono-num text-[#0F6B5D] font-bold shrink-0">
+                                {formatSdg(u.newPriceSdg, lang)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-500">
+                        {lang === 'ar'
+                          ? 'أضف "سعر مرجعي بالدولار" لأي هاتف في المخزون لتفعيل التحديث التلقائي بسعر الصرف.'
+                          : 'Set a Reference USD Price on your listings to enable 1-tap exchange rate updates.'}
+                      </p>
+                    )}
+                  </div>
+
                   {/* Sponsored App-Open Ads Performance & Click-Through Rates (Store Owner View) */}
                   {(() => {
                     const totalAdViews = merchantSponsoredAds.reduce((sum, a) => sum + a.impressions, 0);
@@ -937,14 +1253,24 @@ export function MerchantPortal() {
                                 : 'Live tracking of app-open ad impressions, product clicks, and click-through rate for your store.'}
                             </p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => refreshMerchantData()}
-                            className="h-8 px-3 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 inline-flex items-center gap-1.5"
-                          >
-                            <RefreshCw className="w-3.5 h-3.5" />
-                            {lang === 'ar' ? 'تحديث' : 'Refresh'}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setAdRequestOpen(true)}
+                              className="h-8 px-3 rounded-lg bg-[#0F6B5D] hover:bg-[#0B5348] text-white text-xs font-semibold inline-flex items-center gap-1.5"
+                            >
+                              <Megaphone className="w-3.5 h-3.5" />
+                              {lang === 'ar' ? 'طلب إعلان مموّل' : 'Request Sponsored Ad'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => refreshMerchantData()}
+                              className="h-8 px-3 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 inline-flex items-center gap-1.5"
+                            >
+                              <RefreshCw className="w-3.5 h-3.5" />
+                              {lang === 'ar' ? 'تحديث' : 'Refresh'}
+                            </button>
+                          </div>
                         </div>
 
                         {merchantSponsoredAds.length === 0 ? (
@@ -1341,6 +1667,24 @@ export function MerchantPortal() {
                                       >
                                         {lang === 'ar' ? 'تحديث سريع' : 'Quick Edit'}
                                       </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setFullEditListing(item)}
+                                        title={lang === 'ar' ? 'تعديل كامل للتفاصيل والمواصفات' : 'Full Listing Edit'}
+                                        className="h-8 px-2.5 rounded-lg border border-slate-200 bg-white hover:border-[#0F6B5D] text-slate-700 font-semibold inline-flex items-center gap-1"
+                                      >
+                                        <SlidersHorizontal className="w-3.5 h-3.5" />
+                                        <span className="hidden xl:inline">{lang === 'ar' ? 'تعديل كامل' : 'Full Edit'}</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={duplicatingId === item.id}
+                                        onClick={() => handleDuplicateListing(item)}
+                                        title={lang === 'ar' ? 'نسخ الإعلان' : 'Duplicate Listing'}
+                                        className="h-8 w-8 rounded-lg border border-slate-200 text-slate-600 hover:text-[#0F6B5D] hover:border-[#0F6B5D] inline-flex items-center justify-center disabled:opacity-45"
+                                      >
+                                        <Copy className="w-3.5 h-3.5" />
+                                      </button>
                                       {item.publicationStatus === 'published' && (
                                         <button
                                           type="button"
@@ -1422,13 +1766,31 @@ export function MerchantPortal() {
                           </div>
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <PublicationStatusLabel status={item.publicationStatus} lang={lang} />
-                            <button
-                              type="button"
-                              onClick={() => openQuickEdit(item)}
-                              className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold text-slate-800"
-                            >
-                              {lang === 'ar' ? 'تحديث سريع' : 'Quick Edit'}
-                            </button>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => openQuickEdit(item)}
+                                className="h-8 px-2.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-800"
+                              >
+                                {lang === 'ar' ? 'تحديث سريع' : 'Quick Edit'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setFullEditListing(item)}
+                                className="h-8 px-2.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700"
+                              >
+                                {lang === 'ar' ? 'تعديل' : 'Edit'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={duplicatingId === item.id}
+                                onClick={() => handleDuplicateListing(item)}
+                                aria-label="Duplicate listing"
+                                className="h-8 w-8 rounded-lg border border-slate-200 text-slate-600 inline-flex items-center justify-center"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                           {item.statusReason && (
                             <div className="p-2.5 rounded-lg bg-amber-50 text-[11px] text-amber-950 flex flex-wrap items-center justify-between gap-2">
@@ -2353,6 +2715,22 @@ export function MerchantPortal() {
         }}
         onCancel={() => setStaffToRemove(null)}
       />
+      {/* Full Listing Edit Modal */}
+      {fullEditListing && (
+        <MerchantListingEditModal
+          listing={fullEditListing}
+          onClose={() => setFullEditListing(null)}
+        />
+      )}
+
+      {/* Self-Serve Sponsored Ad Request Modal */}
+      {adRequestOpen && (
+        <MerchantAdRequestModal
+          storeListings={storeListings}
+          defaultCity={activeMerchantStore.city}
+          onClose={() => setAdRequestOpen(false)}
+        />
+      )}
     </div>
   );
 }

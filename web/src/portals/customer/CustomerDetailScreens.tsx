@@ -6,11 +6,15 @@ import {
   ArrowLeftRight,
   ArrowRight,
   Battery,
+  Bell,
+  BellRing,
   Box,
+  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock,
+  Copy,
   Flag,
   GitCompareArrows,
   Globe,
@@ -24,6 +28,7 @@ import {
   Navigation,
   Phone,
   Search,
+  Share2,
   ShieldCheck,
   Store as StoreIcon,
   TrendingDown,
@@ -54,6 +59,10 @@ import {
   RatingSummaryAndReviewsCard,
 } from './RatingsComponents';
 import { ReportTargetSheet } from './ReportTargetSheet';
+import {
+  buildWhatsAppListingShareText,
+  summarizeUsedChecklist,
+} from '../../utils/marketplaceHelpers';
 
 /**
  * C-03: Listing Details Screen (Minimalist Claymorphism + Unavailable/Removed state + Lightbox)
@@ -66,6 +75,10 @@ export function CustomerListingDetails({
   onCompareDetailed,
   onOpenListing,
   onContactSeller,
+  hasPriceAlert,
+  onTogglePriceAlert,
+  inCompareTray,
+  onToggleCompareTray,
 }: {
   listingId: string;
   onBack: () => void;
@@ -74,6 +87,10 @@ export function CustomerListingDetails({
   onCompareDetailed: (listingId: string) => void;
   onOpenListing: (id: string) => void;
   onContactSeller: (listing: Listing, store: Store) => void;
+  hasPriceAlert?: boolean;
+  onTogglePriceAlert?: (listing: Listing) => void;
+  inCompareTray?: boolean;
+  onToggleCompareTray?: (listingId: string) => void;
 }) {
   const {
     lang,
@@ -82,20 +99,22 @@ export function CustomerListingDetails({
     cachedPublicListings,
     cachedAtLabel,
     getStoreById,
-    getPhoneModelRatingSummary,
+    getProductRatingSummary,
+    getModelRatingFromProducts,
     getStoreRatingSummary,
-    submitPhoneModelRating,
+    submitProductRating,
     customerReports,
     submitCustomerReport,
     favoriteIds,
     toggleFavorite,
     sim,
     reconnectAndRefresh,
+    pushToast,
   } = usePrototype();
   const [photoIdx, setPhotoIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [specsSheetOpen, setSpecsSheetOpen] = useState(false);
-  const [ratePhoneModelOpen, setRatePhoneModelOpen] = useState(false);
+  const [rateProductOpen, setRateProductOpen] = useState(false);
   const [reportListingOpen, setReportListingOpen] = useState(false);
   const [galleryUnlocked, setGalleryUnlocked] = useState(false);
 
@@ -399,21 +418,21 @@ export function CustomerListingDetails({
               {title}
             </h1>
             {(() => {
-              const modelSummary = getPhoneModelRatingSummary(listing.brand, listing.model);
+              const productSummary = getProductRatingSummary(listing.id);
               return (
                 <button
                   type="button"
-                  onClick={() => setRatePhoneModelOpen(true)}
+                  onClick={() => setRateProductOpen(true)}
                   className="clay-pill clay-focus-ring px-2.5 py-1 rounded-full shrink-0"
                   title={
                     lang === 'ar'
-                      ? `تقييم هاتف ${title} (مشترك في جميع المتاجر)`
-                      : `${title} rating (shared across all stores)`
+                      ? `تقييم هذا المنتج (${title} — ${tText(store.name, 'ar')})`
+                      : `Rate this product (${title} — ${tText(store.name, 'en')})`
                   }
                 >
                   <CompactStarRating
-                    average={modelSummary.average}
-                    count={modelSummary.count}
+                    average={productSummary.average}
+                    count={productSummary.count}
                     size="xs"
                   />
                 </button>
@@ -459,6 +478,97 @@ export function CustomerListingDetails({
               </span>
             </div>
           )}
+
+          {/* Utility Actions: Price Alert, Compare Tray, WhatsApp Share & Copy Link */}
+          <div className="flex flex-wrap items-center gap-2 pt-2">
+            {onTogglePriceAlert && (
+              <button
+                type="button"
+                onClick={() => onTogglePriceAlert(listing)}
+                className={`h-9 px-3 rounded-full text-[11px] font-bold inline-flex items-center gap-1.5 transition-colors ${
+                  hasPriceAlert
+                    ? 'bg-[#0F6B5D] text-white'
+                    : 'clay-pill text-[#172B20] hover:text-[#0F6B5D]'
+                }`}
+              >
+                {hasPriceAlert ? <BellRing className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
+                <span>
+                  {hasPriceAlert
+                    ? lang === 'ar'
+                      ? 'تنبيه السعر مُفعّل'
+                      : 'Price Alert On'
+                    : lang === 'ar'
+                      ? 'نبّهني عند انخفاض السعر'
+                      : 'Price Drop Alert'}
+                </span>
+              </button>
+            )}
+            {onToggleCompareTray && (
+              <button
+                type="button"
+                onClick={() => onToggleCompareTray(listing.id)}
+                className={`h-9 px-3 rounded-full text-[11px] font-bold inline-flex items-center gap-1.5 transition-colors ${
+                  inCompareTray
+                    ? 'clay-pill-active text-[#18432C]'
+                    : 'clay-pill text-[#172B20] hover:text-[#0F6B5D]'
+                }`}
+              >
+                <GitCompareArrows className="w-3.5 h-3.5" />
+                <span>
+                  {inCompareTray
+                    ? lang === 'ar'
+                      ? 'في قائمة المقارنة ✓'
+                      : 'In Compare ✓'
+                    : lang === 'ar'
+                      ? 'أضف للمقارنة'
+                      : 'Add to Compare'}
+                </span>
+              </button>
+            )}
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(
+                buildWhatsAppListingShareText({
+                  title,
+                  storageGb: listing.storageGb,
+                  conditionLabel: formatCondition(listing.condition, lang),
+                  priceFormatted: formatSdg(listing.priceSdg, lang),
+                  storeName: tText(store.name, lang),
+                  cityLabel: formatCity(store.city, lang),
+                  lang,
+                  url:
+                    typeof window !== 'undefined'
+                      ? `${window.location.origin}/?listing=${listing.id}`
+                      : `https://sudanphones.sd/?listing=${listing.id}`,
+                })
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="clay-pill h-9 px-3 rounded-full text-[11px] font-bold text-[#1E5637] inline-flex items-center gap-1.5"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>{lang === 'ar' ? 'مشاركة واتساب' : 'Share WhatsApp'}</span>
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                const url =
+                  typeof window !== 'undefined'
+                    ? `${window.location.origin}/?listing=${listing.id}`
+                    : `https://sudanphones.sd/?listing=${listing.id}`;
+                if (navigator.clipboard?.writeText) {
+                  navigator.clipboard.writeText(url).catch(() => {});
+                }
+                pushToast('success', {
+                  ar: 'تم نسخ رابط الإعلان للمشاركة.',
+                  en: 'Listing link copied to clipboard.',
+                });
+              }}
+              className="clay-pill h-9 px-3 rounded-full text-[11px] font-bold text-[#4A6457] inline-flex items-center gap-1.5"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>{lang === 'ar' ? 'نسخ الرابط' : 'Copy Link'}</span>
+            </button>
+          </div>
         </motion.div>
 
         {/* Quick Highlights Bar + View All Specs & Detailed Comparison Triggers */}
@@ -616,32 +726,108 @@ export function CustomerListingDetails({
                     </p>
                   </div>
                 )}
+
+                {/* Structured 5-Item Used Phone Verification Checklist */}
+                {(() => {
+                  const summary = summarizeUsedChecklist(listing.usedChecklist);
+                  const chk = listing.usedChecklist;
+                  const items = [
+                    { ok: Boolean(chk?.biometricsWorking), ar: 'البصمة / Face ID تعمل', en: 'Face ID / Fingerprint working' },
+                    { ok: Boolean(chk?.originalScreen), ar: 'شاشة أصلية غير مستبدلة', en: 'Original factory screen' },
+                    { ok: Boolean(chk?.networkUnlocked), ar: 'مفتوح لشبكات السودان', en: 'Network unlocked (Sudan)' },
+                    { ok: Boolean(chk?.cleanImei), ar: 'IMEI سليم ونظيف', en: 'Clean IMEI status' },
+                    { ok: Boolean(chk?.accessoriesIncluded), ar: 'الملحقات/الشاحن مرفق', en: 'Accessories included' },
+                  ];
+                  return (
+                    <div className="p-3.5 rounded-[18px] clay-inset space-y-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-bold text-[#172B20] flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-[#2D6145]" />
+                          {lang === 'ar' ? 'قائمة فحص الجهاز المستعمل' : 'Used Phone Verification Checklist'}
+                        </p>
+                        <span className="text-[11px] font-bold font-mono-num text-[#245A3D]">
+                          {summary.passed}/{summary.total}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                        {items.map((it) => (
+                          <div key={it.en} className="flex items-center gap-1.5 text-[11px]">
+                            <span
+                              className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                                it.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200/80 text-slate-400'
+                              }`}
+                            >
+                              {it.ok ? <Check className="w-2.5 h-2.5" /> : <X className="w-2.5 h-2.5" />}
+                            </span>
+                            <span className={it.ok ? 'text-[#172B20] font-medium' : 'text-[#738A7E]'}>
+                              {lang === 'ar' ? it.ar : it.en}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
         </div>
 
-        {/* Model-Wide Phone Rating Card (Shared Across All Stores Carrying This Exact Phone Model) */}
+        {/* Product Rating Card + Linked Single-Model Aggregated Rating */}
         {(() => {
-          const modelSummary = getPhoneModelRatingSummary(listing.brand, listing.model);
+          const productSummary = getProductRatingSummary(listing.id);
+          const linkedModelSummary = getModelRatingFromProducts(listing.brand, listing.model);
+          const linkedProductsCount = linkedModelSummary.linkedProductCount ?? 0;
           return (
-            <div className="px-4 pt-4">
+            <div className="px-4 pt-4 space-y-3">
               <RatingSummaryAndReviewsCard
-                title={lang === 'ar' ? `تقييم ${title}` : `${title} Rating`}
+                title={lang === 'ar' ? 'تقييم المنتج وآراء المشترين' : 'Product Rating & Reviews'}
                 subtitle={
                   lang === 'ar'
-                    ? 'تقييم خاص بهذا الموديل وليس بإعلان متجر واحد'
-                    : 'Model rating (not tied to a single store listing)'
+                    ? `${title} · ${tText(store.name, 'ar')}`
+                    : `${title} · ${tText(store.name, 'en')}`
                 }
                 scopeNotice={
                   lang === 'ar'
-                    ? `هذا التقييم خاص بهاتف ${title} ويظهر تلقائياً في جميع المتاجر التي تبيع هذا الموديل.`
-                    : `Shared rating for ${title} — every store selling this exact phone model automatically displays this rating.`
+                    ? `يُحسب تقييم هذا المنتج بشكل مستقل، ويُدمج تلقائياً مع تقييمات جميع المنتجات الأخرى لنفس الموديل (${title}) لإظهار التقييم العام للموديل.`
+                    : `Ratings are submitted per product listing and automatically linked to ${title} to compute its overall model rating.`
                 }
-                summary={modelSummary}
-                rateButtonLabel={lang === 'ar' ? 'قيّم الهاتف' : 'Rate Phone'}
-                onOpenRateSheet={() => setRatePhoneModelOpen(true)}
+                emptyMessage={
+                  lang === 'ar'
+                    ? 'لا توجد تقييمات لهذا المنتج بعد. كن أول من يقيّمه!'
+                    : 'No reviews for this product yet. Be the first to rate it!'
+                }
+                summary={productSummary}
+                rateButtonLabel={lang === 'ar' ? 'قيّم المنتج' : 'Rate Product'}
+                onOpenRateSheet={() => setRateProductOpen(true)}
               />
+
+              {/* Read-Only Aggregated Model Rating derived from all linked product ratings */}
+              <div className="clay-card-tint rounded-[22px] p-3.5 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold text-[#172B20] truncate">
+                    {lang === 'ar'
+                      ? `التقييم العام لموديل ${title}`
+                      : `Overall ${title} Model Rating`}
+                  </p>
+                  <p className="text-[10.5px] text-[#4E695B] mt-0.5 leading-snug">
+                    {linkedModelSummary.count > 0
+                      ? lang === 'ar'
+                        ? `مجمّع من ${linkedModelSummary.count} تقييمات منتجات عبر ${linkedProductsCount} ${linkedProductsCount === 1 ? 'منتج' : 'منتجات'}`
+                        : `Aggregated from ${linkedModelSummary.count} product ${linkedModelSummary.count === 1 ? 'rating' : 'ratings'} across ${linkedProductsCount} ${linkedProductsCount === 1 ? 'listing' : 'listings'}`
+                      : lang === 'ar'
+                        ? 'سيظهر تقييم الموديل تلقائياً بمجرد تقييم أي منتج مرتبط به'
+                        : 'Model rating updates automatically once any linked product is rated'}
+                  </p>
+                </div>
+                <div className="clay-pill px-3 py-1.5 rounded-full shrink-0">
+                  <CompactStarRating
+                    average={linkedModelSummary.average}
+                    count={linkedModelSummary.count}
+                    size="sm"
+                  />
+                </div>
+              </div>
             </div>
           );
         })()}
@@ -720,10 +906,10 @@ export function CustomerListingDetails({
             <h3 className="text-[13px] font-bold text-[#172B20] mb-3 px-0.5">
               {lang === 'ar' ? 'هواتف مشابهة من متاجر موثقة' : 'Related Verified Listings'}
             </h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3.5">
               {relatedListings.map((rel) => {
                 const relStore = getStoreById(rel.storeId);
-                const relModelSummary = getPhoneModelRatingSummary(rel.brand, rel.model);
+                const relProductSummary = getProductRatingSummary(rel.id);
                 return (
                   <button
                     key={rel.id}
@@ -732,9 +918,9 @@ export function CustomerListingDetails({
                       setPhotoIdx(0);
                       onOpenListing(rel.id);
                     }}
-                    className="clay-card-interactive clay-focus-ring rounded-[24px] p-2 text-start"
+                    className="clay-card-interactive clay-focus-ring rounded-[24px] p-2.5 text-start flex flex-col"
                   >
-                    <div className="overflow-hidden rounded-[17px]">
+                    <div className="overflow-hidden rounded-[18px] bg-[#E5EDE8]">
                       <SafeImage
                         clay
                         src={rel.photos[0]?.url}
@@ -743,28 +929,32 @@ export function CustomerListingDetails({
                         label={rel.model}
                       />
                     </div>
-                    <div className="px-1.5 pt-2.5 pb-1">
-                      <p className="text-[10.5px] text-[#6B8276] truncate">
-                        {formatCondition(rel.condition, lang)} ·{' '}
-                        <span dir="ltr" className="font-mono-num">
-                          {rel.storageGb} GB
-                        </span>
-                      </p>
-                      <p className="text-xs font-bold text-[#172B20] truncate mt-0.5">
-                        {formatListingTitle(rel.arabicBrandPrefix, rel.model, lang)}
-                      </p>
-                      <div className="flex items-center justify-between gap-1 mt-1">
-                        <p className="text-xs font-bold text-[#225439] font-mono-num truncate">
+                    <div className="px-1.5 pt-3 pb-1 flex-1 flex flex-col justify-between">
+                      <div>
+                        <p className="text-[12.5px] font-bold text-[#14281E] leading-snug truncate">
+                          {formatListingTitle(rel.arabicBrandPrefix, rel.model, lang)}
+                        </p>
+                        <div className="mt-1 flex items-center justify-between gap-1 text-[10.5px] text-[#60786B]">
+                          <p className="truncate">
+                            {formatCondition(rel.condition, lang)} ·{' '}
+                            <span dir="ltr" className="font-mono-num">
+                              {rel.storageGb} GB
+                            </span>
+                          </p>
+                          {relProductSummary.count > 0 && (
+                            <CompactStarRating
+                              average={relProductSummary.average}
+                              count={relProductSummary.count}
+                              size="xs"
+                            />
+                          )}
+                        </div>
+                        <p className="mt-2 text-[13.5px] font-extrabold text-[#1E5637] font-mono-num truncate">
                           {formatSdg(rel.priceSdg, lang)}
                         </p>
-                        <CompactStarRating
-                          average={relModelSummary.average}
-                          count={relModelSummary.count}
-                          size="xs"
-                        />
                       </div>
                       {relStore && (
-                        <p className="text-[10px] text-[#72887C] truncate mt-0.5">
+                        <p className="mt-2 pt-1.5 border-t border-[#172B20]/[0.06] text-[10.5px] text-[#5B7467] truncate">
                           {tText(relStore.name, lang)}
                         </p>
                       )}
@@ -861,30 +1051,23 @@ export function CustomerListingDetails({
         onOpenDetailedCompare={() => onCompareDetailed(listing.id)}
       />
 
-      {/* Interactive Rate Specific Phone Model Sheet */}
+      {/* Interactive Rate Product Listing Sheet */}
       <RateTargetSheet
-        open={ratePhoneModelOpen}
-        title={lang === 'ar' ? `تقييم ${title}` : `Rate ${title}`}
+        open={rateProductOpen}
+        title={lang === 'ar' ? `تقييم المنتج · ${title}` : `Rate Product · ${title}`}
         subtitle={
           lang === 'ar'
-            ? 'قيّم أداء وجودة هذا الموديل بشكل عام'
-            : 'Rate the overall quality & performance of this phone model'
+            ? `قيّم هذا المنتج من ${tText(store.name, 'ar')}`
+            : `Rate this product listing from ${tText(store.name, 'en')}`
         }
         helperNote={
           lang === 'ar'
-            ? `تقييمك يرتبط بموديل ${title} نفسه ويظهر تلقائياً في جميع المتاجر التي تبيع هذا الهاتف.`
-            : `This rating is linked to the ${title} model itself and automatically applies across every store carrying it.`
+            ? `تقييمك يُحفظ على هذا المنتج ويساهم تلقائياً في حساب التقييم العام لموديل ${title}.`
+            : `Your rating is saved for this product and automatically contributes to the overall ${title} model rating.`
         }
-        onClose={() => setRatePhoneModelOpen(false)}
+        onClose={() => setRateProductOpen(false)}
         onSubmit={({ rating, authorName, comment }) =>
-          submitPhoneModelRating(
-            listing.brand,
-            listing.model,
-            listing.arabicBrandPrefix,
-            rating,
-            authorName,
-            comment
-          )
+          submitProductRating(listing.id, rating, authorName, comment)
         }
       />
 
@@ -934,21 +1117,16 @@ export function CustomerStoreProfile({
     getStoreById,
     publicListings,
     getStoreRatingSummary,
-    getPhoneModelRatingSummary,
+    getProductRatingSummary,
     submitStoreRating,
-    submitPhoneModelRating,
     customerReports,
     submitCustomerReport,
+    pushToast,
   } = usePrototype();
   const [query, setQuery] = useState('');
   const [condFilter, setCondFilter] = useState<'all' | 'new' | 'used'>('all');
   const [rateStoreOpen, setRateStoreOpen] = useState(false);
   const [reportStoreOpen, setReportStoreOpen] = useState(false);
-  const [rateModelTarget, setRateModelTarget] = useState<{
-    brand: BrandId;
-    model: string;
-    arabicBrandPrefix: string;
-  } | null>(null);
 
   const hasReportedStore = customerReports.some(
     (r) => r.targetType === 'store' && r.targetId === storeId && r.status === 'open'
@@ -961,21 +1139,6 @@ export function CustomerStoreProfile({
     () => publicListings.filter((l) => l.storeId === storeId),
     [publicListings, storeId]
   );
-
-  const storeModels = useMemo(() => {
-    const seen = new Map<string, { brand: BrandId; model: string; arabicBrandPrefix: string }>();
-    for (const l of storeAllListings) {
-      const k = `${l.brand}::${l.model.toLowerCase()}`;
-      if (!seen.has(k)) {
-        seen.set(k, {
-          brand: l.brand,
-          model: l.model,
-          arabicBrandPrefix: l.arabicBrandPrefix,
-        });
-      }
-    }
-    return Array.from(seen.values());
-  }, [storeAllListings]);
 
   const storeListings = useMemo(() => {
     return storeAllListings.filter((l) => {
@@ -1048,17 +1211,40 @@ export function CustomerStoreProfile({
                 >
                   <BackIcon className="w-5 h-5" />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setReportStoreOpen(true)}
-                  aria-label={lang === 'ar' ? 'الإبلاغ عن المتجر' : 'Report store'}
-                  title={lang === 'ar' ? 'الإبلاغ عن المتجر' : 'Report store'}
-                  className={`clay-pill clay-focus-ring w-11 h-11 rounded-full flex items-center justify-center ${
-                    hasReportedStore ? 'text-[#B4232C]' : 'text-[#5A7265] hover:text-[#B4232C]'
-                  }`}
-                >
-                  <Flag className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url =
+                        typeof window !== 'undefined'
+                          ? `${window.location.origin}/?store=${store.id}`
+                          : `https://sudanphones.sd/?store=${store.id}`;
+                      if (navigator.clipboard?.writeText) {
+                        navigator.clipboard.writeText(url).catch(() => {});
+                      }
+                      pushToast('success', {
+                        ar: 'تم نسخ رابط المتجر للمشاركة.',
+                        en: 'Store link copied to clipboard.',
+                      });
+                    }}
+                    aria-label={lang === 'ar' ? 'مشاركة رابط المتجر' : 'Share store link'}
+                    title={lang === 'ar' ? 'مشاركة رابط المتجر' : 'Share store link'}
+                    className="clay-pill clay-focus-ring w-11 h-11 rounded-full flex items-center justify-center text-[#1E5637]"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReportStoreOpen(true)}
+                    aria-label={lang === 'ar' ? 'الإبلاغ عن المتجر' : 'Report store'}
+                    title={lang === 'ar' ? 'الإبلاغ عن المتجر' : 'Report store'}
+                    className={`clay-pill clay-focus-ring w-11 h-11 rounded-full flex items-center justify-center ${
+                      hasReportedStore ? 'text-[#B4232C]' : 'text-[#5A7265] hover:text-[#B4232C]'
+                    }`}
+                  >
+                    <Flag className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1192,46 +1378,6 @@ export function CustomerStoreProfile({
             rateButtonLabel={lang === 'ar' ? 'قيّم المتجر' : 'Rate Store'}
             onOpenRateSheet={() => setRateStoreOpen(true)}
           />
-
-          {/* Carried Phone Models — Shared Model-Wide Ratings */}
-          {storeModels.length > 0 && (
-            <div className="clay-card rounded-[24px] p-3.5 space-y-2.5">
-              <div className="px-0.5">
-                <h2 className="text-xs font-bold text-[#172B20]">
-                  {lang === 'ar'
-                    ? 'تقييم الموديلات المتوفرة في المتجر'
-                    : 'Phone Model Ratings in Stock'}
-                </h2>
-                <p className="text-[10.5px] text-[#60786B] mt-0.5">
-                  {lang === 'ar'
-                    ? 'تقييم كل موديل مشترك تلقائياً مع جميع المتاجر التي تبيعه'
-                    : 'Each phone model rating is shared automatically across every store selling it'}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 overflow-x-auto py-0.5 thin-scroll">
-                {storeModels.map((m) => {
-                  const mSummary = getPhoneModelRatingSummary(m.brand, m.model);
-                  return (
-                    <button
-                      key={`${m.brand}-${m.model}`}
-                      type="button"
-                      onClick={() => setRateModelTarget(m)}
-                      className="clay-pill clay-focus-ring h-9 px-3 rounded-full inline-flex items-center gap-2 shrink-0"
-                    >
-                      <span className="text-[11px] font-bold text-[#172B20] whitespace-nowrap">
-                        {m.model}
-                      </span>
-                      <CompactStarRating
-                        average={mSummary.average}
-                        count={mSummary.count}
-                        size="xs"
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Store Active Inventory */}
@@ -1285,17 +1431,17 @@ export function CustomerStoreProfile({
                 : 'No matching phones in this store.'}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3.5">
               {storeListings.map((item) => {
-                const itemModelRating = getPhoneModelRatingSummary(item.brand, item.model);
+                const itemProductRating = getProductRatingSummary(item.id);
                 return (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => onOpenListing(item.id)}
-                    className="clay-card-interactive clay-focus-ring rounded-[24px] p-2 text-start"
+                    className="clay-card-interactive clay-focus-ring rounded-[24px] p-2.5 text-start flex flex-col"
                   >
-                    <div className="overflow-hidden rounded-[17px]">
+                    <div className="overflow-hidden rounded-[18px] bg-[#E5EDE8]">
                       <SafeImage
                         clay
                         src={item.photos[0]?.url}
@@ -1304,35 +1450,33 @@ export function CustomerStoreProfile({
                         label={item.model}
                       />
                     </div>
-                    <div className="px-1.5 pt-2.5 pb-1">
-                      <p className="text-[10.5px] text-[#6B8276] truncate">
-                        <span
-                          className={
-                            item.condition === 'new'
-                              ? 'text-[#245A3D] font-semibold'
-                              : 'text-[#3B5246] font-semibold'
-                          }
-                        >
-                          {formatCondition(item.condition, lang)}
-                        </span>
-                        {' · '}
-                        <span dir="ltr" className="font-mono-num">
-                          {item.storageGb} GB
-                        </span>
-                      </p>
-                      <p className="text-xs font-bold text-[#172B20] truncate mt-0.5">
-                        {formatListingTitle(item.arabicBrandPrefix, item.model, lang)}
-                      </p>
-                      <div className="flex items-center justify-between gap-1 mt-1">
-                        <p className="text-xs font-bold text-[#225439] font-mono-num truncate">
-                          {formatSdg(item.priceSdg, lang)}
+                    <div className="px-1.5 pt-3 pb-1 flex-1 flex flex-col justify-between">
+                      <div>
+                        <p className="text-[12.5px] font-bold text-[#14281E] leading-snug truncate">
+                          {formatListingTitle(item.arabicBrandPrefix, item.model, lang)}
                         </p>
-                        <CompactStarRating
-                          average={itemModelRating.average}
-                          count={itemModelRating.count}
-                          size="xs"
-                        />
+                        <div className="mt-1 flex items-center justify-between gap-1 text-[10.5px] text-[#60786B]">
+                          <p className="truncate">
+                            <span className="font-medium text-[#4A6457]">
+                              {formatCondition(item.condition, lang)}
+                            </span>
+                            {' · '}
+                            <span dir="ltr" className="font-mono-num">
+                              {item.storageGb} GB
+                            </span>
+                          </p>
+                          {itemProductRating.count > 0 && (
+                            <CompactStarRating
+                              average={itemProductRating.average}
+                              count={itemProductRating.count}
+                              size="xs"
+                            />
+                          )}
+                        </div>
                       </div>
+                      <p className="mt-2 text-[13.5px] font-extrabold text-[#1E5637] font-mono-num truncate">
+                        {formatSdg(item.priceSdg, lang)}
+                      </p>
                     </div>
                   </button>
                 );
@@ -1360,42 +1504,6 @@ export function CustomerStoreProfile({
           submitStoreRating(store.id, rating, authorName, comment)
         }
       />
-
-      {/* Rate Specific Phone Model Sheet */}
-      {(() => {
-        const modelTitle = rateModelTarget
-          ? formatListingTitle(rateModelTarget.arabicBrandPrefix, rateModelTarget.model, lang)
-          : '';
-        return (
-          <RateTargetSheet
-            open={rateModelTarget !== null}
-            title={lang === 'ar' ? `تقييم ${modelTitle}` : `Rate ${modelTitle}`}
-            subtitle={
-              lang === 'ar'
-                ? 'تقييم عام لهذا الموديل من الهواتف'
-                : 'Overall rating for this specific phone model'
-            }
-            helperNote={
-              lang === 'ar'
-                ? `يتم تطبيق هذا التقييم تلقائياً على جميع عروض ${modelTitle} في هذا المتجر وكافة المتاجر الأخرى.`
-                : `This rating applies automatically to all ${modelTitle} listings in this store and every other store.`
-            }
-            onClose={() => setRateModelTarget(null)}
-            onSubmit={({ rating, authorName, comment }) => {
-              if (rateModelTarget) {
-                submitPhoneModelRating(
-                  rateModelTarget.brand,
-                  rateModelTarget.model,
-                  rateModelTarget.arabicBrandPrefix,
-                  rating,
-                  authorName,
-                  comment
-                );
-              }
-            }}
-          />
-        );
-      })()}
 
       {/* Report Store Sheet */}
       <ReportTargetSheet
@@ -1435,7 +1543,14 @@ export function CustomerCompareOffers({
   onCompareDetailed?: (listingId: string) => void;
   onContactSeller: (listing: Listing, store: Store) => void;
 }) {
-  const { lang, publicListings, getStoreById, getStoreRatingSummary } = usePrototype();
+  const {
+    lang,
+    publicListings,
+    getStoreById,
+    getStoreRatingSummary,
+    getProductRatingSummary,
+    getModelRatingFromProducts,
+  } = usePrototype();
   const BackIcon = lang === 'ar' ? ArrowRight : ArrowLeft;
 
   const offers = useMemo(() => {
@@ -1445,6 +1560,7 @@ export function CustomerCompareOffers({
   }, [publicListings, variantKey]);
 
   const ref = offers[0];
+  const aggregatedModelRating = ref ? getModelRatingFromProducts(ref.brand, ref.model) : null;
   const hasBothConditions =
     offers.some((o) => o.condition === 'new') && offers.some((o) => o.condition === 'used');
 
@@ -1485,13 +1601,27 @@ export function CustomerCompareOffers({
                 alt={ref.model}
                 aspectClass="w-16 h-16 shrink-0 rounded-[16px]"
               />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-[#172B20] truncate">
                   {formatListingTitle(ref.arabicBrandPrefix, ref.model, lang)}
                 </p>
                 <p className="text-xs text-[#5D7568] font-mono-num mt-0.5" dir="ltr">
                   {ref.storageGb} GB{ref.ramGb ? ` · ${ref.ramGb} GB RAM` : ''}
                 </p>
+                {aggregatedModelRating && (
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    <CompactStarRating
+                      average={aggregatedModelRating.average}
+                      count={aggregatedModelRating.count}
+                      size="xs"
+                    />
+                    <span className="text-[10px] text-[#5D7568]">
+                      {lang === 'ar'
+                        ? 'تقييم الموديل من المنتجات'
+                        : 'Model rating from products'}
+                    </span>
+                  </div>
+                )}
                 <p className="text-[11px] text-[#245A3D] font-semibold mt-1">
                   {lang === 'ar'
                     ? `${offers.length} متاجر موثقة توفر نفس السعة والموديل`
@@ -1533,6 +1663,7 @@ export function CustomerCompareOffers({
           if (!store) return null;
           const isBestPrice = idx === 0;
           const storeRating = getStoreRatingSummary(store.id);
+          const productRating = getProductRatingSummary(offer.id);
           return (
             <motion.div
               key={offer.id}
@@ -1556,9 +1687,18 @@ export function CustomerCompareOffers({
                       size="xs"
                     />
                   </div>
-                  <p className="text-[11px] text-[#5D7568] mt-0.5">
-                    {formatCity(store.city, lang)} · {tText(offer.color, lang)}
-                  </p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <p className="text-[11px] text-[#5D7568]">
+                      {formatCity(store.city, lang)} · {tText(offer.color, lang)}
+                    </p>
+                    <span className="text-[#A4B7AD]">·</span>
+                    <CompactStarRating
+                      average={productRating.average}
+                      count={productRating.count}
+                      label={lang === 'ar' ? 'المنتج' : 'Product'}
+                      size="xs"
+                    />
+                  </div>
                 </div>
                 <div className="text-end shrink-0">
                   <p className="text-sm font-bold text-[#1E5236] font-mono-num">
@@ -1673,8 +1813,8 @@ export function OptionalCustomerAccountConcept({ onClose }: { onClose: () => voi
           </p>
           <p>
             {lang === 'ar'
-              ? 'لا يلزم تسجيل الدخول لتصفح الهواتف أو مقارنة العروض أو التواصل مع المتاجر. تم إبقاء هذه الشاشات في مسار منفصل بدون ميزة المفضلة.'
-              : 'Sign-in is never required to browse, compare offers, or contact stores. Kept separate with no saved favorites in core browsing.'}
+              ? 'لا يلزم تسجيل الدخول لتصفح الهواتف أو مقارنة العروض أو التواصل مع المتاجر. وعند تسجيل الدخول، تتم مزامنة المفضلة وتنبيهات الأسعار تلقائياً.'
+              : 'Sign-in is never required to browse, compare offers, or contact stores. Signing in syncs your saved favorites and price drop alerts.'}
           </p>
         </div>
 
@@ -1839,8 +1979,8 @@ export function OptionalCustomerAccountConcept({ onClose }: { onClose: () => voi
               <CheckCircle2 className="w-4 h-4 text-[#2D6145] shrink-0" />
               <span>
                 {lang === 'ar'
-                  ? 'حساب مستقبلي اختياري — بدون مفضلة أو سلة مشتريات'
-                  : 'Optional future profile — no favorites or cart'}
+                  ? 'حساب عميل اختياري — يحفظ المفضلة وتنبيهات انخفاض الأسعار'
+                  : 'Optional customer profile — syncs favorites & price alerts'}
               </span>
             </div>
             <button

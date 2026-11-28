@@ -191,6 +191,23 @@ export function mapListing(raw: any): Listing {
     warrantyMonths: raw.warranty_months ?? undefined,
     inspectionWarrantyDays: raw.warranty_days ?? undefined,
     warrantyType: raw.warranty_type ? bi(raw.warranty_type) : undefined,
+    usedChecklist: raw.used_checklist
+      ? {
+          biometricsWorking: Boolean(raw.used_checklist.biometrics_working ?? raw.used_checklist.biometricsWorking ?? true),
+          originalScreen: Boolean(raw.used_checklist.original_screen ?? raw.used_checklist.originalScreen ?? true),
+          networkUnlocked: Boolean(raw.used_checklist.network_unlocked ?? raw.used_checklist.networkUnlocked ?? true),
+          cleanImei: Boolean(raw.used_checklist.clean_imei ?? raw.used_checklist.cleanImei ?? true),
+          accessoriesIncluded: Boolean(raw.used_checklist.accessories_included ?? raw.used_checklist.accessoriesIncluded ?? false),
+        }
+      : cond === 'used'
+        ? {
+            biometricsWorking: true,
+            originalScreen: true,
+            networkUnlocked: true,
+            cleanImei: true,
+            accessoriesIncluded: Boolean(raw.has_original_box),
+          }
+        : undefined,
     specifications: raw.specifications || undefined,
     publicationStatus: mapPublicationStatus(raw.status || 'published', raw.moderation || 'approved'),
     statusReason: raw.feedback ? bi(raw.feedback) : undefined,

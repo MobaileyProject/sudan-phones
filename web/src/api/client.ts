@@ -539,13 +539,15 @@ export const api = {
       lang,
     }),
 
-  // Ratings & Reports
+  // Ratings & Reports (Product-only ratings aggregated to their linked phone model)
   getStoreRatings: (storeId: string | number) => apiRequest(`/api/v1/stores/${storeId}/ratings`, { query: { limit: 50 } }),
-  submitStoreRating: (storeId: string | number, stars: number, comment: string) =>
-    apiRequest(`/api/v1/stores/${storeId}/ratings`, { method: 'POST', body: { stars, comment } }),
-  getModelRatings: (modelId: string | number) => apiRequest(`/api/v1/models/${modelId}/ratings`, { query: { limit: 50 } }),
-  submitModelRating: (modelId: string | number, stars: number, comment: string) =>
-    apiRequest(`/api/v1/models/${modelId}/ratings`, { method: 'POST', body: { stars, comment } }),
+  submitStoreRating: (storeId: string | number, stars: number, comment: string, authorName?: string) =>
+    apiRequest(`/api/v1/stores/${storeId}/ratings`, { method: 'POST', body: { stars, comment, author_name: authorName } }),
+  getAllProductRatings: () => apiRequest('/api/v1/ratings/products'),
+  getProductRatings: (listingId: string | number) => apiRequest(`/api/v1/listings/${listingId}/ratings`, { query: { limit: 50 } }),
+  submitProductRating: (listingId: string | number, stars: number, comment: string, authorName?: string) =>
+    apiRequest(`/api/v1/listings/${listingId}/ratings`, { method: 'POST', body: { stars, comment, author_name: authorName } }),
+  getModelAggregatedRatings: (modelId: string | number) => apiRequest(`/api/v1/models/${modelId}/ratings`),
   submitReport: (payload: { target_type: 'listing' | 'store'; target_id: number; reason: string; details: string; reporter_contact?: string }) =>
     apiRequest('/api/v1/reports', { method: 'POST', body: payload }),
 
@@ -590,6 +592,8 @@ export const api = {
     }),
   editListing: (id: string | number, payload: Record<string, unknown>, idempotencyKey?: string) =>
     apiRequest(`/api/v1/stores/me/listings/${id}`, { method: 'PATCH', body: payload, idempotent: true, idempotencyKey }),
+  duplicateListing: (id: string | number) =>
+    apiRequest<{ data: any }>(`/api/v1/stores/me/listings/${id}/duplicate`, { method: 'POST' }),
   archiveListing: (id: string | number) =>
     apiRequest(`/api/v1/stores/me/listings/${id}`, { method: 'DELETE' }),
   bulkUpdatePrices: (payload: {
@@ -617,11 +621,63 @@ export const api = {
     apiRequest(`/api/v1/me/favorites/${listingId}`, { method: 'POST' }),
   removeFavorite: (listingId: string | number) =>
     apiRequest(`/api/v1/me/favorites/${listingId}`, { method: 'DELETE' }),
+  getPriceAlerts: () => apiRequest<{ data: any[] }>('/api/v1/me/alerts'),
+  createPriceAlert: (payload: { listing_id: number; target_price_sdg?: number | null }) =>
+    apiRequest<{ data: any }>('/api/v1/me/alerts', { method: 'POST', body: payload }),
+  deletePriceAlert: (alertId: string | number) =>
+    apiRequest(`/api/v1/me/alerts/${alertId}`, { method: 'DELETE' }),
+  getNotifications: () => apiRequest<{ data: any[] }>('/api/v1/me/notifications'),
+  markNotificationsRead: () =>
+    apiRequest<{ data: { read: boolean } }>('/api/v1/me/notifications/read', { method: 'POST' }),
   getMyStaff: () => apiRequest('/api/v1/stores/me/staff'),
-  addStaff: (payload: { phone?: string; user_id?: number; role: 'manager' | 'clerk' | 'staff' }) =>
+  addStaff: (payload: { name?: string; phone?: string; user_id?: number; role: 'manager' | 'clerk' | 'staff' }) =>
     apiRequest('/api/v1/stores/me/staff', { method: 'POST', body: payload }),
   removeStaff: (memberId: string | number) =>
     apiRequest(`/api/v1/stores/me/staff/${memberId}`, { method: 'DELETE' }),
+  getMyBuyerChats: () =>
+    apiRequest<{
+      data: Array<{
+        thread_key: string;
+        store_id: number;
+        store_name?: string;
+        store_phone?: string;
+        customer_name: string;
+        customer_phone: string;
+        listing_id?: number | null;
+        listing_title?: string;
+        listing_price_sdg?: number;
+        unread_count: number;
+        last_message_at: string;
+        last_message_text: string;
+        messages: ApiStoreChatMessage[];
+      }>;
+    }>('/api/v1/me/chats'),
+  getMyStoreChats: () =>
+    apiRequest<{
+      data: Array<{
+        thread_key: string;
+        store_id: number;
+        customer_name: string;
+        customer_phone: string;
+        listing_id?: number | null;
+        listing_title?: string;
+        listing_price_sdg?: number;
+        unread_count: number;
+        last_message_at: string;
+        last_message_text: string;
+        messages: ApiStoreChatMessage[];
+      }>;
+    }>('/api/v1/stores/me/chats'),
+  markStoreChatRead: (threadKey: string) =>
+    apiRequest<{ data: { read: boolean } }>(
+      `/api/v1/stores/me/chats/${encodeURIComponent(threadKey)}/read`,
+      { method: 'POST' }
+    ),
+  replyToStoreChat: (threadKey: string, text: string) =>
+    apiRequest<{ data: { message: ApiStoreChatMessage; messages: ApiStoreChatMessage[] } }>(
+      `/api/v1/stores/me/chats/${encodeURIComponent(threadKey)}/reply`,
+      { method: 'POST', body: { text } }
+    ),
 
   // Admin Portal
   getAdminOverview: () => apiRequest('/api/v1/admin/overview'),
@@ -660,6 +716,26 @@ export const api = {
     }),
   getAuditEvents: (query?: Record<string, string | number | undefined>) =>
     apiRequest('/api/v1/admin/audit-events', { query: { limit: 100, ...query } }),
+
+  // Admin Phone Catalog Management
+  createAdminBrand: (payload: { name: string; name_ar: string }) =>
+    apiRequest<{ data: ApiBrand }>('/api/v1/admin/catalog/brands', { method: 'POST', body: payload }),
+  createAdminModel: (payload: {
+    brand_id: number;
+    name: string;
+    release_year?: number;
+    display_size?: number;
+    display_type?: string;
+    chipset?: string;
+    camera_mp?: number;
+    battery_mah?: number;
+    variants?: Array<{ storage_gb: number; ram_gb: number; color?: string }>;
+  }) =>
+    apiRequest<{ data: ApiCatalogModel }>('/api/v1/admin/catalog/models', { method: 'POST', body: payload }),
+  updateAdminModel: (id: string | number, payload: Record<string, unknown>) =>
+    apiRequest<{ data: ApiCatalogModel }>(`/api/v1/admin/catalog/models/${id}`, { method: 'PATCH', body: payload }),
+  deleteAdminModel: (id: string | number) =>
+    apiRequest<{ data: { deleted: boolean } }>(`/api/v1/admin/catalog/models/${id}`, { method: 'DELETE' }),
 
   // Sponsored App-Open Ads (Public + Merchant + Admin)
   getActiveAds: (city?: string) =>
@@ -701,6 +777,22 @@ export const api = {
         };
       };
     }>('/api/v1/stores/me/ads'),
+  requestStoreAd: (payload: {
+    listing_id?: number | null;
+    title_ar: string;
+    title_en: string;
+    subtitle_ar?: string;
+    subtitle_en?: string;
+    target_city: string;
+    duration_days: number;
+    paid_amount_sdg: number;
+    payment_ref: string;
+    image_url?: string;
+  }) =>
+    apiRequest<{ data: ApiSponsoredAd }>('/api/v1/stores/me/ads/request', {
+      method: 'POST',
+      body: payload,
+    }),
   getAdminAds: () => apiRequest<{ data: ApiSponsoredAd[] }>('/api/v1/admin/ads'),
   createAdminAd: (payload: Record<string, unknown>) =>
     apiRequest<{ data: ApiSponsoredAd }>('/api/v1/admin/ads', { method: 'POST', body: payload }),

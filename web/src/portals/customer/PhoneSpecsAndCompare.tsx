@@ -650,7 +650,8 @@ export function CustomerDetailedPhoneCompare({
     listings,
     reviews,
     getStoreById,
-    getPhoneModelRatingSummary,
+    getProductRatingSummary,
+    getModelRatingFromProducts,
     getStoreRatingSummary,
   } = usePrototype();
   const BackIcon = lang === 'ar' ? ArrowRight : ArrowLeft;
@@ -820,10 +821,15 @@ export function CustomerDetailedPhoneCompare({
         ? `${phoneB.warrantyMonths ?? 0} ${lang === 'ar' ? 'شهراً' : 'mo'}`
         : `${phoneB.inspectionWarrantyDays ?? 0} ${lang === 'ar' ? 'أيام' : 'days'}`;
 
-    const phoneRatingA = getPhoneModelRatingSummary(phoneA.brand, phoneA.model);
-    const phoneRatingB = getPhoneModelRatingSummary(phoneB.brand, phoneB.model);
+    const productRatingA = getProductRatingSummary(phoneA.id);
+    const productRatingB = getProductRatingSummary(phoneB.id);
+    const modelRatingA = getModelRatingFromProducts(phoneA.brand, phoneA.model);
+    const modelRatingB = getModelRatingFromProducts(phoneB.brand, phoneB.model);
     const storeRatingA = getStoreRatingSummary(phoneA.storeId);
     const storeRatingB = getStoreRatingSummary(phoneB.storeId);
+
+    const fmtRating = (s: { average: number; count: number }) =>
+      s.count > 0 ? `★ ${s.average.toFixed(1)} (${s.count})` : '—';
 
     const allSections: ComparisonSection[] = [
       {
@@ -841,20 +847,29 @@ export function CustomerDetailedPhoneCompare({
             { lowerIsBetter: true, ltr: true }
           ),
           makeRow(
-            'phone_rating',
-            'تقييم الهاتف',
-            'Phone Rating',
-            `★ ${phoneRatingA.average.toFixed(1)} (${phoneRatingA.count})`,
-            `★ ${phoneRatingB.average.toFixed(1)} (${phoneRatingB.count})`,
-            evaluateNumericVerdict(phoneRatingA.average, phoneRatingB.average, 'higher'),
+            'product_rating',
+            'تقييم المنتج',
+            'Product Rating',
+            fmtRating(productRatingA),
+            fmtRating(productRatingB),
+            evaluateNumericVerdict(productRatingA.average, productRatingB.average, 'higher'),
+            { ltr: true }
+          ),
+          makeRow(
+            'model_rating',
+            'تقييم الموديل (مجمّع من المنتجات)',
+            'Model Rating (All Products)',
+            fmtRating(modelRatingA),
+            fmtRating(modelRatingB),
+            evaluateNumericVerdict(modelRatingA.average, modelRatingB.average, 'higher'),
             { ltr: true }
           ),
           makeRow(
             'store_rating',
             'تقييم المتجر',
             'Store Rating',
-            `★ ${storeRatingA.average.toFixed(1)} (${storeRatingA.count})`,
-            `★ ${storeRatingB.average.toFixed(1)} (${storeRatingB.count})`,
+            fmtRating(storeRatingA),
+            fmtRating(storeRatingB),
             evaluateNumericVerdict(storeRatingA.average, storeRatingB.average, 'higher'),
             { ltr: true }
           ),

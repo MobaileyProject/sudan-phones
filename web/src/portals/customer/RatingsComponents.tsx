@@ -40,8 +40,8 @@ export function CompactStarRating({
 }
 
 /**
- * Minimalist Claymorphism Rating Summary + Distribution + Reviews + "Rate" trigger card.
- * Works identically for both Store Ratings and Brand-Wide Phone Ratings.
+ * Minimalist Claymorphism Rating Summary + Distribution + Reviews + optional "Rate" trigger card.
+ * Supports Store Ratings, Product Ratings, and read-only Aggregated Model Ratings.
  */
 export function RatingSummaryAndReviewsCard({
   title,
@@ -50,13 +50,17 @@ export function RatingSummaryAndReviewsCard({
   summary,
   rateButtonLabel,
   onOpenRateSheet,
+  showSourceStore = false,
+  emptyMessage,
 }: {
   title: string;
   subtitle?: string;
   scopeNotice?: string;
   summary: RatingSummary;
-  rateButtonLabel: string;
-  onOpenRateSheet: () => void;
+  rateButtonLabel?: string;
+  onOpenRateSheet?: () => void;
+  showSourceStore?: boolean;
+  emptyMessage?: string;
 }) {
   const { lang } = usePrototype();
   const [expanded, setExpanded] = useState(false);
@@ -65,7 +69,7 @@ export function RatingSummaryAndReviewsCard({
 
   return (
     <div className="clay-card rounded-[26px] p-4 space-y-3.5">
-      {/* Header + Rate Action Button */}
+      {/* Header + Optional Rate Action Button */}
       <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0">
           <h2 className="text-xs font-bold text-[#172B20]">{title}</h2>
@@ -73,14 +77,16 @@ export function RatingSummaryAndReviewsCard({
             <p className="text-[10.5px] text-[#5F776A] mt-0.5 leading-snug">{subtitle}</p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onOpenRateSheet}
-          className="clay-pill-active clay-focus-ring h-8 px-3 rounded-full text-[11px] font-bold text-[#17462C] inline-flex items-center gap-1.5 shrink-0"
-        >
-          <MessageSquarePlus className="w-3.5 h-3.5" />
-          <span>{rateButtonLabel}</span>
-        </button>
+        {onOpenRateSheet && rateButtonLabel && (
+          <button
+            type="button"
+            onClick={onOpenRateSheet}
+            className="clay-pill-active clay-focus-ring h-8 px-3 rounded-full text-[11px] font-bold text-[#17462C] inline-flex items-center gap-1.5 shrink-0"
+          >
+            <MessageSquarePlus className="w-3.5 h-3.5" />
+            <span>{rateButtonLabel}</span>
+          </button>
+        )}
       </div>
 
       {/* Score Overview + Star Distribution Bars */}
@@ -136,7 +142,7 @@ export function RatingSummaryAndReviewsCard({
         </div>
       </div>
 
-      {/* Scope Clarification Notice (especially for Brand-Level Phone Ratings) */}
+      {/* Scope Clarification Notice */}
       {scopeNotice && (
         <p className="text-[10.5px] text-[#2B5D42] bg-[#E3F2E9]/75 border border-[#2D6145]/10 rounded-[14px] px-3 py-2 leading-relaxed">
           {scopeNotice}
@@ -144,7 +150,7 @@ export function RatingSummaryAndReviewsCard({
       )}
 
       {/* Recent Reviews List */}
-      {visibleReviews.length > 0 && (
+      {visibleReviews.length > 0 ? (
         <div className="space-y-2">
           {visibleReviews.map((rev) => (
             <div
@@ -173,6 +179,11 @@ export function RatingSummaryAndReviewsCard({
                   </span>
                 </div>
               </div>
+              {showSourceStore && rev.storeName && (
+                <p className="text-[10px] font-semibold text-[#2B5D42] truncate">
+                  {rev.storeName}
+                </p>
+              )}
               {rev.comment && (
                 <p className="text-[11px] text-[#4C6457] leading-relaxed">{rev.comment}</p>
               )}
@@ -203,6 +214,10 @@ export function RatingSummaryAndReviewsCard({
             </button>
           )}
         </div>
+      ) : (
+        emptyMessage && (
+          <p className="text-[11px] text-[#667D71] text-center py-1.5">{emptyMessage}</p>
+        )
       )}
     </div>
   );
