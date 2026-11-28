@@ -539,7 +539,14 @@ export function MerchantOnboardingFlow({ onFinished }: { onFinished: () => void 
     slot: 'national_id_front' | 'national_id_back' | 'business_proof',
     file: File
   ) => {
-    const kind = slot === 'business_proof' ? businessProofType : slot;
+    const rawKind = slot === 'business_proof' ? businessProofType : slot;
+    const KIND_MAP: Record<string, string> = {
+      national_id_front: 'id_front',
+      national_id_back: 'id_back',
+      commercial_reg: 'commercial',
+      storefront_photo: 'signboard',
+    };
+    const kind = KIND_MAP[rawKind] || rawKind;
     setDocs((prev) => ({ ...prev, [slot]: { status: 'uploading', fileName: file.name } }));
     try {
       const assetId = await uploadMediaFile(file, kind, 'verification');

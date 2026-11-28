@@ -30,6 +30,7 @@ class Listing(models.Model):
     warranty_type = models.CharField(max_length=120, blank=True)
     is_sealed = models.BooleanField(default=False)
     has_original_box = models.BooleanField(default=False)
+    used_checklist = models.JSONField(null=True, blank=True)
     featured = models.BooleanField(default=False, db_index=True)
     status = models.CharField(max_length=16, default="processing")
     moderation = models.CharField(max_length=16, default="pending")

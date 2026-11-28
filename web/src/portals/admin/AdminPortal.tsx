@@ -1269,6 +1269,7 @@ export function AdminPortal() {
                   >
                     <option value="all">{lang === 'ar' ? 'جميع الإعلانات المنشورة والمُعلّمة' : 'All Live & Moderated Listings'}</option>
                     <option value="published">{formatPublicationStatus('published', lang)}</option>
+                    <option value="paused">{formatPublicationStatus('paused', lang)}</option>
                     <option value="flagged">{formatPublicationStatus('flagged', lang)}</option>
                     <option value="removed_suspended">{formatPublicationStatus('removed_suspended', lang)}</option>
                   </select>
@@ -1607,7 +1608,8 @@ export function AdminPortal() {
 
                   <div className="space-y-3">
                     {dualApprovals.map((req) => {
-                      const isSelf = req.requesterId === activeAdminUser.id;
+                      const currentAdminId = session.authenticated && me?.id ? String(me.id) : activeAdminUser.id;
+                      const isSelf = req.requesterId === currentAdminId;
                       const canApprove = hasAdminPermission('approve_sensitive') && !isSelf;
                       return (
                         <div

@@ -37,11 +37,19 @@ def contract(api_id, phase, request=None, response=None, **kwargs):
             "API-073",
             "API-075",
             "API-076",
+            "API-087",
+            "API-088",
+            "API-089",
+            "API-094",
+            "API-102",
+            "API-104",
+            "API-110",
+            "API-112",
         }
         else (202,)
         if api_id in {"API-063", "API-001", "API-079"}
         else (200, 201)
-        if api_id == "API-045"
+        if api_id in {"API-045", "API-096"}
         else (200,)
     )
     parameters = kwargs.pop("parameters", [])
@@ -110,6 +118,17 @@ def contract(api_id, phase, request=None, response=None, **kwargs):
         "API-083",
         "API-085",
         "API-086",
+        "API-087",
+        "API-088",
+        "API-089",
+        "API-090",
+        "API-091",
+        "API-104",
+        "API-105",
+        "API-110",
+        "API-112",
+        "API-113",
+        "API-114",
     }:
         parameters.append(
             OpenApiParameter(

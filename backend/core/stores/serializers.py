@@ -16,6 +16,9 @@ class ProfileInput(StrictSerializer):
     description = serializers.CharField(
         max_length=2000, allow_blank=True, required=False
     )
+    opening_hours = serializers.CharField(
+        max_length=300, allow_blank=True, required=False
+    )
     latitude = serializers.DecimalField(
         max_digits=9, decimal_places=6, allow_null=True, required=False
     )
@@ -36,6 +39,9 @@ class SettingsInput(StrictSerializer):
     description = serializers.CharField(
         max_length=2000, allow_blank=True, required=False
     )
+    opening_hours = serializers.CharField(
+        max_length=300, allow_blank=True, required=False
+    )
     phone = PhoneField(required=False)
     whatsapp = PhoneField(required=False)
     latitude = serializers.DecimalField(
@@ -50,6 +56,7 @@ class SettingsInput(StrictSerializer):
 
 class StaffInput(StrictSerializer):
     user_id = serializers.IntegerField(min_value=1, required=False)
+    name = serializers.CharField(max_length=120, allow_blank=True, required=False, default="")
     phone = PhoneField(required=False)
     role = serializers.ChoiceField(
         choices=["staff", "manager", "clerk"], default="staff"
@@ -63,11 +70,16 @@ class StaffInput(StrictSerializer):
 
 class StaffData(serializers.Serializer):
     id = serializers.IntegerField()
-    user_id = serializers.IntegerField()
+    user_id = serializers.IntegerField(allow_null=True)
     name = serializers.CharField()
     phone = serializers.CharField()
     role = serializers.CharField()
+    invite_code = serializers.CharField(allow_null=True, required=False, default=None)
     created_at = serializers.DateTimeField(allow_null=True)
+
+
+class StaffItemResponse(serializers.Serializer):
+    data = StaffData()
 
 
 class StaffListResponse(serializers.Serializer):

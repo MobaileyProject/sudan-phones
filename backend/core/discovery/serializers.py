@@ -25,6 +25,8 @@ class SearchQuery(PageQuery, StrictQuerySerializer):
         max_digits=14, decimal_places=2, min_value=Decimal("0"), required=False
     )
     storage_gb = serializers.IntegerField(min_value=1, max_value=4096, required=False)
+    ram_gb = serializers.IntegerField(min_value=1, max_value=64, required=False)
+    has_discount = serializers.BooleanField(required=False)
     accepts_trade_in = serializers.BooleanField(required=False)
     sort = serializers.ChoiceField(
         choices=["latest", "newest", "price_asc", "price_desc"], default="latest"

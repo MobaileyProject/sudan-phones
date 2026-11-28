@@ -42,6 +42,9 @@ class CreateInput(StrictSerializer):
     )
     is_sealed = serializers.BooleanField(required=False)
     has_original_box = serializers.BooleanField(required=False)
+    used_checklist = serializers.DictField(
+        child=serializers.BooleanField(), required=False, allow_null=True
+    )
     featured = serializers.BooleanField(required=False)
     accepts_trade_in = serializers.BooleanField(required=False)
     usd_price = serializers.DecimalField(
@@ -76,8 +79,27 @@ class StockInput(StrictSerializer):
     )
 
 
+class StatusInput(StrictSerializer):
+    status = serializers.ChoiceField(choices=["paused", "published"])
+    version = serializers.IntegerField(min_value=1, required=False)
+
+
 class EditInput(StrictSerializer):
-    version = serializers.IntegerField(min_value=1)
+    version = serializers.IntegerField(min_value=1, required=False)
+    price = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        required=False,
+    )
+    storage_gb = serializers.IntegerField(min_value=4, max_value=4096, required=False)
+    ram_gb = serializers.IntegerField(min_value=1, max_value=64, required=False)
+    color = serializers.CharField(max_length=80, allow_blank=True, required=False)
+    quantity = serializers.IntegerField(min_value=0, max_value=1000000, required=False)
+    used_availability = serializers.ChoiceField(
+        choices=["available", "reserved", "sold"], required=False
+    )
+    is_sealed = serializers.BooleanField(required=False)
     media = serializers.ListField(
         child=serializers.UUIDField(), min_length=1, max_length=8, required=False
     )
@@ -102,6 +124,9 @@ class EditInput(StrictSerializer):
         max_length=120, allow_blank=True, required=False
     )
     has_original_box = serializers.BooleanField(required=False)
+    used_checklist = serializers.DictField(
+        child=serializers.BooleanField(), required=False, allow_null=True
+    )
     featured = serializers.BooleanField(required=False)
     accepts_trade_in = serializers.BooleanField(required=False)
     usd_price = serializers.DecimalField(
@@ -171,6 +196,7 @@ class ListingData(serializers.Serializer):
     warranty_type = serializers.CharField(default="")
     is_sealed = serializers.BooleanField()
     has_original_box = serializers.BooleanField()
+    used_checklist = serializers.JSONField(allow_null=True, required=False, default=None)
     featured = serializers.BooleanField(default=False)
     status = serializers.CharField()
     moderation = serializers.CharField()
@@ -229,9 +255,14 @@ class BulkPriceInput(StrictSerializer):
     condition_scope = serializers.ChoiceField(
         choices=["all", "new", "used"], default="all"
     )
+    condition = serializers.ChoiceField(
+        choices=["all", "new", "used"], required=False
+    )
     round_to = serializers.IntegerField(min_value=1, max_value=100000, default=1000)
 
     def validate(self, attrs):
+        if "condition" in attrs:
+            attrs["condition_scope"] = attrs.pop("condition")
         if attrs["mode"] == "percent" and attrs.get("percent") is None:
             raise serializers.ValidationError("percent is required when mode=percent.")
         if attrs["mode"] == "usd_rate" and attrs.get("usd_rate") is None:
@@ -248,14 +279,15 @@ class BulkPriceResponse(serializers.Serializer):
 
 
 class BulkImportRowInput(StrictSerializer):
-    brand = serializers.CharField(max_length=80)
-    model = serializers.CharField(max_length=120)
-    storage_gb = serializers.IntegerField(min_value=4, max_value=4096)
-    ram_gb = serializers.IntegerField(min_value=1, max_value=64, default=8)
-    color = serializers.CharField(max_length=80, allow_blank=True, default="Standard")
-    condition = serializers.ChoiceField(choices=["new", "used"], default="new")
+    listing_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    brand = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    model = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    storage_gb = serializers.IntegerField(min_value=4, max_value=4096, required=False)
+    ram_gb = serializers.IntegerField(min_value=1, max_value=64, default=8, required=False)
+    color = serializers.CharField(max_length=80, allow_blank=True, default="Standard", required=False)
+    condition = serializers.ChoiceField(choices=["new", "used"], default="new", required=False)
     price = serializers.DecimalField(
-        max_digits=14, decimal_places=2, min_value=Decimal("0.01")
+        max_digits=14, decimal_places=2, min_value=Decimal("0.01"), required=False
     )
     usd_price = serializers.DecimalField(
         max_digits=10,
@@ -264,8 +296,19 @@ class BulkImportRowInput(StrictSerializer):
         allow_null=True,
         required=False,
     )
-    quantity = serializers.IntegerField(min_value=0, max_value=1000000, default=1)
-    accepts_trade_in = serializers.BooleanField(required=False, default=False)
+    quantity = serializers.IntegerField(min_value=0, max_value=1000000, required=False)
+    accepts_trade_in = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        if attrs.get("listing_id") is not None:
+            return attrs
+        missing = [k for k in ("brand", "model", "storage_gb", "price") if attrs.get(k) in (None, "")]
+        if missing:
+            raise serializers.ValidationError(
+                f"Provide listing_id or all of {', '.join(missing)}."
+            )
+        attrs.setdefault("quantity", 1)
+        return attrs
 
 
 class BulkImportInput(StrictSerializer):
@@ -275,6 +318,8 @@ class BulkImportInput(StrictSerializer):
 class BulkImportData(serializers.Serializer):
     updated = serializers.IntegerField()
     skipped = serializers.IntegerField()
+    updated_count = serializers.IntegerField()
+    skipped_count = serializers.IntegerField()
     errors = serializers.ListField(child=serializers.CharField())
 
 

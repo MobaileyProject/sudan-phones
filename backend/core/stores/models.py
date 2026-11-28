@@ -25,7 +25,12 @@ class Store(models.Model):
 
 class Membership(models.Model):
     store = models.ForeignKey(Store, on_delete=models.CASCADE)
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True
+    )
+    display_name = models.CharField(max_length=120, blank=True, default="")
+    phone = models.CharField(max_length=16, blank=True, default="")
+    invite_code = models.CharField(max_length=24, unique=True, null=True, blank=True)
     role = models.CharField(max_length=16, default="staff")
     created_at = models.DateTimeField(auto_now_add=True, null=True)
 

@@ -24,6 +24,7 @@ from .models import (
 )
 from .audit import record
 from .authorization import require_admin
+from .engagement import notify_price_drop  # noqa: F401
 
 
 def require_founder(actor):
@@ -304,6 +305,8 @@ def dashboard(actor):
 
 
 def overview(actor):
+    from .ads import ads_overview_metrics
+
     require_admin(actor, "view_metrics")
     counts = dashboard_counts(Listing.objects.all())
     counts["active_listings"] = visible_listings().count()
@@ -313,12 +316,16 @@ def overview(actor):
         m.day: m.searches
         for m in DailyMetrics.objects.filter(day__gte=days[0])
     }
-    return counts | {
+    return counts | ads_overview_metrics() | {
         "stores": Store.objects.count(),
         "verified_stores": Store.objects.filter(status="verified").count(),
         "pending_verifications": Verification.objects.filter(
             status="pending_verification"
         ).count(),
+        "flagged_listings": Listing.objects.filter(
+            status="published", moderation="flagged"
+        ).count(),
+        "pending_approvals": DualApproval.objects.filter(status="pending").count(),
         "open_reports": CustomerReport.objects.filter(status="open").count(),
         "daily_searches": by_day.get(today, 0),
         "daily_searches_trend": [{"day": d, "count": by_day.get(d, 0)} for d in days],
@@ -373,9 +380,16 @@ def _rating_data(rating):
     return {
         "id": rating.pk,
         "target_type": rating.target_type,
-        "target_id": rating.store_id if rating.target_type == "store" else rating.phone_model_id,
-        "author_id": rating.author_id,
-        "author_name": rating.author.first_name or rating.author.username,
+        "target_id": (
+            rating.store_id
+            if rating.target_type == "store"
+            else rating.listing_id
+            if rating.target_type == "listing"
+            else rating.phone_model_id
+        ),
+        "author_id": rating.author_id or 0,
+        "author_name": rating.author_name
+        or ((rating.author.first_name or rating.author.username) if rating.author else "Customer"),
         "stars": rating.stars,
         "comment": rating.comment,
         "created_at": rating.created_at,
@@ -404,7 +418,8 @@ def list_ratings(target_type, target_id, query):
     else:
         require(PhoneModel.objects.filter(pk=target_id).exists(), "NOT_FOUND", 404)
         qs = Rating.objects.select_related("author").filter(
-            target_type="phone_model", phone_model_id=target_id
+            Q(target_type="phone_model", phone_model_id=target_id)
+            | Q(target_type="listing", listing__variant__model_id=target_id)
         )
     rows = qs.order_by("-updated_at", "-pk")[
         query["offset"] : query["offset"] + query["limit"]
@@ -418,6 +433,9 @@ def list_ratings(target_type, target_id, query):
 @transaction.atomic
 def submit_rating(actor, target_type, target_id, data):
     require_actor(actor)
+    author_name = (data.get("author_name") or "").strip()[:120] or (
+        actor.first_name or actor.username
+    )
     if target_type == "store":
         store = visible_stores().filter(pk=target_id).first()
         require(store is not None, "NOT_FOUND", 404)
@@ -428,6 +446,8 @@ def submit_rating(actor, target_type, target_id, data):
             defaults={
                 "target_type": "store",
                 "phone_model": None,
+                "listing": None,
+                "author_name": author_name,
                 "stars": data["stars"],
                 "comment": data.get("comment", "").strip(),
             },
@@ -438,9 +458,11 @@ def submit_rating(actor, target_type, target_id, data):
         rating, _ = Rating.objects.update_or_create(
             author=actor,
             phone_model=model,
+            target_type="phone_model",
             defaults={
-                "target_type": "phone_model",
                 "store": None,
+                "listing": None,
+                "author_name": author_name,
                 "stars": data["stars"],
                 "comment": data.get("comment", "").strip(),
             },

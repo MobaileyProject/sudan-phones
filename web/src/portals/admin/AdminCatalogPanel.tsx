@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, RefreshCw, Search, Smartphone, Trash2 } from 'lucide-react';
+import { Pencil, Plus, RefreshCw, Search, Smartphone, Trash2, X } from 'lucide-react';
 import { api, ApiBrand, ApiCatalogModel } from '../../api/client';
 import { usePrototype } from '../../store/PrototypeContext';
 
@@ -25,16 +25,29 @@ export function AdminCatalogPanel() {
   const [batteryMah, setBatteryMah] = useState('5000');
   const [savingModel, setSavingModel] = useState(false);
 
+  // Edit Model state
+  const [editingModel, setEditingModel] = useState<ApiCatalogModel | null>(null);
+  const [editChipset, setEditChipset] = useState('');
+  const [editBatteryMah, setEditBatteryMah] = useState('');
+  const [updatingModel, setUpdatingModel] = useState(false);
+
   const loadCatalog = async () => {
     setLoading(true);
     try {
-      const [bRes, mRes] = await Promise.all([
-        api.getCatalogBrands(),
-        api.getCatalogModels({ limit: 200 }),
-      ]);
+      const fetchAllModels = async () => {
+        const collected: ApiCatalogModel[] = [];
+        for (let offset = 0; offset < 1000; offset += 100) {
+          const res = await api.getPublicModels({ limit: 100, offset });
+          const batch = res.data || [];
+          collected.push(...batch);
+          if (batch.length < 100) break;
+        }
+        return collected;
+      };
+      const [bRes, mList] = await Promise.all([api.getBrands(), fetchAllModels()]);
       const bList = bRes.data || [];
       setBrands(bList);
-      setModels(mRes.data || []);
+      setModels(mList);
       if (!modelBrandId && bList.length > 0) {
         setModelBrandId(String(bList[0].id));
       }
@@ -122,6 +135,41 @@ export function AdminCatalogPanel() {
       });
     } finally {
       setSavingModel(false);
+    }
+  };
+
+  const openEditModel = (model: ApiCatalogModel) => {
+    setEditingModel(model);
+    setEditChipset(model.specifications?.performance?.chipset || '');
+    setEditBatteryMah(
+      model.specifications?.battery?.capacity_mah
+        ? String(model.specifications.battery.capacity_mah)
+        : ''
+    );
+  };
+
+  const handleUpdateModel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingModel) return;
+    setUpdatingModel(true);
+    try {
+      await api.updateAdminModel(editingModel.id, {
+        chipset: editChipset.trim() || undefined,
+        battery_mah: editBatteryMah ? Number(editBatteryMah) : undefined,
+      });
+      setEditingModel(null);
+      await Promise.all([loadCatalog(), refreshPublicData()]);
+      pushToast('success', {
+        ar: 'تم تحديث مواصفات الموديل في الكتالوج.',
+        en: 'Updated model specifications in catalog.',
+      });
+    } catch (err: any) {
+      pushToast('error', {
+        ar: err?.message || 'تعذر تحديث الموديل.',
+        en: err?.message || 'Failed to update model.',
+      });
+    } finally {
+      setUpdatingModel(false);
     }
   };
 
@@ -367,14 +415,24 @@ export function AdminCatalogPanel() {
                     </span>
                   </td>
                   <td className="py-3 px-4 text-end">
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteModel(m)}
-                      aria-label={`Delete ${m.name}`}
-                      className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="inline-flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => openEditModel(m)}
+                        aria-label={`Edit ${m.name}`}
+                        className="p-2 rounded-lg text-slate-400 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteModel(m)}
+                        aria-label={`Delete ${m.name}`}
+                        className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -382,6 +440,68 @@ export function AdminCatalogPanel() {
           </table>
         </div>
       </div>
+
+      {editingModel && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[75] flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-[1px]"
+        >
+          <form
+            onSubmit={handleUpdateModel}
+            className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-900">
+                {lang === 'ar' ? `تعديل ${editingModel.name}` : `Edit ${editingModel.name}`}
+              </h3>
+              <button type="button" onClick={() => setEditingModel(null)} className="p-1 text-slate-400">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                {lang === 'ar' ? 'المعالج' : 'Chipset'}
+              </label>
+              <input
+                type="text"
+                dir="ltr"
+                value={editChipset}
+                onChange={(e) => setEditChipset(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                {lang === 'ar' ? 'سعة البطارية (mAh)' : 'Battery (mAh)'}
+              </label>
+              <input
+                type="number"
+                dir="ltr"
+                value={editBatteryMah}
+                onChange={(e) => setEditBatteryMah(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 text-xs tabular-nums"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setEditingModel(null)}
+                className="h-9 px-4 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700"
+              >
+                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="submit"
+                disabled={updatingModel}
+                className="h-9 px-4 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold disabled:opacity-50"
+              >
+                {lang === 'ar' ? 'حفظ تعديلات الموديل' : 'Save Model Specs'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

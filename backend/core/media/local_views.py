@@ -39,3 +39,17 @@ def local_private_download(request, token):
     response["Cache-Control"] = "no-store"
     response["Content-Disposition"] = f'inline; filename="{key.split("/")[-1]}"'
     return response
+
+
+def local_public_media(request, key):
+    if request.method not in ("GET", "HEAD"):
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    clean_key = f"public/{key.lstrip('/')}"
+    try:
+        data = LocalDiskStorage().read(clean_key, settings.MEDIA_DOCUMENT_MAX_BYTES)
+    except Exception:
+        return JsonResponse({"error": "Not found"}, status=404)
+    content_type = mimetypes.guess_type(clean_key)[0] or "application/octet-stream"
+    response = HttpResponse(data, content_type=content_type)
+    response["Cache-Control"] = "public, max-age=3600"
+    return response

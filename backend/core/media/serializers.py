@@ -9,7 +9,17 @@ class UploadInput(StrictSerializer):
     size = serializers.IntegerField(min_value=1, max_value=10 * 1024 * 1024)
     sha256 = serializers.RegexField(r"^[a-f0-9]{64}$")
     kind = serializers.ChoiceField(
-        choices=["front", "back", "screen", "screen_on", "seal", "catalog", "general"]
+        choices=[
+            "front",
+            "back",
+            "screen",
+            "screen_on",
+            "seal",
+            "defect",
+            "other",
+            "catalog",
+            "general",
+        ]
     )
 
 

@@ -26,7 +26,9 @@ import {
   MessageSquare,
   MousePointerClick,
   Package,
+  PauseCircle,
   Percent,
+  PlayCircle,
   Plus,
   Printer,
   QrCode,
@@ -109,6 +111,7 @@ export function MerchantPortal() {
     merchantSponsoredAds,
     updateListingQuick,
     archiveListing,
+    toggleListingStatus,
     refreshMerchantData,
     refreshPublicData,
     fixAndRepublishListing,
@@ -159,9 +162,10 @@ export function MerchantPortal() {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
 
-  // Full Edit Modal, Duplicate Busy, Ad Request Modal, Inbox Unread, Quick USD Rate Updater
+  // Full Edit Modal, Duplicate Busy, Status Toggle Busy, Ad Request Modal, Inbox Unread, Quick USD Rate Updater
   const [fullEditListing, setFullEditListing] = useState<Listing | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [togglingStatusId, setTogglingStatusId] = useState<string | null>(null);
   const [adRequestOpen, setAdRequestOpen] = useState(false);
   const [inboxUnread, setInboxUnread] = useState<number>(0);
   const [quickUsdRate, setQuickUsdRate] = useState<string>('2700');
@@ -173,6 +177,7 @@ export function MerchantPortal() {
   const [reverifyNote, setReverifyNote] = useState('');
 
   // Settings & Staff State
+  const hydratedStoreIdRef = useRef<string | null>(null);
   const [settingsDirty, setSettingsDirty] = useState(false);
   const [sCity, setSCity] = useState<CityId>(activeMerchantStore.city);
   const [sAddressAr, setSAddressAr] = useState(activeMerchantStore.address.ar);
@@ -219,6 +224,9 @@ export function MerchantPortal() {
   }, [session.authenticated, session.role, activeMerchantStore.id]);
 
   React.useEffect(() => {
+    const storeChanged = hydratedStoreIdRef.current !== activeMerchantStore.id;
+    if (!storeChanged && settingsDirty) return;
+    hydratedStoreIdRef.current = activeMerchantStore.id;
     setSCity(activeMerchantStore.city);
     setSAddressAr(activeMerchantStore.address.ar);
     setSHoursAr(activeMerchantStore.openingHours.ar);
@@ -229,7 +237,19 @@ export function MerchantPortal() {
     setSLng(activeMerchantStore.longitude != null ? String(activeMerchantStore.longitude) : '');
     setSAcceptsTradeIn(Boolean(activeMerchantStore.acceptsTradeIn));
     setSettingsDirty(false);
-  }, [activeMerchantStore.id, activeMerchantStore.latitude, activeMerchantStore.longitude, activeMerchantStore.acceptsTradeIn]);
+  }, [
+    activeMerchantStore.id,
+    activeMerchantStore.city,
+    activeMerchantStore.address.ar,
+    activeMerchantStore.openingHours.ar,
+    activeMerchantStore.phone,
+    activeMerchantStore.whatsapp,
+    activeMerchantStore.description.ar,
+    activeMerchantStore.latitude,
+    activeMerchantStore.longitude,
+    activeMerchantStore.acceptsTradeIn,
+    settingsDirty,
+  ]);
 
   const storeListings = useMemo(
     () => listings.filter((l) => l.storeId === activeMerchantStore.id),
@@ -468,6 +488,54 @@ export function MerchantPortal() {
     } finally {
       setDuplicatingId(null);
     }
+  };
+
+  const handleToggleListingStatus = async (item: Listing) => {
+    if (item.publicationStatus !== 'published' && item.publicationStatus !== 'paused') return;
+    const nextStatus = item.publicationStatus === 'paused' ? 'published' : 'paused';
+    setTogglingStatusId(item.id);
+    try {
+      await toggleListingStatus(item.id, nextStatus);
+    } catch (err: any) {
+      pushToast('error', {
+        ar: err?.message || 'تعذر تحديث حالة الإعلان.',
+        en: err?.message || 'Could not update listing status.',
+      });
+    } finally {
+      setTogglingStatusId(null);
+    }
+  };
+
+  const renderStatusToggleButton = (item: Listing, iconOnly: boolean) => {
+    if (item.publicationStatus !== 'published' && item.publicationStatus !== 'paused') return null;
+    const isPaused = item.publicationStatus === 'paused';
+    const label = isPaused
+      ? lang === 'ar'
+        ? 'إعادة النشر'
+        : 'Repost'
+      : lang === 'ar'
+        ? 'إيقاف مؤقت'
+        : 'Pause';
+    const Icon = isPaused ? PlayCircle : PauseCircle;
+    return (
+      <button
+        type="button"
+        disabled={togglingStatusId === item.id}
+        onClick={() => handleToggleListingStatus(item)}
+        title={label}
+        aria-label={label}
+        className={`${
+          iconOnly ? 'h-8 w-8 inline-flex items-center justify-center' : 'h-8 px-2.5 inline-flex items-center gap-1 text-xs font-semibold'
+        } rounded-lg border disabled:opacity-45 ${
+          isPaused
+            ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+            : 'border-amber-200 text-amber-700 hover:bg-amber-50'
+        }`}
+      >
+        <Icon className="w-3.5 h-3.5" />
+        {!iconOnly && <span>{label}</span>}
+      </button>
+    );
   };
 
   const usdRatePreview = useMemo(() => {
@@ -1550,6 +1618,7 @@ export function MerchantPortal() {
                 >
                   <option value="all">{lang === 'ar' ? 'كل حالات النشر' : 'All Publication Statuses'}</option>
                   <option value="published">{formatPublicationStatus('published', lang)}</option>
+                  <option value="paused">{formatPublicationStatus('paused', lang)}</option>
                   <option value="processing">{formatPublicationStatus('processing', lang)}</option>
                   <option value="draft">{formatPublicationStatus('draft', lang)}</option>
                   <option value="needs_correction">{formatPublicationStatus('needs_correction', lang)}</option>
@@ -1685,6 +1754,7 @@ export function MerchantPortal() {
                                       >
                                         <Copy className="w-3.5 h-3.5" />
                                       </button>
+                                      {renderStatusToggleButton(item, true)}
                                       {item.publicationStatus === 'published' && (
                                         <button
                                           type="button"
@@ -1790,6 +1860,7 @@ export function MerchantPortal() {
                               >
                                 <Copy className="w-3.5 h-3.5" />
                               </button>
+                              {renderStatusToggleButton(item, false)}
                             </div>
                           </div>
                           {item.statusReason && (

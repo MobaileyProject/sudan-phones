@@ -1,11 +1,12 @@
 from rest_framework.response import Response
 from core.common.views import DomainView, contract
-from core.common.serializers import AcceptedResponse, IDResponse
+from core.common.serializers import AcceptedResponse
 from . import services
 from .serializers import (
     ProfileInput,
     SettingsInput,
     StaffInput,
+    StaffItemResponse,
     StaffListResponse,
     StoreResponse,
 )
@@ -54,12 +55,12 @@ class StaffView(DomainView):
             StaffListResponse({"data": services.list_staff(request.user)}).data
         )
 
-    @contract("API-055", "P3", request=StaffInput, response=IDResponse)
+    @contract("API-055", "P3", request=StaffInput, response=StaffItemResponse)
     def post(self, request):
         member = services.add_staff(
             request.user, self.validated(StaffInput, request.data)
         )
-        return Response({"data": {"id": member.pk}}, status=201)
+        return Response(StaffItemResponse({"data": member}).data, status=201)
 
 
 class StaffDetailView(DomainView):

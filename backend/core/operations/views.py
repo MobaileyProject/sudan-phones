@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework.throttling import SimpleRateThrottle
 from core.common.views import DomainView, contract
 from core.common.serializers import PageQuery, AcceptedResponse
+from . import ads as ads_services
+from . import engagement
 from . import services
 from .serializers import (
     RoleInput,
@@ -31,6 +33,28 @@ from .serializers import (
     AdminUserListResponse,
     FavoriteListResponse,
     FavoriteActionResponse,
+    ProductRatingListResponse,
+    ProductRatingCreateResponse,
+    PriceAlertInput,
+    PriceAlertResponse,
+    PriceAlertListResponse,
+    DeleteFlagResponse,
+    NotificationListResponse,
+    ReadFlagResponse,
+    StoreMessageInput,
+    StoreMessageListResponse,
+    StoreMessageSendResponse,
+    ChatThreadListResponse,
+    MerchantChatReplyInput,
+    SponsoredAdResponse,
+    SponsoredAdListResponse,
+    MerchantAdsSummaryResponse,
+    AdQuery,
+    AdImpressionInput,
+    AdClickInput,
+    MerchantAdRequestInput,
+    AdminAdInput,
+    AdminAdPatchInput,
 )
 
 
@@ -334,5 +358,326 @@ class FavoriteDetailView(DomainView):
         return Response(
             FavoriteActionResponse(
                 {"data": services.remove_favorite(request.user, listing_id)}
+            ).data
+        )
+
+
+def _visitor_id(request):
+    return (
+        request.headers.get("X-Chat-Visitor-Id")
+        or request.query_params.get("visitor_id")
+        or ""
+    )
+
+
+class AllProductRatingsView(DomainView):
+    permission_classes = [AllowAny]
+
+    @contract("API-092", "P5", response=ProductRatingListResponse, auth=[])
+    def get(self, request):
+        return Response(
+            ProductRatingListResponse(
+                {"data": engagement.list_all_product_ratings()}
+            ).data
+        )
+
+
+class ListingRatingsView(DomainView):
+    permission_classes = [AllowAny]
+
+    @contract("API-093", "P5", response=ProductRatingListResponse, auth=[])
+    def get(self, request, id):
+        return Response(
+            ProductRatingListResponse(engagement.list_listing_ratings(id)).data
+        )
+
+    @contract(
+        "API-094", "P5", request=RatingInput, response=ProductRatingCreateResponse, auth=[]
+    )
+    def post(self, request, id):
+        payload = engagement.submit_listing_rating(
+            request.user, id, self.validated(RatingInput, request.data)
+        )
+        return Response(ProductRatingCreateResponse(payload).data, status=201)
+
+
+class PriceAlertsView(DomainView):
+    permission_classes = [AllowAny]
+
+    @contract("API-095", "P5", response=PriceAlertListResponse, auth=[])
+    def get(self, request):
+        return Response(
+            PriceAlertListResponse(
+                {"data": engagement.list_alerts(request.user, _visitor_id(request))}
+            ).data
+        )
+
+    @contract("API-096", "P5", request=PriceAlertInput, response=PriceAlertResponse, auth=[])
+    def post(self, request):
+        data, created = engagement.create_alert(
+            request.user,
+            self.validated(PriceAlertInput, request.data),
+            _visitor_id(request),
+        )
+        return Response(
+            PriceAlertResponse({"data": data}).data, status=201 if created else 200
+        )
+
+
+class PriceAlertDetailView(DomainView):
+    permission_classes = [AllowAny]
+
+    @contract("API-097", "P5", response=DeleteFlagResponse, auth=[])
+    def delete(self, request, id):
+        return Response(
+            DeleteFlagResponse(
+                {
+                    "data": engagement.delete_alert(
+                        request.user, id, _visitor_id(request)
+                    )
+                }
+            ).data
+        )
+
+
+class NotificationsView(DomainView):
+    permission_classes = [AllowAny]
+
+    @contract("API-098", "P5", response=NotificationListResponse, auth=[])
+    def get(self, request):
+        return Response(
+            NotificationListResponse(
+                {
+                    "data": engagement.list_notifications(
+                        request.user, _visitor_id(request)
+                    )
+                }
+            ).data
+        )
+
+
+class NotificationsReadView(DomainView):
+    permission_classes = [AllowAny]
+
+    @contract("API-099", "P5", response=ReadFlagResponse, auth=[])
+    def post(self, request):
+        return Response(
+            ReadFlagResponse(
+                {
+                    "data": engagement.mark_notifications_read(
+                        request.user, _visitor_id(request)
+                    )
+                }
+            ).data
+        )
+
+
+class BuyerChatsView(DomainView):
+    permission_classes = [AllowAny]
+
+    @contract("API-100", "P5", response=ChatThreadListResponse, auth=[])
+    def get(self, request):
+        return Response(
+            ChatThreadListResponse(
+                {"data": engagement.list_buyer_chats(request.user, _visitor_id(request))}
+            ).data
+        )
+
+
+class StoreMessagesView(DomainView):
+    permission_classes = [AllowAny]
+
+    @contract("API-101", "P5", response=StoreMessageListResponse, auth=[])
+    def get(self, request, id):
+        return Response(
+            StoreMessageListResponse(
+                {
+                    "data": engagement.list_store_messages(
+                        request.user, id, _visitor_id(request)
+                    )
+                }
+            ).data
+        )
+
+    @contract(
+        "API-102",
+        "P5",
+        request=StoreMessageInput,
+        response=StoreMessageSendResponse,
+        auth=[],
+    )
+    def post(self, request, id):
+        locale = getattr(request, "api_locale", "ar")
+        result = engagement.send_store_message(
+            request.user,
+            id,
+            self.validated(StoreMessageInput, request.data),
+            _visitor_id(request),
+            locale=locale,
+        )
+        return Response(StoreMessageSendResponse({"data": result}).data, status=201)
+
+
+class MerchantChatsView(DomainView):
+    @contract("API-103", "P5", response=ChatThreadListResponse)
+    def get(self, request):
+        return Response(
+            ChatThreadListResponse(
+                {"data": engagement.list_merchant_chats(request.user)}
+            ).data
+        )
+
+
+class MerchantChatReplyView(DomainView):
+    @contract(
+        "API-104",
+        "P5",
+        request=MerchantChatReplyInput,
+        response=StoreMessageSendResponse,
+    )
+    def post(self, request, thread_key):
+        data = self.validated(MerchantChatReplyInput, request.data)
+        result = engagement.reply_merchant_chat(request.user, thread_key, data["text"])
+        return Response(StoreMessageSendResponse({"data": result}).data, status=201)
+
+
+class MerchantChatReadView(DomainView):
+    @contract("API-105", "P5", response=ReadFlagResponse)
+    def post(self, request, thread_key):
+        return Response(
+            ReadFlagResponse(
+                {"data": engagement.mark_merchant_chat_read(request.user, thread_key)}
+            ).data
+        )
+
+
+class ActiveAdsView(DomainView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @contract("API-106", "P5", response=SponsoredAdListResponse, parameters=[AdQuery], auth=[])
+    def get(self, request):
+        query = self.validated(AdQuery, request.query_params)
+        return Response(
+            SponsoredAdListResponse(
+                {"data": ads_services.list_active_ads(query.get("city", "all"))}
+            ).data
+        )
+
+
+class AdImpressionView(DomainView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @contract(
+        "API-107",
+        "P5",
+        request=AdImpressionInput,
+        response=SponsoredAdResponse,
+        auth=[],
+    )
+    def post(self, request, id):
+        self.validated(AdImpressionInput, request.data or {})
+        return Response(
+            SponsoredAdResponse({"data": ads_services.record_ad_impression(id)}).data
+        )
+
+
+class AdClickView(DomainView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @contract(
+        "API-108", "P5", request=AdClickInput, response=SponsoredAdResponse, auth=[]
+    )
+    def post(self, request, id):
+        data = self.validated(AdClickInput, request.data or {})
+        return Response(
+            SponsoredAdResponse({"data": ads_services.record_ad_click(id, data)}).data
+        )
+
+
+class MerchantAdsView(DomainView):
+    @contract("API-109", "P5", response=MerchantAdsSummaryResponse)
+    def get(self, request):
+        return Response(
+            MerchantAdsSummaryResponse(
+                {"data": ads_services.list_merchant_ads(request.user)}
+            ).data
+        )
+
+
+class MerchantAdRequestView(DomainView):
+    @contract(
+        "API-110",
+        "P5",
+        request=MerchantAdRequestInput,
+        response=SponsoredAdResponse,
+    )
+    def post(self, request):
+        return Response(
+            SponsoredAdResponse(
+                {
+                    "data": ads_services.request_merchant_ad(
+                        request.user,
+                        self.validated(MerchantAdRequestInput, request.data),
+                        actor_ip=request.META.get("REMOTE_ADDR"),
+                    )
+                }
+            ).data,
+            status=201,
+        )
+
+
+class AdminAdsView(DomainView):
+    @contract("API-111", "P6", response=SponsoredAdListResponse)
+    def get(self, request):
+        return Response(
+            SponsoredAdListResponse(
+                {"data": ads_services.list_admin_ads(request.user)}
+            ).data
+        )
+
+    @contract("API-112", "P6", request=AdminAdInput, response=SponsoredAdResponse)
+    def post(self, request):
+        return Response(
+            SponsoredAdResponse(
+                {
+                    "data": ads_services.create_admin_ad(
+                        request.user,
+                        self.validated(AdminAdInput, request.data),
+                        actor_ip=request.META.get("REMOTE_ADDR"),
+                    )
+                }
+            ).data,
+            status=201,
+        )
+
+
+class AdminAdDetailView(DomainView):
+    @contract("API-113", "P6", request=AdminAdPatchInput, response=SponsoredAdResponse)
+    def patch(self, request, id):
+        return Response(
+            SponsoredAdResponse(
+                {
+                    "data": ads_services.update_admin_ad(
+                        request.user,
+                        id,
+                        self.validated(AdminAdPatchInput, request.data),
+                        actor_ip=request.META.get("REMOTE_ADDR"),
+                    )
+                }
+            ).data
+        )
+
+    @contract("API-114", "P6", response=DeleteFlagResponse)
+    def delete(self, request, id):
+        return Response(
+            DeleteFlagResponse(
+                {
+                    "data": ads_services.delete_admin_ad(
+                        request.user, id, actor_ip=request.META.get("REMOTE_ADDR")
+                    )
+                }
             ).data
         )

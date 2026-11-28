@@ -9,8 +9,21 @@ from .serializers import (
     PublicModelResponse,
     VariantResponse,
     CategoryResponse,
+    AdminBrandInput,
+    AdminBrandResponse,
+    AdminModelInput,
+    AdminModelUpdateInput,
+    AdminModelResponse,
+    DeleteResponse,
 )
-from .services import choices, public_models
+from .services import (
+    choices,
+    public_models,
+    create_brand,
+    create_model,
+    update_model,
+    delete_model,
+)
 
 
 class BrandsView(DomainView):
@@ -109,6 +122,69 @@ class VariantsView(DomainView):
                         request.user,
                         "variants",
                         self.validated(CatalogQuery, request.query_params),
+                    )
+                }
+            ).data
+        )
+
+
+class AdminBrandsView(DomainView):
+    @contract("API-088", "P6", request=AdminBrandInput, response=AdminBrandResponse)
+    def post(self, request):
+        return Response(
+            AdminBrandResponse(
+                {
+                    "data": create_brand(
+                        request.user,
+                        self.validated(AdminBrandInput, request.data),
+                        actor_ip=request.META.get("REMOTE_ADDR"),
+                    )
+                }
+            ).data,
+            status=201,
+        )
+
+
+class AdminModelsView(DomainView):
+    @contract("API-089", "P6", request=AdminModelInput, response=AdminModelResponse)
+    def post(self, request):
+        return Response(
+            AdminModelResponse(
+                {
+                    "data": create_model(
+                        request.user,
+                        self.validated(AdminModelInput, request.data),
+                        actor_ip=request.META.get("REMOTE_ADDR"),
+                    )
+                }
+            ).data,
+            status=201,
+        )
+
+
+class AdminModelDetailView(DomainView):
+    @contract("API-090", "P6", request=AdminModelUpdateInput, response=AdminModelResponse)
+    def patch(self, request, id):
+        return Response(
+            AdminModelResponse(
+                {
+                    "data": update_model(
+                        request.user,
+                        id,
+                        self.validated(AdminModelUpdateInput, request.data),
+                        actor_ip=request.META.get("REMOTE_ADDR"),
+                    )
+                }
+            ).data
+        )
+
+    @contract("API-091", "P6", response=DeleteResponse)
+    def delete(self, request, id):
+        return Response(
+            DeleteResponse(
+                {
+                    "data": delete_model(
+                        request.user, id, actor_ip=request.META.get("REMOTE_ADDR")
                     )
                 }
             ).data

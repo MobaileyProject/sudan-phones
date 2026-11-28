@@ -194,6 +194,7 @@ export function formatPublicationStatus(status: PublicationStatus, lang: Languag
     processing: { ar: 'جاري معالجة الصور', en: 'Processing Photos' },
     needs_correction: { ar: 'يحتاج تصحيح', en: 'Needs Correction' },
     published: { ar: 'منشور وظاهر للعملاء', en: 'Published' },
+    paused: { ar: 'متوقف مؤقتاً', en: 'Paused' },
     flagged: { ar: 'مُعلّم للمراجعة', en: 'Flagged for Review' },
     removed_suspended: { ar: 'مُزال / مخفي', en: 'Removed / Hidden' },
   };
