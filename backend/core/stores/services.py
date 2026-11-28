@@ -1,3 +1,4 @@
+import secrets
 from django.db import transaction, IntegrityError
 from django.contrib.auth import get_user_model
 from core.common.domain import DomainError, require, require_actor
@@ -49,6 +50,26 @@ def update_settings(actor, data):
     return store
 
 
+def _staff_data(m):
+    account = getattr(m.user, "account", None) if m.user else None
+    resolved_name = (
+        m.display_name
+        or (m.user.first_name or m.user.username if m.user else "")
+        or m.phone
+        or "Staff"
+    )
+    resolved_phone = m.phone or (account.phone if account else "")
+    return {
+        "id": m.pk,
+        "user_id": m.user_id,
+        "name": resolved_name,
+        "phone": resolved_phone,
+        "role": m.role,
+        "invite_code": m.invite_code,
+        "created_at": m.created_at,
+    }
+
+
 def list_staff(actor):
     store = member_store(actor)
     members = (
@@ -56,20 +77,15 @@ def list_staff(actor):
         .filter(store=store)
         .order_by("pk")
     )
-    result = []
-    for m in members:
-        account = getattr(m.user, "account", None)
-        result.append(
-            {
-                "id": m.pk,
-                "user_id": m.user_id,
-                "name": m.user.first_name or m.user.username,
-                "phone": account.phone if account else "",
-                "role": m.role,
-                "created_at": m.created_at,
-            }
-        )
-    return result
+    return [_staff_data(m) for m in members]
+
+
+def _unique_invite_code():
+    for _ in range(10):
+        code = f"SP-{secrets.randbelow(900000) + 100000}"
+        if not Membership.objects.filter(invite_code=code).exists():
+            return code
+    return f"SP-{secrets.token_hex(4).upper()}"
 
 
 @transaction.atomic
@@ -77,28 +93,42 @@ def add_staff(actor, data):
     from core.identity.models import Account
 
     store = member_store(actor, owner=True, lock=True)
+    display_name = (data.get("name") or "").strip()
+    role = data.get("role", "staff")
+    invite_code = _unique_invite_code()
     if data.get("user_id"):
         user = (
             get_user_model()
             .objects.filter(pk=data["user_id"], is_active=True)
             .first()
         )
+        require(user is not None, "NOT_FOUND", 404)
+        account = Account.objects.filter(user=user).first()
+        phone_val = account.phone if account else ""
     else:
+        phone_val = data["phone"]
         account = (
             Account.objects.select_related("user")
-            .filter(phone=data["phone"], phone_verified=True, user__is_active=True)
+            .filter(phone=phone_val, phone_verified=True, user__is_active=True)
             .first()
         )
         user = account.user if account else None
-    require(user is not None, "NOT_FOUND", 404)
-    role = data.get("role", "staff")
+        if user is None and Membership.objects.filter(store=store, phone=phone_val).exists():
+            raise DomainError("MEMBERSHIP_EXISTS", 409)
     try:
         with transaction.atomic():
-            member = Membership.objects.create(store=store, user=user, role=role)
+            member = Membership.objects.create(
+                store=store,
+                user=user,
+                display_name=display_name,
+                phone=phone_val,
+                invite_code=invite_code,
+                role=role,
+            )
     except IntegrityError:
         raise DomainError("MEMBERSHIP_EXISTS", 409) from None
     record(actor, "store.staff_added", store.pk, membership=member.pk, role=role)
-    return member
+    return _staff_data(member)
 
 
 @transaction.atomic

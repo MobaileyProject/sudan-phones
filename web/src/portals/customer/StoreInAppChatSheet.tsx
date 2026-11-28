@@ -24,25 +24,6 @@ import { api, ApiStoreChatMessage } from '../../api/client';
 import { usePrototype } from '../../store/PrototypeContext';
 import { SafeImage } from '../../components/DesignSystem';
 
-const LOCAL_THREAD_PREFIX = 'sp_store_chat_v1_';
-
-function readLocalThread(storeId: string): ApiStoreChatMessage[] {
-  try {
-    const raw = window.localStorage.getItem(`${LOCAL_THREAD_PREFIX}${storeId}`);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeLocalThread(storeId: string, messages: ApiStoreChatMessage[]) {
-  try {
-    window.localStorage.setItem(`${LOCAL_THREAD_PREFIX}${storeId}`, JSON.stringify(messages.slice(-50)));
-  } catch {
-    // ignore storage quota errors
-  }
-}
-
 function formatMessageTime(iso: string, lang: 'ar' | 'en'): string {
   try {
     const d = new Date(iso);
@@ -72,7 +53,7 @@ export function StoreInAppChatSheet({
   onClose: () => void;
   onSwitchToExternalContact?: (listing: Listing | null, store: Store) => void;
 }) {
-  const { lang, me, session, recordContactClick, pushToast } = usePrototype();
+  const { lang, me, session, pushToast } = usePrototype();
   const [messages, setMessages] = useState<ApiStoreChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -82,11 +63,9 @@ export function StoreInAppChatSheet({
   const [showContactFields, setShowContactFields] = useState(false);
   const [attachedListing, setAttachedListing] = useState<Listing | null>(listing);
   const scrollEndRef = useRef<HTMLDivElement | null>(null);
-  const hasCountedLeadRef = useRef(false);
 
   useEffect(() => {
     setAttachedListing(listing);
-    hasCountedLeadRef.current = false;
   }, [listing, store?.id]);
 
   useEffect(() => {
@@ -99,21 +78,16 @@ export function StoreInAppChatSheet({
   useEffect(() => {
     if (!store) return;
     let active = true;
-    const cached = readLocalThread(store.id);
-    setMessages(cached);
+    setMessages([]);
     setLoading(true);
     api
       .getStoreMessages(store.id)
       .then((res) => {
         if (!active) return;
-        const remote = res.data || [];
-        if (remote.length > 0 || cached.length === 0) {
-          setMessages(remote);
-          writeLocalThread(store.id, remote);
-        }
+        setMessages(res.data || []);
       })
       .catch(() => {
-        // Keep local cache when offline
+        if (active) setMessages([]);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -194,16 +168,7 @@ export function StoreInAppChatSheet({
       created_at: new Date().toISOString(),
     };
 
-    setMessages((prev) => {
-      const next = [...prev, optimistic];
-      writeLocalThread(store.id, next);
-      return next;
-    });
-
-    if (attachedListing && !hasCountedLeadRef.current) {
-      recordContactClick(attachedListing.id, store.id);
-      hasCountedLeadRef.current = true;
-    }
+    setMessages((prev) => [...prev, optimistic]);
 
     try {
       const res = await api.sendStoreMessage(
@@ -219,15 +184,13 @@ export function StoreInAppChatSheet({
         lang
       );
       const updated = res.data?.messages || [];
-      if (updated.length > 0) {
-        setMessages(updated);
-        writeLocalThread(store.id, updated);
-      }
+      setMessages(updated);
       setAttachedListing(null);
     } catch {
-      pushToast('info', {
-        ar: 'تم حفظ رسالتك محلياً وسيتم إرسالها للمتجر عند توفر الاتصال.',
-        en: 'Message saved locally — will sync with the store once connected.',
+      setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      pushToast('error', {
+        ar: 'تعذر إرسال الرسالة. تأكد من الاتصال وحاول مرة أخرى.',
+        en: 'Failed to send message. Check your connection and try again.',
       });
     } finally {
       setSending(false);

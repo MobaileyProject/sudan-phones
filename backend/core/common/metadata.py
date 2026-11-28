@@ -74,13 +74,42 @@ SUMMARIES = {
     "API-084": "List the authenticated user's saved favorite listings",
     "API-085": "Save a public listing to the authenticated user's favorites",
     "API-086": "Remove a listing from the authenticated user's favorites",
+    "API-087": "Duplicate an existing merchant listing for fast variant entry",
+    "API-088": "Create a new phone brand in the reference catalog",
+    "API-089": "Create a new phone model with specifications and default variants",
+    "API-090": "Update a phone model in the reference catalog",
+    "API-091": "Delete an unused phone model from the reference catalog",
+    "API-092": "List recent product reviews across the marketplace",
+    "API-093": "List product reviews for a specific listing",
+    "API-094": "Submit a product review for a listing and recalculate model aggregate",
+    "API-095": "List active price-drop alerts for the current user or visitor",
+    "API-096": "Subscribe to a price-drop alert on a visible listing",
+    "API-097": "Delete a price-drop alert",
+    "API-098": "List customer or merchant notifications",
+    "API-099": "Mark all notifications for the current user or visitor as read",
+    "API-100": "List buyer chat threads with stores",
+    "API-101": "Fetch direct chat messages between buyer and store",
+    "API-102": "Send a buyer message to a verified store and notify the store",
+    "API-103": "List all buyer chat threads for the authenticated merchant store",
+    "API-104": "Reply to a buyer chat thread as the merchant store",
+    "API-105": "Mark a merchant store chat thread and its notifications as read",
+    "API-106": "List currently active app-open sponsored ads",
+    "API-107": "Record a sponsored ad impression",
+    "API-108": "Record a sponsored ad click and time-to-click telemetry",
+    "API-109": "List sponsored ad campaigns and CTR summary for the merchant store",
+    "API-110": "Submit a self-serve sponsored ad campaign request for admin approval",
+    "API-111": "List all sponsored ad campaigns in Admin Portal",
+    "API-112": "Create a new sponsored ad campaign in Admin Portal",
+    "API-113": "Update a sponsored ad campaign in Admin Portal",
+    "API-114": "Delete a sponsored ad campaign in Admin Portal",
+    "API-115": "Pause or repost a merchant listing without deleting it",
 }
 
 
 AUTHORIZATION = {}
 for codes, policy in [
     (
-        "014 018 020 022 023 024 025 027 029 036 037 064 071 072 074 076",
+        "014 018 020 022 023 024 025 027 029 036 037 064 071 072 074 076 092 093 094 095 096 097 098 099 100 101 102 106 107 108",
         "Public guest access; listing/store resources must pass current public eligibility.",
     ),
     (
@@ -110,7 +139,7 @@ for codes, policy in [
         "Store owner; same-store private evidence; post-approval re-verification preserves live store status until decided.",
     ),
     (
-        "015 016 017 050 054 038 039 040 032 081 082 083",
+        "015 016 017 050 054 038 039 040 032 081 082 083 087 103 104 105 109 110 115",
         "Current member of a verified store; mutable resources must belong to that store.",
     ),
     (
@@ -126,7 +155,7 @@ for codes, policy in [
         "Active founder (superuser) only; delegated verify_stores permission never grants private document links.",
     ),
     (
-        "008 044 077 078",
+        "008 044 077 078 088 089 090 091 111 112 113 114",
         "Active founder or current moderate_listings role; no own-store moderation; suspension proposals require founder.",
     ),
     ("009", "Active founder or current view_metrics role."),

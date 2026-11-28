@@ -1,0 +1,30 @@
+{
+  "id": "BUG-2026-022",
+  "category": "logic",
+  "severity": "high",
+  "status": "resolved",
+  "affected_files": [
+    "backend/core/operations/engagement.py",
+    "backend/core/listings/serializers.py",
+    "backend/core/listings/services.py",
+    "web/src/portals/customer/CustomerSheets.tsx",
+    "web/src/portals/customer/MobileAppAuthScreens.tsx",
+    "web/src/portals/customer/CustomerApp.tsx",
+    "web/src/portals/merchant/MerchantPortal.tsx",
+    "web/src/portals/admin/AdminCatalogPanel.tsx",
+    "web/src/api/mappers.ts",
+    "web/src/store/PrototypeContext.tsx"
+  ],
+  "affected_endpoints": [
+    "/api/v1/stores/:id/messages",
+    "/api/v1/stores/me/profile",
+    "/api/v1/stores/me/verification/submit",
+    "/api/v1/stores/me/listings/import",
+    "/api/v1/admin/moderation/queue",
+    "/api/v1/admin/listings/:id/moderate",
+    "/api/v1/admin/dual-approvals"
+  ],
+  "root_cause": "End-to-end live Playwright + PostgreSQL QA surfaced: (1) opposite lock order in send_store_message() vs contact_event() causing PostgreSQL deadlocks, (2) BulkImportRowInput rejecting listing_id-based spreadsheet updates expected by docs/API_SPECIFICATION.md and MerchantPortal, (3) moderation_queue ascending pk truncation hiding newly flagged listings and causing stale version 409 on clear, (4) merchant registration sending lat/lng and calling updateStoreProfile/submitVerification before OTP verification while CustomerApp closed entryScreen prematurely, (5) AdminCatalogPanel calling merchant-only /catalog/brands with limit=200 and omitting model edit, (6) MerchantPortal settings hydration leaving phone/whatsapp empty or clobbering dirty edits, (7) mapDualApproval leaving pending status unmapped and blocking self-approval UI detection, and (8) window.open('noopener') navigating away on WhatsApp handoff plus missing <html dir> sync.",
+  "fix_summary": "Enforced uniform Store->Listing locking order in send_store_message, supported listing_id and *_count fields in BulkImportRowInput/bulk_import_listings, prioritized flagged listings in moderation_queue with synchronous listing state updates on moderate, moved store profile/verification submission cleanly after merchant OTP verify with latitude/longitude and required id_front upload, switched AdminCatalogPanel to public paginated catalog endpoints with Model Edit modal, fixed MerchantPortal Settings hydration/dirty guards, mapped DualApproval pending->awaiting_second_approval, preserved non-verified/flagged records across public refreshes, and fixed WhatsApp opener and HTML dir syncing.",
+  "regression_test": "core.tests.test_marketplace_contracts.MarketplaceContractTests.test_bulk_import_by_listing_id_and_flagged_moderation_queue_priority"
+}

@@ -173,7 +173,9 @@ export function CustomerApp() {
 
   useEffect(() => {
     if (session.authenticated) {
-      setEntryScreen(null);
+      setEntryScreen((prev) =>
+        prev === 'otp' || prev === 'pending_review' ? prev : null
+      );
       if (me) {
         setSignedInUser({
           name: me.name || me.email || me.phone,

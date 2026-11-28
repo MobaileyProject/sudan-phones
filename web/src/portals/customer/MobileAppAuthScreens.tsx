@@ -18,7 +18,6 @@ import {
   Mail,
   MapPin,
   Moon,
-  Paperclip,
   RefreshCw,
   ShieldCheck,
   Smartphone,
@@ -47,8 +46,8 @@ import {
   tText,
 } from '../../i18n/translations';
 import { usePrototype } from '../../store/PrototypeContext';
+import { api, uploadMediaFile } from '../../api/client';
 import {
-  AppleIcon,
   AuthFieldError,
   AuthFieldLabel,
   AuthInputField,
@@ -86,10 +85,19 @@ type ErrorFieldKey =
   | 'regPassword'
   | 'storeName'
   | 'certificate'
+  | 'idFront'
   | 'storeAddress'
   | 'mapLocation'
   | 'email'
   | 'terms';
+
+interface AuthUploadedFile {
+  name: string;
+  sizeBytes: number;
+  extLabel: string;
+  previewUrl?: string;
+  file?: File;
+}
 
 interface MapLandmark {
   id: string;
@@ -314,9 +322,9 @@ export function MobileAppAuthScreens({
     setSelectedCity,
     setPortal,
     pushToast,
-    registerOrUpdateStore,
     loginWithBackend,
     loginWithGoogle,
+    hydrateSession,
   } = usePrototype();
 
   const [internalTheme, setInternalTheme] = useState<AuthThemeMode>(authTheme);
@@ -360,20 +368,15 @@ export function MobileAppAuthScreens({
   const [loginEmail, setLoginEmail] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(true);
   const [otpChannel, setOtpChannel] = useState<'whatsapp' | 'email'>('whatsapp');
-  const [otpEmail, setOtpEmail] = useState('waleed@example.com');
+  const [otpEmail, setOtpEmail] = useState('');
   const [fullName, setFullName] = useState('');
   const [storeName, setStoreName] = useState('');
   const [regCity, setRegCity] = useState<CityId>(
     selectedCity === 'all' ? 'port_sudan' : selectedCity
   );
   const [storeAddress, setStoreAddress] = useState('');
-  const [certificateFile, setCertificateFile] = useState<{
-    name: string;
-    sizeBytes: number;
-    extLabel: string;
-    previewUrl?: string;
-    isSample?: boolean;
-  } | null>(null);
+  const [certificateFile, setCertificateFile] = useState<AuthUploadedFile | null>(null);
+  const [idFrontFile, setIdFrontFile] = useState<AuthUploadedFile | null>(null);
   const [pickedMapLocation, setPickedMapLocation] = useState<{
     lat: number;
     lng: number;
@@ -406,6 +409,7 @@ export function MobileAppAuthScreens({
     storeName: string;
     ownerName: string;
     phone: string;
+    e164Phone: string;
     city: CityId;
     address: string;
     certificateName: string;
@@ -426,7 +430,7 @@ export function MobileAppAuthScreens({
   const [formError, setFormError] = useState('');
   const [errorField, setErrorField] = useState<ErrorFieldKey>(null);
   const [loadingMode, setLoadingMode] = useState<
-    null | 'email' | 'whatsapp' | 'google' | 'apple' | 'merchant' | 'password'
+    null | 'email' | 'whatsapp' | 'google' | 'merchant' | 'password'
   >(null);
 
   // Gracefully detect soft keyboard open on mobile viewports via visualViewport
@@ -443,12 +447,15 @@ export function MobileAppAuthScreens({
 
   // Refs
   const certInputRef = useRef<HTMLInputElement | null>(null);
+  const idFrontInputRef = useRef<HTMLInputElement | null>(null);
   const storeSectionRef = useRef<HTMLDivElement | null>(null);
 
   // OTP 6-digit state
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [otpError, setOtpError] = useState('');
   const [otpOrigin, setOtpOrigin] = useState<'signin' | 'register' | 'recovery'>('signin');
+  const [recoveryNewPassword, setRecoveryNewPassword] = useState('');
+  const [showRecoveryPassword, setShowRecoveryPassword] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -462,14 +469,17 @@ export function MobileAppAuthScreens({
     setFormError(message);
   };
 
-  // Cleanup any uploaded image object URL
+  // Cleanup any uploaded image object URLs
   useEffect(() => {
     return () => {
       if (certificateFile?.previewUrl) {
         URL.revokeObjectURL(certificateFile.previewUrl);
       }
+      if (idFrontFile?.previewUrl) {
+        URL.revokeObjectURL(idFrontFile.previewUrl);
+      }
     };
-  }, [certificateFile?.previewUrl]);
+  }, [certificateFile?.previewUrl, idFrontFile?.previewUrl]);
 
   // Automatically transition from Launch intro -> First Page (Welcome)
   useEffect(() => {
@@ -561,43 +571,37 @@ export function MobileAppAuthScreens({
     }
   };
 
-  const handleCertificateFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDocFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    current: AuthUploadedFile | null,
+    setter: (next: AuthUploadedFile | null) => void
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (certificateFile?.previewUrl) {
-      URL.revokeObjectURL(certificateFile.previewUrl);
+    if (current?.previewUrl) {
+      URL.revokeObjectURL(current.previewUrl);
     }
     const ext = file.name.split('.').pop()?.toUpperCase() || 'PDF';
     const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
-    setCertificateFile({
+    setter({
       name: file.name,
       sizeBytes: file.size,
       extLabel: ext,
       previewUrl,
-      isSample: false,
+      file,
     });
     clearError();
     e.target.value = '';
   };
 
-  const handleAttachSampleCertificate = () => {
-    if (certificateFile?.previewUrl) {
-      URL.revokeObjectURL(certificateFile.previewUrl);
+  const handleRemoveDocFile = (
+    current: AuthUploadedFile | null,
+    setter: (next: AuthUploadedFile | null) => void
+  ) => {
+    if (current?.previewUrl) {
+      URL.revokeObjectURL(current.previewUrl);
     }
-    setCertificateFile({
-      name: tText(AUTH_COPY.sampleCertFileName, lang),
-      sizeBytes: 420 * 1024,
-      extLabel: 'PDF',
-      isSample: true,
-    });
-    clearError();
-  };
-
-  const handleRemoveCertificate = () => {
-    if (certificateFile?.previewUrl) {
-      URL.revokeObjectURL(certificateFile.previewUrl);
-    }
-    setCertificateFile(null);
+    setter(null);
   };
 
   const handleOpenMapPicker = () => {
@@ -720,7 +724,7 @@ export function MobileAppAuthScreens({
     }
   };
 
-  const handleMerchantRegistrationSubmit = () => {
+  const handleMerchantRegistrationSubmit = async () => {
     if (!fullName.trim()) {
       setValidationError('fullName', tText(AUTH_COPY.errFullNameRequired, lang));
       return;
@@ -734,16 +738,30 @@ export function MobileAppAuthScreens({
       setValidationError('regPassword', tText(AUTH_COPY.errPasswordCreateRequired, lang));
       return;
     }
-    if (regPassword.length < 6) {
-      setValidationError('regPassword', tText(AUTH_COPY.errPasswordMinLength, lang));
+    if (regPassword.length < 8) {
+      setValidationError(
+        'regPassword',
+        lang === 'ar'
+          ? 'كلمة المرور يجب أن تكون 8 أحرف على الأقل وغير سهلة التخمين'
+          : 'Password must be at least 8 characters'
+      );
       return;
     }
     if (!storeName.trim()) {
       setValidationError('storeName', tText(AUTH_COPY.errStoreNameRequired, lang));
       return;
     }
-    if (!certificateFile) {
+    if (!certificateFile?.file) {
       setValidationError('certificate', tText(AUTH_COPY.errCertificateRequired, lang));
+      return;
+    }
+    if (!idFrontFile?.file) {
+      setValidationError(
+        'idFront',
+        lang === 'ar'
+          ? 'يرجى رفع صورة البطاقة القومية (الوجه الأمامي) لإثبات هوية المالك.'
+          : 'Please upload the owner National ID (front) for verification.'
+      );
       return;
     }
     if (!storeAddress.trim()) {
@@ -761,51 +779,26 @@ export function MobileAppAuthScreens({
 
     clearError();
     setLoadingMode('merchant');
+    const cleanNum = `+249${phoneDigits.replace(/\D/g, '')}`;
+    const formattedPhone = `+249 ${formatPhoneByDialCode(phoneDigits, '+249')}`;
+    const trimmedStore = storeName.trim();
+    const trimmedOwner = fullName.trim();
+    const trimmedAddress = storeAddress.trim();
 
-    window.setTimeout(() => {
-      const formattedPhone = `+249 ${formatPhoneByDialCode(phoneDigits, '+249')}`;
-      const trimmedStore = storeName.trim();
-      const trimmedOwner = fullName.trim();
-      const trimmedAddress = storeAddress.trim();
-      const refCode = `SP-${String(Math.floor(1000 + Math.random() * 9000))}`;
-      const coordTextAr = formatCoordinates(pickedMapLocation.lat, pickedMapLocation.lng, 'ar');
-      const coordTextEn = formatCoordinates(pickedMapLocation.lat, pickedMapLocation.lng, 'en');
-
-      registerOrUpdateStore(
-        null,
-        {
-          name: { ar: trimmedStore, en: trimmedStore },
-          city: regCity,
-          address: { ar: trimmedAddress, en: trimmedAddress },
-          locationGuidance: {
-            ar: `${pickedMapLocation.labelAr} · ${coordTextAr}`,
-            en: `${pickedMapLocation.labelEn} · ${coordTextEn}`,
-          },
-          phone: formattedPhone,
-          whatsapp: formattedPhone,
-          applicantName: { ar: trimmedOwner, en: trimmedOwner },
-          applicantPhone: formattedPhone,
-          documents: [
-            {
-              id: `doc-cert-${Date.now()}`,
-              type: 'commercial_reg',
-              label: { ar: 'شهادة تسجيل المتجر', en: 'Store Registration Certificate' },
-              fileName: certificateFile.name,
-              uploadedAt: new Date().toISOString().slice(0, 10),
-              status: 'uploaded',
-              imageUrl: '',
-              notes: `${certificateFile.extLabel} · ${formatAuthFileSize(certificateFile.sizeBytes, lang)}`,
-            },
-          ],
-        },
-        true
-      );
+    try {
+      await api.registerMerchant({
+        phone: cleanNum,
+        password: regPassword,
+        name: trimmedOwner,
+        channel: 'whatsapp',
+      });
 
       setSubmittedMerchantInfo({
-        refCode,
+        refCode: 'SP-PENDING',
         storeName: trimmedStore,
         ownerName: trimmedOwner,
         phone: formattedPhone,
+        e164Phone: cleanNum,
         city: regCity,
         address: trimmedAddress,
         certificateName: certificateFile.name,
@@ -813,17 +806,32 @@ export function MobileAppAuthScreens({
         lng: pickedMapLocation.lng,
         mapLabel: { ar: pickedMapLocation.labelAr, en: pickedMapLocation.labelEn },
       });
+      setOtpChannel('whatsapp');
+      setOtpOrigin('register');
+      setOtpDigits(['', '', '', '', '', '']);
+      setOtpError('');
+      setCountdown(45);
+      onNavigate('otp');
+      pushToast('info', {
+        ar: 'تم إنشاء حساب المتجر وإرسال رمز التحقق لإتمام تقديم مستندات التوثيق.',
+        en: 'Merchant account created — enter the verification code to submit store documents.',
+      });
+    } catch (err: any) {
+      const msg =
+        err?.message ||
+        (lang === 'ar' ? 'تعذر إرسال طلب تسجيل المتجر.' : 'Could not submit store registration.');
+      setValidationError('phone', msg);
+    } finally {
       setLoadingMode(null);
-      onNavigate('pending_review');
-    }, 420);
+    }
   };
 
-  const requestOtp = (
+  const requestOtp = async (
     origin: 'signin' | 'register' | 'recovery',
     channel: 'whatsapp' | 'email' = otpChannel
   ) => {
     if (origin === 'register' && accountType === 'merchant') {
-      handleMerchantRegistrationSubmit();
+      await handleMerchantRegistrationSubmit();
       return;
     }
 
@@ -832,13 +840,26 @@ export function MobileAppAuthScreens({
       return;
     }
 
-    if (channel === 'email') {
+    if (origin === 'recovery') {
+      const phoneErr = validatePhoneForMode(true);
+      if (phoneErr) {
+        setValidationError('phone', phoneErr);
+        return;
+      }
+    } else if (channel === 'email') {
       if (!otpEmail.trim() || !otpEmail.includes('@')) {
         setValidationError('email', tText(AUTH_COPY.errEmailInvalid, lang));
         return;
       }
+      if (origin === 'register') {
+        const phoneErr = validatePhoneForMode(true);
+        if (phoneErr) {
+          setValidationError('phone', phoneErr);
+          return;
+        }
+      }
     } else {
-      const phoneErr = validatePhoneForMode(false);
+      const phoneErr = validatePhoneForMode(true);
       if (phoneErr) {
         setValidationError('phone', phoneErr);
         return;
@@ -850,8 +871,13 @@ export function MobileAppAuthScreens({
         setValidationError('regPassword', tText(AUTH_COPY.errPasswordCreateRequired, lang));
         return;
       }
-      if (regPassword.length < 6) {
-        setValidationError('regPassword', tText(AUTH_COPY.errPasswordMinLength, lang));
+      if (regPassword.length < 8) {
+        setValidationError(
+          'regPassword',
+          lang === 'ar'
+            ? 'كلمة المرور يجب أن تكون 8 أحرف على الأقل وغير سهلة التخمين'
+            : 'Password must be at least 8 characters'
+        );
         return;
       }
       if (!agreedToTerms) {
@@ -863,8 +889,27 @@ export function MobileAppAuthScreens({
     clearError();
     setOtpChannel(channel);
     setLoadingMode(channel);
-    window.setTimeout(() => {
-      setLoadingMode(null);
+    const e164Phone = `+249${phoneDigits.replace(/\D/g, '')}`;
+
+    try {
+      if (origin === 'register') {
+        await api.registerBuyer({
+          phone: e164Phone,
+          password: regPassword,
+          name: fullName.trim(),
+          email: otpEmail.trim() || undefined,
+          channel,
+        });
+      } else if (origin === 'recovery') {
+        await api.recoverPassword({
+          phone: e164Phone,
+          channel,
+        });
+        setRecoveryNewPassword('');
+      } else {
+        await api.verifyOtp({ channel });
+      }
+
       setOtpOrigin(origin);
       setOtpDigits(['', '', '', '', '', '']);
       setOtpError('');
@@ -873,14 +918,21 @@ export function MobileAppAuthScreens({
       pushToast('info', {
         ar:
           channel === 'whatsapp'
-            ? 'أُرسل رمز التحقق عبر واتساب (أدخل 123456 للنجاح أو 000000 لاختبار الخطأ).'
-            : 'أُرسل رمز التحقق عبر البريد الإلكتروني (لا يوثّق رقم واتساب · أدخل 123456 للنجاح).',
+            ? 'تم إرسال رمز التحقق عبر واتساب إلى رقمك.'
+            : 'تم إرسال رمز التحقق إلى بريدك الإلكتروني.',
         en:
           channel === 'whatsapp'
-            ? 'WhatsApp verification code sent (enter 123456 to continue or 000000 to test error).'
-            : 'Email verification code sent (verifies email only, not WhatsApp · enter 123456 to continue).',
+            ? 'Verification code sent to your WhatsApp number.'
+            : 'Verification code sent to your email address.',
       });
-    }, 320);
+    } catch (err: any) {
+      const msg =
+        err?.message ||
+        (lang === 'ar' ? 'تعذر إرسال رمز التحقق، تأكد من البيانات.' : 'Could not send verification code.');
+      setValidationError(channel === 'email' && origin !== 'recovery' ? 'email' : 'phone', msg);
+    } finally {
+      setLoadingMode(null);
+    }
   };
 
   const GOOGLE_WEB_CLIENT_ID =
@@ -946,31 +998,6 @@ export function MobileAppAuthScreens({
     }
   };
 
-  const handleAppleContinue = () => {
-    clearError();
-    setLoadingMode('apple');
-    window.setTimeout(() => {
-      setLoadingMode(null);
-      if (accountType === 'merchant') {
-        pushToast('success', {
-          ar: 'تم تسجيل الدخول عبر آبل — جاري فتح بوابة التاجر.',
-          en: 'Signed in with Apple — opening Merchant Portal.',
-        });
-        setPortal('merchant');
-        return;
-      }
-      pushToast('success', {
-        ar: 'مرحباً بك في سودان فونز — تم تسجيل الدخول عبر آبل.',
-        en: 'Welcome to Sudan Phones — signed in with Apple.',
-      });
-      onEnterAppSignedIn({
-        name: lang === 'ar' ? 'محمد عثمان' : 'Mohammed Osman',
-        phone: '+249 92 440 8821',
-        accountType: 'customer',
-      });
-    }, 380);
-  };
-
   const handleOtpBoxChange = (idx: number, raw: string) => {
     const clean = raw.replace(/\D/g, '');
     if (otpError) setOtpError('');
@@ -1000,48 +1027,105 @@ export function MobileAppAuthScreens({
     }
   };
 
-  const verifyOtp = (e: React.FormEvent) => {
+  const verifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = otpDigits.join('');
     if (code.length < 6) {
       setOtpError(tText(AUTH_COPY.otpErrLength, lang));
       return;
     }
-    if (code === '000000') {
-      setOtpError(tText(AUTH_COPY.otpErrInvalid, lang));
+
+    if (otpOrigin === 'recovery' && recoveryNewPassword.length < 8) {
+      setOtpError(
+        lang === 'ar'
+          ? 'أدخل كلمة مرور جديدة من 8 أحرف على الأقل.'
+          : 'Enter a new password of at least 8 characters.'
+      );
       return;
     }
 
     setOtpError('');
-    if (accountType === 'merchant') {
+    setLoadingMode(otpChannel);
+    const e164Phone = `+249${phoneDigits.replace(/\D/g, '')}`;
+
+    try {
+      if (otpOrigin === 'recovery') {
+        await api.recoverPassword({
+          phone: e164Phone,
+          channel: otpChannel,
+          code,
+          password: recoveryNewPassword,
+        });
+        pushToast('success', {
+          ar: 'تمت استعادة الحساب وتحديث كلمة المرور. يمكنك تسجيل الدخول الآن.',
+          en: 'Password reset succeeded. You can now sign in.',
+        });
+        setRecoveryNewPassword('');
+        onNavigate('signin');
+        return;
+      }
+
+      await api.verifyOtp({ code, channel: otpChannel });
+
+      if (accountType === 'merchant') {
+        if (submittedMerchantInfo && certificateFile?.file && idFrontFile?.file) {
+          const profileRes = await api.updateStoreProfile({
+            name: submittedMerchantInfo.storeName,
+            city: submittedMerchantInfo.city,
+            address: submittedMerchantInfo.address,
+            phone: submittedMerchantInfo.e164Phone,
+            whatsapp: submittedMerchantInfo.e164Phone,
+            latitude: submittedMerchantInfo.lat,
+            longitude: submittedMerchantInfo.lng,
+          });
+          const [certDocId, idFrontDocId] = await Promise.all([
+            uploadMediaFile(certificateFile.file, 'commercial', 'verification'),
+            uploadMediaFile(idFrontFile.file, 'id_front', 'verification'),
+          ]);
+          await api.submitVerification([idFrontDocId, certDocId]);
+          const storeIdNum = (profileRes as any)?.data?.id;
+          if (storeIdNum) {
+            setSubmittedMerchantInfo((prev) => (prev ? { ...prev, refCode: `SP-${storeIdNum}` } : prev));
+          }
+        }
+        await hydrateSession();
+        pushToast('success', {
+          ar: 'تم التحقق من رقم المتجر وحفظ طلب التوثيق للمراجعة.',
+          en: 'Merchant number verified — store application is now under review.',
+        });
+        if (submittedMerchantInfo) {
+          onNavigate('pending_review');
+        } else {
+          setPortal('merchant');
+        }
+        return;
+      }
+
+      await hydrateSession();
+
+      if (otpOrigin === 'register') {
+        setSelectedCity(regCity);
+      }
+
       pushToast('success', {
-        ar: 'تم التحقق من رقم المتجر — جاري فتح بوابة التاجر.',
-        en: 'Merchant number verified — opening Merchant Portal.',
+        ar: 'تم توثيق الحساب وتسجيل الدخول بنجاح.',
+        en: 'Account verified and signed in.',
       });
-      setPortal('merchant');
-      return;
+
+      onEnterAppSignedIn({
+        name: fullName.trim() || e164Phone,
+        phone: `${effectiveDialCode} ${phoneDigits}`.trim(),
+        accountType: 'customer',
+      });
+    } catch (err: any) {
+      setOtpError(
+        err?.code === 'INVALID_OTP'
+          ? tText(AUTH_COPY.otpErrInvalid, lang)
+          : err?.message || tText(AUTH_COPY.otpErrInvalid, lang)
+      );
+    } finally {
+      setLoadingMode(null);
     }
-
-    if (otpOrigin === 'register') {
-      setSelectedCity(regCity);
-    }
-
-    pushToast('success', {
-      ar:
-        otpOrigin === 'recovery'
-          ? 'تمت استعادة الحساب بنجاح.'
-          : 'تم تسجيل الدخول بنجاح — مرحباً بك في سودان فونز.',
-      en:
-        otpOrigin === 'recovery'
-          ? 'Account recovered successfully.'
-          : 'Signed in — welcome to Sudan Phones.',
-    });
-
-    onEnterAppSignedIn({
-      name: fullName.trim() || (lang === 'ar' ? 'وليد الصادق' : 'Waleed Al-Sadiq'),
-      phone: `${effectiveDialCode} ${phoneDigits || selectedCountry.placeholder}`,
-      accountType,
-    });
   };
 
   return (
@@ -1756,7 +1840,7 @@ export function MobileAppAuthScreens({
                               ref={certInputRef}
                               type="file"
                               accept="image/*,.pdf"
-                              onChange={handleCertificateFileChange}
+                              onChange={(e) => handleDocFileChange(e, certificateFile, setCertificateFile)}
                               className="sr-only"
                             />
 
@@ -1782,15 +1866,13 @@ export function MobileAppAuthScreens({
                                       {certificateFile.name}
                                     </p>
                                     <p className="text-[12px] leading-[17px] text-[var(--text-secondary)] tabular-nums">
-                                      {certificateFile.isSample
-                                        ? tText(AUTH_COPY.sampleCertFileSize, lang)
-                                        : formatAuthFileSize(certificateFile.sizeBytes, lang)}
+                                      {formatAuthFileSize(certificateFile.sizeBytes, lang)}
                                     </p>
                                   </div>
                                 </div>
                                 <button
                                   type="button"
-                                  onClick={handleRemoveCertificate}
+                                  onClick={() => handleRemoveDocFile(certificateFile, setCertificateFile)}
                                   aria-label={tText(AUTH_COPY.removeFile, lang)}
                                   className="auth-focus-ring min-w-[44px] min-h-[44px] rounded-[12px] text-[var(--text-secondary)] hover:text-[var(--danger)] hover:bg-[var(--danger-bg)] flex items-center justify-center shrink-0 transition-colors"
                                 >
@@ -1820,19 +1902,86 @@ export function MobileAppAuthScreens({
                                     </p>
                                   </div>
                                 </button>
-
-                                <button
-                                  type="button"
-                                  onClick={handleAttachSampleCertificate}
-                                  className="auth-focus-ring mt-0.5 min-h-[44px] px-1 inline-flex items-center gap-2 text-[13.5px] leading-[19px] font-semibold text-[var(--brand)] hover:underline underline-offset-4 transition-colors"
-                                >
-                                  <Paperclip className="w-4 h-4 shrink-0" aria-hidden="true" />
-                                  <span>{tText(AUTH_COPY.attachSampleCert, lang)}</span>
-                                </button>
                               </div>
                             )}
 
                             {errorField === 'certificate' && (
+                              <AuthFieldError message={formError} />
+                            )}
+                          </div>
+
+                          {/* Owner National ID Front */}
+                          <div className="w-full">
+                            <AuthFieldLabel
+                              label={
+                                lang === 'ar'
+                                  ? 'البطاقة القومية للمالك (الوجه الأمامي)'
+                                  : 'Owner National ID (Front)'
+                              }
+                              required
+                              lang={lang}
+                            />
+
+                            <input
+                              ref={idFrontInputRef}
+                              type="file"
+                              accept="image/*,.pdf"
+                              onChange={(e) => handleDocFileChange(e, idFrontFile, setIdFrontFile)}
+                              className="sr-only"
+                            />
+
+                            {idFrontFile ? (
+                              <div className="p-3 rounded-[14px] bg-[var(--field)] border border-[var(--brand)]/50 flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="w-11 h-11 rounded-[10px] bg-[var(--success-bg)] border border-[var(--brand)]/30 text-[var(--brand)] flex flex-col items-center justify-center shrink-0">
+                                    <FileText className="w-5 h-5" aria-hidden="true" />
+                                    <span className="text-[9px] font-bold leading-none mt-0.5">
+                                      {idFrontFile.extLabel}
+                                    </span>
+                                  </div>
+                                  <div className="min-w-0 text-start">
+                                    <p className="text-[13.5px] leading-[19px] font-semibold text-[var(--text)] truncate">
+                                      {idFrontFile.name}
+                                    </p>
+                                    <p className="text-[12px] leading-[17px] text-[var(--text-secondary)] tabular-nums">
+                                      {formatAuthFileSize(idFrontFile.sizeBytes, lang)}
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveDocFile(idFrontFile, setIdFrontFile)}
+                                  aria-label={tText(AUTH_COPY.removeFile, lang)}
+                                  className="auth-focus-ring min-w-[44px] min-h-[44px] rounded-[12px] text-[var(--text-secondary)] hover:text-[var(--danger)] hover:bg-[var(--danger-bg)] flex items-center justify-center shrink-0 transition-colors"
+                                >
+                                  <X className="w-5 h-5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => idFrontInputRef.current?.click()}
+                                className={`auth-focus-ring w-full p-3.5 rounded-[14px] border-[1.5px] border-dashed flex items-center gap-3 text-start transition-colors ${
+                                  errorField === 'idFront'
+                                    ? 'bg-[var(--danger-bg)] border-[var(--danger)]'
+                                    : 'bg-[var(--field)] border-[var(--border-strong)] hover:border-[var(--brand)] hover:bg-[var(--field-hover)]'
+                                }`}
+                              >
+                                <div className="w-10 h-10 rounded-[11px] bg-[var(--bg)] border border-[var(--border)] text-[var(--brand)] flex items-center justify-center shrink-0">
+                                  <FileUp className="w-5 h-5" aria-hidden="true" />
+                                </div>
+                                <div className="min-w-0 flex-1 space-y-0.5">
+                                  <p className="text-[13.5px] leading-[19px] font-semibold text-[var(--text)]">
+                                    {lang === 'ar' ? 'ارفع صورة البطاقة القومية (الأمام)' : 'Upload National ID (Front)'}
+                                  </p>
+                                  <p className="text-[12px] leading-[17px] text-[var(--text-secondary)]">
+                                    {tText(AUTH_COPY.uploadCertHelper, lang)}
+                                  </p>
+                                </div>
+                              </button>
+                            )}
+
+                            {errorField === 'idFront' && (
                               <AuthFieldError message={formError} />
                             )}
                           </div>
@@ -2397,41 +2546,38 @@ export function MobileAppAuthScreens({
                   ))}
                 </div>
 
-                {otpError ? (
+                {otpOrigin === 'recovery' && (
+                  <AuthInputField
+                    id="auth-otp-new-password"
+                    label={lang === 'ar' ? 'كلمة المرور الجديدة' : 'New password'}
+                    required
+                    lang={lang}
+                    type="password"
+                    autoComplete="new-password"
+                    value={recoveryNewPassword}
+                    onChange={(next) => {
+                      setRecoveryNewPassword(next);
+                      if (otpError) setOtpError('');
+                    }}
+                    placeholder={
+                      lang === 'ar'
+                        ? 'أدخل كلمة مرور من 8 أحرف على الأقل'
+                        : 'At least 8 characters'
+                    }
+                    leadingIcon={<Lock className="w-[18px] h-[18px]" />}
+                    passwordToggle={{
+                      shown: showRecoveryPassword,
+                      onToggle: () => setShowRecoveryPassword((s) => !s),
+                      showLabel: tText(AUTH_COPY.showPassword, lang),
+                      hideLabel: tText(AUTH_COPY.hidePassword, lang),
+                    }}
+                  />
+                )}
+
+                {otpError && (
                   <div className="p-3.5 rounded-[14px] bg-[var(--danger-bg)] border border-[var(--danger)]/50 text-[13px] leading-[18px] text-[var(--danger)] flex items-start gap-2" role="alert">
                     <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
                     <span>{otpError}</span>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-[13px] leading-[18px] text-[var(--text-secondary)]">
-                    <span>
-                      {tText(AUTH_COPY.otpDemoLabel, lang)}{' '}
-                      <span dir="ltr" className="inline-block font-semibold tabular-nums text-[var(--text)]">
-                        123456
-                      </span>
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOtpDigits(['1', '2', '3', '4', '5', '6']);
-                          setOtpError('');
-                        }}
-                        className="auth-focus-ring min-h-[44px] px-1 font-semibold text-[var(--brand)] hover:underline underline-offset-4"
-                      >
-                        {tText(AUTH_COPY.otpFillDemo, lang)}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOtpDigits(['0', '0', '0', '0', '0', '0']);
-                          setOtpError('');
-                        }}
-                        className="auth-focus-ring min-h-[44px] px-1 font-medium text-[var(--text-secondary)] hover:text-[var(--danger)]"
-                      >
-                        {tText(AUTH_COPY.otpTestError, lang)}
-                      </button>
-                    </div>
                   </div>
                 )}
 
@@ -2441,13 +2587,28 @@ export function MobileAppAuthScreens({
                   </span>
                   <button
                     type="button"
-                    disabled={countdown > 0}
-                    onClick={() => {
-                      setCountdown(45);
-                      pushToast('info', {
-                        ar: 'تمت إعادة إرسال رمز التحقق.',
-                        en: 'Verification code resent.',
-                      });
+                    disabled={countdown > 0 || loadingMode !== null}
+                    onClick={async () => {
+                      const e164Phone = `+249${phoneDigits.replace(/\D/g, '')}`;
+                      try {
+                        if (otpOrigin === 'recovery') {
+                          await api.recoverPassword({ phone: e164Phone, channel: otpChannel });
+                        } else {
+                          await api.verifyOtp({ channel: otpChannel });
+                        }
+                        setCountdown(45);
+                        pushToast('info', {
+                          ar: 'تمت إعادة إرسال رمز التحقق.',
+                          en: 'Verification code resent.',
+                        });
+                      } catch (err: any) {
+                        setOtpError(
+                          err?.message ||
+                            (lang === 'ar'
+                              ? 'تعذر إعادة إرسال رمز التحقق.'
+                              : 'Could not resend verification code.')
+                        );
+                      }
                     }}
                     className="auth-focus-ring min-h-[44px] px-1 font-semibold tabular-nums text-[var(--brand)] disabled:text-[var(--placeholder)]"
                   >
@@ -2461,7 +2622,7 @@ export function MobileAppAuthScreens({
               </div>
 
               <div className="shrink-0 bg-[var(--bg)] border-t border-[var(--border-subtle)] px-4 sm:px-5 pt-3 auth-safe-bottom">
-                <AuthPrimaryButton type="submit">
+                <AuthPrimaryButton type="submit" disabled={loadingMode !== null} loading={loadingMode !== null}>
                   <span>{tText(AUTH_COPY.otpVerifyCta, lang)}</span>
                 </AuthPrimaryButton>
               </div>
@@ -2551,44 +2712,26 @@ export function MobileAppAuthScreens({
                   </button>
                 </div>
 
-                {otpChannel === 'whatsapp' ? (
-                  <AuthPhoneField
-                    id="auth-recovery-phone"
-                    label={tText(AUTH_COPY.registeredWhatsAppLabel, lang)}
-                    lang={lang}
-                    dialCode={dialCode}
-                    onDialCodeChange={handleDialCodeChange}
-                    value={phoneDigits}
-                    onChange={(next) => {
-                      setPhoneDigits(formatPhoneByDialCode(next, dialCode));
-                      clearError();
-                    }}
-                    onClear={() => {
-                      setPhoneDigits('');
-                      clearError();
-                    }}
-                    placeholder={selectedCountry.placeholder}
-                    carrierLabel={carrierLabel}
-                    error={errorField === 'phone' ? formError : undefined}
-                  />
-                ) : (
-                  <AuthInputField
-                    id="auth-recovery-email"
-                    label={tText(AUTH_COPY.registeredEmailLabel, lang)}
-                    lang={lang}
-                    type="email"
-                    dir="ltr"
-                    value={otpEmail}
-                    onChange={(next) => {
-                      setOtpEmail(next);
-                      clearError();
-                    }}
-                    placeholder="name@example.com"
-                    leadingIcon={<Mail className="w-[18px] h-[18px]" />}
-                    helperText={tText(AUTH_COPY.otpEmailNote, lang)}
-                    error={errorField === 'email' ? formError : undefined}
-                  />
-                )}
+                <AuthPhoneField
+                  id="auth-recovery-phone"
+                  label={tText(AUTH_COPY.registeredWhatsAppLabel, lang)}
+                  lang={lang}
+                  dialCode="+249"
+                  onDialCodeChange={() => {}}
+                  value={phoneDigits}
+                  onChange={(next) => {
+                    setPhoneDigits(formatPhoneByDialCode(next, '+249'));
+                    clearError();
+                  }}
+                  onClear={() => {
+                    setPhoneDigits('');
+                    clearError();
+                  }}
+                  placeholder={selectedCountry.placeholder}
+                  carrierLabel={carrierLabel}
+                  helperText={otpChannel === 'email' ? tText(AUTH_COPY.otpEmailNote, lang) : undefined}
+                  error={errorField === 'phone' ? formError : undefined}
+                />
               </div>
 
               <div className="shrink-0 bg-[var(--bg)] border-t border-[var(--border-subtle)] px-4 sm:px-5 pt-3 auth-safe-bottom">

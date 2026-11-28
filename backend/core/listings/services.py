@@ -3,6 +3,7 @@ import hashlib
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
+from django.db.models import Case, Value, When
 from django.utils import timezone
 from core.common.domain import require
 from core.stores.services import member_store
@@ -34,6 +35,7 @@ FIELDS = (
     "warranty_type",
     "is_sealed",
     "has_original_box",
+    "used_checklist",
     "featured",
     "status",
     "moderation",
@@ -253,6 +255,7 @@ def create_listing(actor, data, key):
             "warranty_type",
             "is_sealed",
             "has_original_box",
+            "used_checklist",
             "featured",
             "accepts_trade_in",
             "usd_price",
@@ -351,14 +354,25 @@ def update_listing(actor, listing_id, data, key, operation):
     if replay is not None:
         return replay
     listing = (
-        Listing.objects.select_for_update().filter(store=store, pk=listing_id).first()
+        Listing.objects.select_for_update()
+        .select_related("variant")
+        .filter(store=store, pk=listing_id)
+        .first()
     )
     require(listing is not None, "NOT_FOUND", 404)
-    require(listing.version == data["version"], "STALE_VERSION", 409)
+    if operation != "edit" or "version" in data:
+        require("version" in data and listing.version == data["version"], "STALE_VERSION", 409)
     allowed = {
         "price": {"price"},
         "stock": {"quantity", "used_availability"},
         "edit": {
+            "price",
+            "storage_gb",
+            "ram_gb",
+            "color",
+            "quantity",
+            "used_availability",
+            "is_sealed",
             "grade",
             "battery_health",
             "defects",
@@ -368,6 +382,7 @@ def update_listing(actor, listing_id, data, key, operation):
             "warranty_days",
             "warranty_type",
             "has_original_box",
+            "used_checklist",
             "featured",
             "accepts_trade_in",
             "usd_price",
@@ -377,11 +392,21 @@ def update_listing(actor, listing_id, data, key, operation):
     require(
         operation in allowed
         and set(data) - {"version"} <= allowed[operation]
-        and len(data) > 1,
+        and len(set(data) - {"version"}) >= 1,
         "INVALID_MUTATION",
     )
-    merged = {**listing_data(listing), **data}
-    invariant(merged)
+    invariant_input = {
+        **listing_data(listing),
+        **{
+            k: v
+            for k, v in data.items()
+            if k not in {"storage_gb", "ram_gb", "color", "used_checklist"}
+        },
+    }
+    if operation == "edit" and listing.condition == "new":
+        # New stock invariant requires is_sealed=True in DB constraint.
+        invariant_input["is_sealed"] = True
+    invariant(invariant_input)
     if "media" in data:
         ids = data["media"]
         assets = list(
@@ -416,13 +441,28 @@ def update_listing(actor, listing_id, data, key, operation):
         )
         if listing.status != "removed":
             listing.status, listing.moderation = "processing", "pending"
+    if any(k in data for k in ("storage_gb", "ram_gb", "color")):
+        cur_var = listing.variant
+        new_storage = data.get("storage_gb", cur_var.storage_gb)
+        new_ram = data.get("ram_gb", cur_var.ram_gb)
+        new_color = (data.get("color") or cur_var.color).strip()[:80] or cur_var.color
+        resolved_variant, _ = Variant.objects.get_or_create(
+            model_id=cur_var.model_id,
+            storage_gb=new_storage,
+            ram_gb=new_ram,
+            color=new_color,
+        )
+        listing.variant = resolved_variant
     old_price = listing.price
     for name, value in data.items():
-        if name not in ["version", "media"]:
+        if name not in ["version", "media", "storage_gb", "ram_gb", "color"]:
+            if name == "is_sealed" and listing.condition == "new":
+                continue
             setattr(listing, name, value)
-    if operation == "price" and listing.price != old_price:
+    price_changed = (operation == "price" or "price" in data) and listing.price != old_price
+    if price_changed:
         listing.previous_price = old_price
-    if operation == "stock" and listing.condition == "used":
+    if (operation == "stock" or "used_availability" in data or "quantity" in data) and listing.condition == "used":
         if "used_availability" in data:
             listing.used_availability = data["used_availability"]
             if data["used_availability"] in ("reserved", "sold"):
@@ -437,8 +477,12 @@ def update_listing(actor, listing_id, data, key, operation):
     listing.save()
     publish_ready(store)
     listing.refresh_from_db()
-    if operation == "price":
+    if price_changed or operation == "price":
         PriceHistory.objects.create(listing=listing, actor=actor, price=listing.price)
+    if price_changed and listing.price < old_price:
+        from core.operations.services import notify_price_drop
+
+        notify_price_drop(listing, old_price, listing.price)
     record(actor, f"listing.{operation}", listing.pk, version=listing.version)
     return remember(
         actor,
@@ -448,6 +492,40 @@ def update_listing(actor, listing_id, data, key, operation):
         data,
         listing_data(listing, include_merchant_meta=True),
     )
+
+
+@transaction.atomic
+def set_listing_status(actor, listing_id, data):
+    """Toggle a verified merchant's listing between published and paused."""
+    store = member_store(actor, verified=True, lock=True)
+    listing = (
+        Listing.objects.select_for_update()
+        .select_related("variant")
+        .filter(store=store, pk=listing_id)
+        .first()
+    )
+    require(listing is not None, "NOT_FOUND", 404)
+    if "version" in data:
+        require(listing.version == data["version"], "STALE_VERSION", 409)
+    require(listing.status != "removed", "REMOVED_LISTING", 409)
+    require(listing.moderation != "flagged", "FLAGGED_LISTING", 409)
+    target = data["status"]
+    if target == "published":
+        require(ready(listing), "NOT_READY", 409)
+        listing.status = "published"
+        if listing.published_at is None:
+            listing.published_at = timezone.now()
+    else:
+        require(
+            listing.status in ("published", "paused"),
+            "INVALID_STATUS_TRANSITION",
+            409,
+        )
+        listing.status = "paused"
+    listing.version += 1
+    listing.save(update_fields=["status", "published_at", "version"])
+    record(actor, f"listing.status.{listing.status}", listing.pk, version=listing.version)
+    return listing_data(listing, include_merchant_meta=True)
 
 
 def merchant_list(actor, query):
@@ -479,7 +557,10 @@ def moderation_queue(actor, query):
         Listing.objects.select_related("variant__model__brand")
         .prefetch_related("media_links__asset")
         .filter(status="published", moderation__in=["pending", "flagged"])
-        .order_by("pk")[query["offset"] : query["offset"] + query["limit"]]
+        .annotate(
+            _mod_priority=Case(When(moderation="flagged", then=Value(0)), default=Value(1))
+        )
+        .order_by("_mod_priority", "-pk")[query["offset"] : query["offset"] + query["limit"]]
     )
     return [listing_data(l, include_merchant_meta=True) for l in qs]
 
@@ -546,8 +627,73 @@ def archive_listing(actor, listing_id):
 
 
 @transaction.atomic
+def duplicate_listing(actor, listing_id):
+    import uuid
+    from datetime import timedelta
+
+    store = member_store(actor, verified=True, lock=True)
+    source = (
+        Listing.objects.prefetch_related("media_links__asset")
+        .filter(store=store, pk=listing_id)
+        .exclude(status="removed")
+        .first()
+    )
+    require(source is not None, "NOT_FOUND", 404)
+    cloned = Listing.objects.create(
+        store=store,
+        variant=source.variant,
+        condition=source.condition,
+        price=source.price,
+        previous_price=None,
+        usd_price=source.usd_price,
+        accepts_trade_in=source.accepts_trade_in,
+        quantity=1 if source.condition == "used" else max(1, source.quantity),
+        grade=source.grade,
+        battery_health=source.battery_health,
+        defects=source.defects,
+        replaced_parts=source.replaced_parts,
+        used_unit_code="",
+        used_availability="available" if source.condition == "used" else "",
+        warranty_months=source.warranty_months,
+        warranty_days=source.warranty_days,
+        warranty_type=source.warranty_type,
+        is_sealed=source.is_sealed,
+        has_original_box=source.has_original_box,
+        used_checklist=source.used_checklist,
+        featured=False,
+        status=source.status,
+        moderation="approved" if source.status == "published" else "pending",
+        published_at=timezone.now() if source.status == "published" else None,
+    )
+    if cloned.condition == "used":
+        cloned.used_unit_code = f"SD-{store.pk}{cloned.pk}"
+        cloned.save(update_fields=["used_unit_code"])
+    for link in ordered_media(source):
+        src_asset = link.asset
+        cloned_asset = MediaAsset.objects.create(
+            id=uuid.uuid4(),
+            store=store,
+            purpose=src_asset.purpose,
+            kind=src_asset.kind,
+            content_type=src_asset.content_type,
+            size=src_asset.size,
+            sha256=src_asset.sha256,
+            upload_key=f"dup/{uuid.uuid4()}",
+            processed_key=src_asset.processed_key,
+            thumbnail_key=src_asset.thumbnail_key,
+            status=src_asset.status,
+            expires_at=timezone.now() + timedelta(days=1),
+        )
+        ListingMedia.objects.create(listing=cloned, asset=cloned_asset, position=link.position)
+    PriceHistory.objects.create(listing=cloned, actor=actor, price=cloned.price)
+    record(actor, "listing.duplicated", cloned.pk, source_id=source.pk)
+    return listing_data(cloned, include_merchant_meta=True)
+
+
+@transaction.atomic
 def bulk_update_prices(actor, data):
     from decimal import ROUND_HALF_UP
+    from core.operations.services import notify_price_drop
 
     store = member_store(actor, verified=True, lock=True)
     qs = Listing.objects.select_for_update().filter(
@@ -572,16 +718,42 @@ def bulk_update_prices(actor, data):
         if rounded <= 0:
             rounded = round_to
         if rounded != listing.price:
-            listing.previous_price = listing.price
+            old_price = listing.price
+            listing.previous_price = old_price
             listing.price = rounded
             listing.version += 1
             listing.save(update_fields=["previous_price", "price", "version"])
             history_rows.append(PriceHistory(listing=listing, actor=actor, price=rounded))
+            if rounded < old_price:
+                notify_price_drop(listing, old_price, rounded)
             updated += 1
     if history_rows:
         PriceHistory.objects.bulk_create(history_rows)
     record(actor, "listing.bulk_price", store.pk, mode=mode, updated=updated)
     return {"updated_count": updated}
+
+
+def _apply_bulk_import_row(existing, row, actor, history_rows):
+    """Apply imported price, stock, USD reference, and trade-in updates to a locked listing."""
+    if row.get("price") is not None:
+        new_price = Decimal(str(row["price"]))
+        if new_price != existing.price:
+            existing.previous_price = existing.price
+            existing.price = new_price
+            history_rows.append(PriceHistory(listing=existing, actor=actor, price=new_price))
+    if row.get("quantity") is not None:
+        qty = row["quantity"]
+        if existing.condition == "new":
+            existing.quantity = qty
+        else:
+            existing.quantity = min(1, qty)
+            existing.used_availability = "available" if existing.quantity > 0 else "sold"
+    if "usd_price" in row:
+        existing.usd_price = row["usd_price"]
+    if "accepts_trade_in" in row:
+        existing.accepts_trade_in = bool(row["accepts_trade_in"])
+    existing.version += 1
+    existing.save()
 
 
 @transaction.atomic
@@ -594,6 +766,22 @@ def bulk_import_listings(actor, data):
     errors = []
     history_rows = []
     for idx, row in enumerate(data["rows"], start=1):
+        listing_id = row.get("listing_id")
+        if listing_id is not None:
+            existing = (
+                Listing.objects.select_for_update()
+                .filter(pk=listing_id, store=store)
+                .exclude(status="removed")
+                .first()
+            )
+            if not existing:
+                skipped += 1
+                errors.append(f"Row {idx}: Listing #{listing_id} not found for this store.")
+                continue
+            _apply_bulk_import_row(existing, row, actor, history_rows)
+            updated += 1
+            continue
+
         brand_name = row["brand"].strip()
         model_name = row["model"].strip()
         brand = Brand.objects.filter(name__iexact=brand_name).first()
@@ -624,21 +812,7 @@ def bulk_import_listings(actor, data):
             .first()
         )
         if existing:
-            new_price = Decimal(str(row["price"]))
-            if new_price != existing.price:
-                existing.previous_price = existing.price
-                existing.price = new_price
-                history_rows.append(PriceHistory(listing=existing, actor=actor, price=new_price))
-            if row["condition"] == "new":
-                existing.quantity = row["quantity"]
-            else:
-                existing.quantity = min(1, row["quantity"])
-                existing.used_availability = "available" if existing.quantity > 0 else "sold"
-            if row.get("usd_price") is not None:
-                existing.usd_price = row["usd_price"]
-            existing.accepts_trade_in = bool(row.get("accepts_trade_in", existing.accepts_trade_in))
-            existing.version += 1
-            existing.save()
+            _apply_bulk_import_row(existing, row, actor, history_rows)
             updated += 1
         else:
             skipped += 1
@@ -648,4 +822,10 @@ def bulk_import_listings(actor, data):
     if history_rows:
         PriceHistory.objects.bulk_create(history_rows)
     record(actor, "listing.bulk_import", store.pk, updated=updated, skipped=skipped)
-    return {"updated": updated, "skipped": skipped, "errors": errors[:25]}
+    return {
+        "updated": updated,
+        "skipped": skipped,
+        "updated_count": updated,
+        "skipped_count": skipped,
+        "errors": errors[:25],
+    }

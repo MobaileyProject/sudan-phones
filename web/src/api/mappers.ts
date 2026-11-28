@@ -90,6 +90,7 @@ export function mapVerificationStatus(status: string): VerificationStatus {
 export function mapPublicationStatus(status: string, moderation: string): PublicationStatus {
   if (status === 'removed') return 'removed_suspended';
   if (moderation === 'flagged') return 'flagged';
+  if (status === 'paused') return 'paused';
   if (status === 'processing') return 'processing';
   if (status === 'published') return 'published';
   return 'draft';
@@ -150,6 +151,8 @@ export function mapListing(raw: any): Listing {
     seal: { ar: 'ختم المصنع والعلبة', en: 'Factory Seal & Box' },
     catalog: { ar: 'صورة الجهاز', en: 'Device Photo' },
     general: { ar: 'صورة إضافية', en: 'Additional Photo' },
+    defect: { ar: 'ملاحظات الحالة', en: 'Condition Close-up' },
+    other: { ar: 'صورة أخرى', en: 'Other Photo' },
   };
   const photos: ListingPhoto[] = (raw.media || raw.media_status || []).map((m: any, idx: number) => ({
     id: String(m.id || idx),
@@ -278,7 +281,7 @@ export function mapDualApproval(raw: any): DualApprovalRequest {
     reason: bi(raw.reason),
     requesterId: String(raw.requested_by_id),
     requesterName: bi(raw.requested_by_name || `Admin #${raw.requested_by_id}`),
-    status: raw.status || 'pending',
+    status: raw.status === 'pending' ? 'awaiting_second_approval' : raw.status || 'awaiting_second_approval',
     createdAt: raw.created_at || '',
     secondApproverId: raw.decided_by_id ? String(raw.decided_by_id) : undefined,
     secondApproverName: raw.decided_by_name ? bi(raw.decided_by_name) : undefined,

@@ -21,7 +21,7 @@ class ApiResponseMiddleware:
             response['Access-Control-Allow-Origin'] = origin
             response['Access-Control-Allow-Credentials'] = 'true'
             response['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
-            response['Access-Control-Allow-Headers'] = 'Content-Type, X-CSRFToken, X-Session-Token, Idempotency-Key, Accept-Language'
+            response['Access-Control-Allow-Headers'] = 'Content-Type, X-CSRFToken, X-Session-Token, X-Chat-Visitor-Id, Idempotency-Key, Accept-Language'
             response['Access-Control-Expose-Headers'] = 'X-CSRFToken, X-Session-Token, X-Request-ID, Content-Language'
             vary = response.get('Vary', '')
             if 'Origin' not in vary:

@@ -36,6 +36,7 @@ export type PublicationStatus =
   | 'processing'
   | 'needs_correction'
   | 'published'
+  | 'paused'
   | 'flagged'
   | 'removed_suspended';
 
@@ -177,7 +178,7 @@ export interface ListingPhoto {
   id: string;
   url: string;
   caption: BilingualText;
-  kind?: 'front' | 'back' | 'screen_on' | 'seal' | 'general';
+  kind?: 'front' | 'back' | 'screen_on' | 'seal' | 'general' | 'defect' | 'other';
 }
 
 export interface PhoneSpecifications {

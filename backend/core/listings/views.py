@@ -8,6 +8,7 @@ from .serializers import (
     CreateInput,
     PriceInput,
     StockInput,
+    StatusInput,
     EditInput,
     ModerateInput,
     BulkPriceInput,
@@ -77,6 +78,15 @@ class StatusView(DomainView):
             ListingResponse({"data": services.merchant_status(request.user, id)}).data
         )
 
+    @contract("API-115", "P4", request=StatusInput, response=ListingResponse)
+    def patch(self, request, id):
+        payload = self.validated(StatusInput, request.data)
+        return Response(
+            ListingResponse(
+                {"data": services.set_listing_status(request.user, id, payload)}
+            ).data
+        )
+
 
 class EditView(DomainView):
     @contract(
@@ -101,6 +111,15 @@ class EditView(DomainView):
     def delete(self, request, id):
         return Response(
             ArchiveResponse({"data": services.archive_listing(request.user, id)}).data
+        )
+
+
+class DuplicateView(DomainView):
+    @contract("API-087", "P4", response=ListingResponse)
+    def post(self, request, id):
+        return Response(
+            ListingResponse({"data": services.duplicate_listing(request.user, id)}).data,
+            status=201,
         )
 
 

@@ -26,4 +26,10 @@ from core.operations.models import (  # noqa: F401,E402
     CustomerReport,
     Rating,
     Favorite,
+    PriceAlert,
+    CustomerNotification,
+    StoreChatThread,
+    StoreChatMessage,
+    SponsoredAd,
+    SponsoredAdDailyStat,
 )

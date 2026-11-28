@@ -35,7 +35,7 @@ import { LtrValue } from '../../components/DesignSystem';
  * C-00: Minimalist Claymorphism Startup / Loading / Failure + Retry Overlay
  */
 export function CustomerStartupOverlay() {
-  const { lang, setLang, sim, updateSim } = usePrototype();
+  const { lang, setLang, sim, updateSim, reconnectAndRefresh } = usePrototype();
 
   if (sim.startupMode === 'ready') return null;
 
@@ -94,9 +94,10 @@ export function CustomerStartupOverlay() {
             </div>
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 updateSim({ startupMode: 'loading' });
-                window.setTimeout(() => updateSim({ startupMode: 'ready' }), 700);
+                await reconnectAndRefresh();
+                updateSim({ startupMode: 'ready' });
               }}
               className="clay-primary-btn clay-focus-ring w-full h-12 rounded-full font-bold text-sm flex items-center justify-center gap-2"
             >
@@ -159,20 +160,6 @@ export function CitySelectorSheet({
       ar: `تم ضبط المدينة على: ${formatCity(city, 'ar')}`,
       en: `City set to: ${formatCity(city, 'en')}`,
     });
-  };
-
-  const simulateDetection = (outcome: 'port_sudan' | 'denied' | 'outside') => {
-    setLocStep('detecting');
-    window.setTimeout(() => {
-      if (outcome === 'port_sudan') {
-        setDetectedCity('port_sudan');
-        setLocStep('detected');
-      } else if (outcome === 'denied') {
-        setLocStep('denied');
-      } else {
-        setLocStep('outside');
-      }
-    }, 650);
   };
 
   return (
@@ -791,9 +778,9 @@ export function ContactSellerSheet({
     if (channel === 'whatsapp') {
       const baseWa = contact?.whatsapp_url?.split('?')[0] || `https://wa.me/${resolvedWhatsapp}`;
       const waUrl = `${baseWa}?text=${encodeURIComponent(prefilledInquiry)}`;
-      const opened = window.open(waUrl, '_blank', 'noopener,noreferrer');
-      if (!opened) {
-        window.location.href = waUrl;
+      const opened = window.open(waUrl, '_blank');
+      if (opened) {
+        opened.opener = null;
       }
     } else if (channel === 'call') {
       const telUrl = contact?.phone_url || `tel:${resolvedPhone}`;

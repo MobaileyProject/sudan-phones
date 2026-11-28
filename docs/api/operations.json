@@ -1,10 +1,74 @@
 [
   {
+    "api_id": "API-111",
+    "method": "GET",
+    "path": "/api/v1/admin/ads",
+    "phase": "P6",
+    "operation_id": "api_111",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-112",
+    "method": "POST",
+    "path": "/api/v1/admin/ads",
+    "phase": "P6",
+    "operation_id": "api_112",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-114",
+    "method": "DELETE",
+    "path": "/api/v1/admin/ads/{id}",
+    "phase": "P6",
+    "operation_id": "api_114",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-113",
+    "method": "PATCH",
+    "path": "/api/v1/admin/ads/{id}",
+    "phase": "P6",
+    "operation_id": "api_113",
+    "authentication": "required"
+  },
+  {
     "api_id": "API-006",
     "method": "GET",
     "path": "/api/v1/admin/audit-events",
     "phase": "P6",
     "operation_id": "api_006",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-088",
+    "method": "POST",
+    "path": "/api/v1/admin/catalog/brands",
+    "phase": "P6",
+    "operation_id": "api_088",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-089",
+    "method": "POST",
+    "path": "/api/v1/admin/catalog/models",
+    "phase": "P6",
+    "operation_id": "api_089",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-091",
+    "method": "DELETE",
+    "path": "/api/v1/admin/catalog/models/{id}",
+    "phase": "P6",
+    "operation_id": "api_091",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-090",
+    "method": "PATCH",
+    "path": "/api/v1/admin/catalog/models/{id}",
+    "phase": "P6",
+    "operation_id": "api_090",
     "authentication": "required"
   },
   {
@@ -134,6 +198,30 @@
     "phase": "P3",
     "operation_id": "api_013",
     "authentication": "required"
+  },
+  {
+    "api_id": "API-106",
+    "method": "GET",
+    "path": "/api/v1/ads/active",
+    "phase": "P5",
+    "operation_id": "api_106",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-108",
+    "method": "POST",
+    "path": "/api/v1/ads/{id}/click",
+    "phase": "P5",
+    "operation_id": "api_108",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-107",
+    "method": "POST",
+    "path": "/api/v1/ads/{id}/impression",
+    "phase": "P5",
+    "operation_id": "api_107",
+    "authentication": "public"
   },
   {
     "api_id": "API-066",
@@ -288,6 +376,22 @@
     "authentication": "public"
   },
   {
+    "api_id": "API-093",
+    "method": "GET",
+    "path": "/api/v1/listings/{id}/ratings",
+    "phase": "P5",
+    "operation_id": "api_093",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-094",
+    "method": "POST",
+    "path": "/api/v1/listings/{id}/ratings",
+    "phase": "P5",
+    "operation_id": "api_094",
+    "authentication": "public"
+  },
+  {
     "api_id": "API-025",
     "method": "GET",
     "path": "/api/v1/listings/{id}/related",
@@ -312,6 +416,38 @@
     "authentication": "required"
   },
   {
+    "api_id": "API-095",
+    "method": "GET",
+    "path": "/api/v1/me/alerts",
+    "phase": "P5",
+    "operation_id": "api_095",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-096",
+    "method": "POST",
+    "path": "/api/v1/me/alerts",
+    "phase": "P5",
+    "operation_id": "api_096",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-097",
+    "method": "DELETE",
+    "path": "/api/v1/me/alerts/{id}",
+    "phase": "P5",
+    "operation_id": "api_097",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-100",
+    "method": "GET",
+    "path": "/api/v1/me/chats",
+    "phase": "P5",
+    "operation_id": "api_100",
+    "authentication": "public"
+  },
+  {
     "api_id": "API-084",
     "method": "GET",
     "path": "/api/v1/me/favorites",
@@ -334,6 +470,22 @@
     "phase": "P5",
     "operation_id": "api_085",
     "authentication": "required"
+  },
+  {
+    "api_id": "API-098",
+    "method": "GET",
+    "path": "/api/v1/me/notifications",
+    "phase": "P5",
+    "operation_id": "api_098",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-099",
+    "method": "POST",
+    "path": "/api/v1/me/notifications/read",
+    "phase": "P5",
+    "operation_id": "api_099",
+    "authentication": "public"
   },
   {
     "api_id": "API-050",
@@ -400,6 +552,14 @@
     "authentication": "public"
   },
   {
+    "api_id": "API-092",
+    "method": "GET",
+    "path": "/api/v1/ratings/products",
+    "phase": "P5",
+    "operation_id": "api_092",
+    "authentication": "public"
+  },
+  {
     "api_id": "API-076",
     "method": "POST",
     "path": "/api/v1/reports",
@@ -429,6 +589,46 @@
     "path": "/api/v1/stores/me",
     "phase": "P3",
     "operation_id": "api_059",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-109",
+    "method": "GET",
+    "path": "/api/v1/stores/me/ads",
+    "phase": "P5",
+    "operation_id": "api_109",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-110",
+    "method": "POST",
+    "path": "/api/v1/stores/me/ads/request",
+    "phase": "P5",
+    "operation_id": "api_110",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-103",
+    "method": "GET",
+    "path": "/api/v1/stores/me/chats",
+    "phase": "P5",
+    "operation_id": "api_103",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-105",
+    "method": "POST",
+    "path": "/api/v1/stores/me/chats/{thread_key}/read",
+    "phase": "P5",
+    "operation_id": "api_105",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-104",
+    "method": "POST",
+    "path": "/api/v1/stores/me/chats/{thread_key}/reply",
+    "phase": "P5",
+    "operation_id": "api_104",
     "authentication": "required"
   },
   {
@@ -488,6 +688,14 @@
     "authentication": "required"
   },
   {
+    "api_id": "API-087",
+    "method": "POST",
+    "path": "/api/v1/stores/me/listings/{id}/duplicate",
+    "phase": "P4",
+    "operation_id": "api_087",
+    "authentication": "required"
+  },
+  {
     "api_id": "API-039",
     "method": "PATCH",
     "path": "/api/v1/stores/me/listings/{id}/price",
@@ -501,6 +709,14 @@
     "path": "/api/v1/stores/me/listings/{id}/status",
     "phase": "P4",
     "operation_id": "api_034",
+    "authentication": "required"
+  },
+  {
+    "api_id": "API-115",
+    "method": "PATCH",
+    "path": "/api/v1/stores/me/listings/{id}/status",
+    "phase": "P4",
+    "operation_id": "api_115",
     "authentication": "required"
   },
   {
@@ -589,6 +805,22 @@
     "path": "/api/v1/stores/{id}/listings",
     "phase": "P5",
     "operation_id": "api_037",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-101",
+    "method": "GET",
+    "path": "/api/v1/stores/{id}/messages",
+    "phase": "P5",
+    "operation_id": "api_101",
+    "authentication": "public"
+  },
+  {
+    "api_id": "API-102",
+    "method": "POST",
+    "path": "/api/v1/stores/{id}/messages",
+    "phase": "P5",
+    "operation_id": "api_102",
     "authentication": "public"
   },
   {

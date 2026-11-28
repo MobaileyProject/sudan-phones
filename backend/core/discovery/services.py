@@ -90,11 +90,16 @@ def search(query, store_id=None, variant_id=None, related_id=None, count_search=
         "min_price": "price__gte",
         "max_price": "price__lte",
         "storage_gb": "variant__storage_gb",
+        "ram_gb": "variant__ram_gb",
         "accepts_trade_in": "accepts_trade_in",
     }
     for key, field in filters.items():
         if key in query:
             listings = listings.filter(**{field: query[key]})
+    if query.get("has_discount"):
+        from django.db.models import F as DbF
+
+        listings = listings.filter(previous_price__isnull=False, previous_price__gt=DbF("price"))
     if "brand" in query:
         from django.db.models import Q
 

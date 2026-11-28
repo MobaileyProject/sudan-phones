@@ -129,6 +129,7 @@ interface PrototypeContextValue {
   isLoadingLive: boolean;
   loginWithBackend: (payload: { phone?: string; email?: string; password: string }) => Promise<ApiSession>;
   loginWithGoogle: (idToken: string) => Promise<ApiSession>;
+  hydrateSession: () => Promise<void>;
   logoutSession: () => Promise<void>;
   updateMeProfile: (payload: { name?: string; preferred_city?: string; preferred_locale?: 'ar' | 'en' }) => Promise<ApiMe>;
   refreshPublicData: () => Promise<void>;
@@ -191,6 +192,7 @@ interface PrototypeContextValue {
   favoriteIds: string[];
   toggleFavorite: (listingId: string) => void;
   archiveListing: (listingId: string) => Promise<void>;
+  toggleListingStatus: (listingId: string, nextStatus: 'paused' | 'published') => Promise<void>;
   deleteAdminRole: (roleId: string) => Promise<void>;
 
   activeMerchantStoreId: string;
@@ -300,6 +302,10 @@ function detectInitialPortal(): PortalMode {
 export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLang] = useState<Language>('ar');
   useEffect(() => {
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = lang;
+  }, [lang]);
+  useEffect(() => {
     document.documentElement.classList.remove('dark');
     delete document.documentElement.dataset.theme;
     try {
@@ -328,14 +334,7 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<ApiMe | null>(() => initialCachedAuth?.me ?? null);
   const [isLoadingLive, setIsLoadingLive] = useState<boolean>(true);
 
-  const [brands, setBrands] = useState<ApiBrand[]>(() => {
-    try {
-      const raw = window.localStorage.getItem('sp_cached_brands');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [brands, setBrands] = useState<ApiBrand[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [merchantStore, setMerchantStore] = useState<Store>(FALLBACK_STORE);
@@ -343,20 +342,13 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
   const [adminVerifications, setAdminVerifications] = useState<any[]>([]);
   const [adminOverview, setAdminOverview] = useState<PrototypeContextValue['adminOverview']>(null);
   const [adminRoles, setAdminRoles] = useState<AdminRole[]>([FOUNDER_ROLE]);
-  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([FALLBACK_ADMIN]);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [dualApprovals, setDualApprovals] = useState<DualApprovalRequest[]>([]);
   const [sponsoredAds, setSponsoredAds] = useState<SponsoredAd[]>([]);
   const [activeOpenAds, setActiveOpenAds] = useState<SponsoredAd[]>([]);
   const [merchantSponsoredAds, setMerchantSponsoredAds] = useState<SponsoredAd[]>([]);
-  const [favoriteIds, setFavoriteIds] = useState<string[]>(() => {
-    try {
-      const raw = window.localStorage.getItem('sp_favorites_v1');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [reviews, setReviews] = useState<RatingReview[]>([]);
   const [customerReports, setCustomerReports] = useState<CustomerReport[]>([]);
 
@@ -432,25 +424,50 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
 
   const refreshPublicData = useCallback(async () => {
     try {
-      const [listingsRes, storesRes, brandsRes, adsRes, productRatingsRes] = await Promise.all([
-        api.searchListings({ limit: 100 }),
-        api.getFeaturedStores(),
+      const fetchAllPages = async <T,>(
+        fetcher: (offset: number, limit: number) => Promise<{ data?: T[] }>
+      ): Promise<T[]> => {
+        const limit = 100;
+        const collected: T[] = [];
+        for (let page = 0; page < 20; page++) {
+          const res = await fetcher(page * limit, limit);
+          const batch = res.data || [];
+          collected.push(...batch);
+          if (batch.length < limit) break;
+        }
+        return collected;
+      };
+
+      const [rawListings, rawStores, brandsRes, adsRes, productRatingsRes] = await Promise.all([
+        fetchAllPages((offset, limit) => api.searchListings({ limit, offset })),
+        fetchAllPages((offset, limit) => api.getFeaturedStores({ limit, offset })),
         api.getBrands(),
         api.getActiveAds().catch(() => ({ data: [] })),
         api.getAllProductRatings().catch(() => ({ data: [] })),
       ]);
-      const mappedListings = (listingsRes.data || []).map(mapListing);
-      const mappedStores = (storesRes.data || []).map((s: any) => mapStore(s));
+      const mappedListings = rawListings.map(mapListing);
+      const mappedStores = rawStores.map((s: any) => mapStore(s));
       const loadedBrands = brandsRes.data || [];
-      setListings(mappedListings);
-      setStores(mappedStores);
+      setListings((prev) => {
+        const byId = new Map(mappedListings.map((l) => [l.id, l]));
+        for (const item of prev) {
+          if (!byId.has(item.id) && item.publicationStatus === 'flagged') {
+            byId.set(item.id, item);
+          }
+        }
+        return Array.from(byId.values());
+      });
+      setStores((prev) => {
+        const byId = new Map(mappedStores.map((s) => [s.id, s]));
+        for (const st of prev) {
+          if (!byId.has(st.id) && st.verificationStatus !== 'verified') {
+            byId.set(st.id, st);
+          }
+        }
+        return Array.from(byId.values());
+      });
       setBrands(loadedBrands);
       setActiveOpenAds((adsRes.data || []).map(mapSponsoredAd));
-      try {
-        window.localStorage.setItem('sp_cached_brands', JSON.stringify(loadedBrands));
-      } catch {
-        // ignore storage quota
-      }
 
       // Load live ratings for stores and all individual products (aggregated per model in UI)
       const loadedReviews: RatingReview[] = [];
@@ -495,18 +512,11 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       );
       setReviews(loadedReviews);
       setCachedAtLabel(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      try {
-        window.localStorage.setItem('sp_cached_listings', JSON.stringify(mappedListings));
-      } catch {
-        // ignore storage quota
-      }
     } catch {
-      try {
-        const cached = window.localStorage.getItem('sp_cached_listings');
-        if (cached) setListings(JSON.parse(cached));
-      } catch {
-        // ignore
-      }
+      setListings([]);
+      setStores([]);
+      setBrands([]);
+      setActiveOpenAds([]);
     }
   }, []);
 
@@ -520,18 +530,20 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       ]);
       let dailyViews: { day: BilingualText; views: number; contacts: number }[] = [];
       let dashStats = { views: 0, contact_leads: 0 };
-      try {
-        const dash = await api.getMyDashboard();
-        if (dash.data) {
-          dailyViews = (dash.data.daily_views || []).map((d: any) => ({
-            day: bi(String(d.day || '').slice(5)),
-            views: Number(d.count || 0),
-            contacts: 0,
-          }));
-          dashStats = { views: dash.data.views || 0, contact_leads: dash.data.contact_leads || 0 };
+      if (storeRes.data?.status === 'verified') {
+        try {
+          const dash = await api.getMyDashboard();
+          if (dash.data) {
+            dailyViews = (dash.data.daily_views || []).map((d: any) => ({
+              day: bi(String(d.day || '').slice(5)),
+              views: Number(d.count || 0),
+              contacts: 0,
+            }));
+            dashStats = { views: dash.data.views || 0, contact_leads: dash.data.contact_leads || 0 };
+          }
+        } catch {
+          // ignore transient dashboard errors
         }
-      } catch {
-        // unverified store won't have dashboard yet
       }
       const staffList: StoreStaffMember[] = (staffRes.data || []).map((m: any) => ({
         id: String(m.id),
@@ -647,13 +659,8 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         api
           .getFavorites()
           .then((favRes) => {
-            const ids = (favRes.data || []).map((l: any) => String(l.id));
+            const ids = (favRes.data || []).map((l: any) => String(typeof l === 'object' ? l.id : l));
             setFavoriteIds(ids);
-            try {
-              window.localStorage.setItem('sp_favorites_v1', JSON.stringify(ids));
-            } catch {
-              // ignore
-            }
           })
           .catch(() => {});
         if (sess.merchant || sess.role === 'merchant') {
@@ -670,6 +677,12 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       // offline or unreachable — preserve cached session/me so user isn't kicked out
     } finally {
       await refreshPublicData();
+      try {
+        const s = await api.getSession();
+        if (s.role === 'admin') await refreshAdminData();
+      } catch {
+        // ignore
+      }
       setIsLoadingLive(false);
     }
   }, [refreshPublicData, refreshMerchantData, refreshAdminData]);
@@ -702,6 +715,13 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         setMe(null);
       }
       setCachedAuth({ session: sess, me: fetchedMe });
+      api
+        .getFavorites()
+        .then((favRes) => {
+          const ids = (favRes.data || []).map((l: any) => String(typeof l === 'object' ? l.id : l));
+          setFavoriteIds(ids);
+        })
+        .catch(() => {});
       if (sess.merchant || sess.role === 'merchant') await refreshMerchantData();
       if (sess.role === 'admin') await refreshAdminData();
       return sess;
@@ -735,6 +755,17 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       email_verified: false,
     });
     setMe(null);
+    setFavoriteIds([]);
+    setMerchantStore(FALLBACK_STORE);
+    setMerchantListings([]);
+    setMerchantSponsoredAds([]);
+    setAdminOverview(null);
+    setAdminVerifications([]);
+    setAdminRoles([FOUNDER_ROLE]);
+    setAdminUsers([]);
+    setAuditLogs([]);
+    setDualApprovals([]);
+    setSponsoredAds([]);
   }, []);
 
   const updateMeProfile = useCallback(
@@ -1007,11 +1038,6 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       const exists = favoriteIds.includes(listingId);
       const next = exists ? favoriteIds.filter((id) => id !== listingId) : [listingId, ...favoriteIds];
       setFavoriteIds(next);
-      try {
-        window.localStorage.setItem('sp_favorites_v1', JSON.stringify(next));
-      } catch {
-        // ignore
-      }
       if (session.authenticated) {
         const req = exists ? api.removeFavorite(listingId) : api.addFavorite(listingId);
         req.catch(() => {});
@@ -1031,6 +1057,30 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       pushToast('info', { ar: 'تم أرشفة/إزالة الإعلان بنجاح.', en: 'Listing archived successfully.' });
     },
     [refreshMerchantData, refreshPublicData, pushToast]
+  );
+
+  const toggleListingStatus = useCallback(
+    async (listingId: string, nextStatus: 'paused' | 'published') => {
+      const current = allListings.find((l) => l.id === listingId) as any;
+      const res = await api.updateListingStatus(listingId, {
+        status: nextStatus,
+        ...(current?._version ? { version: current._version } : {}),
+      });
+      if (res?.data) {
+        const updatedMapped = mapListing(res.data);
+        setListings((prev) =>
+          prev.some((l) => l.id === updatedMapped.id)
+            ? prev.map((l) => (l.id === updatedMapped.id ? updatedMapped : l))
+            : [updatedMapped, ...prev]
+        );
+      }
+      await Promise.all([refreshMerchantData(), refreshPublicData()]);
+      pushToast('success', {
+        ar: nextStatus === 'paused' ? 'تم إيقاف الإعلان مؤقتاً.' : 'تم إعادة نشر الإعلان للعملاء.',
+        en: nextStatus === 'paused' ? 'Listing paused.' : 'Listing reposted publicly.',
+      });
+    },
+    [allListings, refreshMerchantData, refreshPublicData, pushToast]
   );
 
   const deleteAdminRole = useCallback(
@@ -1107,9 +1157,9 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       }
       api
         .decideVerification(verif.id, decision, verif.version || 1, note.ar || note.en || '')
-        .then(() => {
-          refreshAdminData();
-          refreshPublicData();
+        .then(async () => {
+          await refreshPublicData();
+          await refreshAdminData();
           pushToast('success', { ar: 'تم تسجيل قرار التوثيق بنجاح.', en: 'Verification decision saved.' });
         })
         .catch((err: ApiError) => pushToast('error', { ar: err.message, en: err.message }));
@@ -1122,9 +1172,19 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
       const item = allListings.find((l) => l.id === listingId) as any;
       api
         .moderateListing(listingId, action, item?._version || 1, reason.ar || reason.en || 'Moderated')
-        .then(() => {
-          refreshAdminData();
-          refreshPublicData();
+        .then(async (res: any) => {
+          const updatedRaw = res?.data?.listing;
+          if (updatedRaw) {
+            const updatedMapped = mapListing(updatedRaw);
+            setListings((prev) => {
+              const exists = prev.some((l) => l.id === updatedMapped.id);
+              return exists
+                ? prev.map((l) => (l.id === updatedMapped.id ? updatedMapped : l))
+                : [updatedMapped, ...prev];
+            });
+          }
+          await refreshPublicData();
+          await refreshAdminData();
           pushToast('success', { ar: 'تم تنفيذ إجراء الإشراف.', en: 'Moderation action applied.' });
         })
         .catch((err: ApiError) => pushToast('error', { ar: err.message, en: err.message }));
@@ -1405,6 +1465,7 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         isLoadingLive,
         loginWithBackend,
         loginWithGoogle,
+        hydrateSession,
         logoutSession,
         updateMeProfile,
         refreshPublicData,
@@ -1430,6 +1491,7 @@ export function PrototypeProvider({ children }: { children: React.ReactNode }) {
         favoriteIds,
         toggleFavorite,
         archiveListing,
+        toggleListingStatus,
         deleteAdminRole,
         activeMerchantStoreId,
         setActiveMerchantStoreId,

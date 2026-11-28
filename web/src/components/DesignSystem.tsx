@@ -5,6 +5,7 @@ import {
   Clock,
   ImageOff,
   Info,
+  PauseCircle,
   RefreshCw,
   ShieldCheck,
   Smartphone,
@@ -338,6 +339,10 @@ export function PublicationStatusLabel({
     published: {
       text: 'text-emerald-800 bg-emerald-50 border-emerald-200',
       icon: <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />,
+    },
+    paused: {
+      text: 'text-slate-700 bg-slate-100 border-slate-300',
+      icon: <PauseCircle className="w-3.5 h-3.5 shrink-0" />,
     },
     processing: {
       text: 'text-blue-800 bg-blue-50 border-blue-200',

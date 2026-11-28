@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from core.bootstrap.views import BundleView, ConfigView, HealthView
-from core.media.local_views import local_private_download, local_upload
+from core.media.local_views import local_private_download, local_public_media, local_upload
 
 urlpatterns = [
     path('api/v1/config', ConfigView.as_view(), name='public-config'),
@@ -12,6 +12,7 @@ urlpatterns = [
     path('api/v1/', include('core.urls')),
     path('media-transfer/upload/<str:token>', local_upload, name='local-media-upload'),
     path('media-transfer/private/<str:token>', local_private_download, name='local-media-private'),
+    path('media-transfer/public/<path:key>', local_public_media, name='local-media-public'),
     path('admin/', admin.site.urls),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

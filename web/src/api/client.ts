@@ -498,12 +498,13 @@ export const api = {
   getHome: (city?: string) =>
     apiRequest('/api/v1/home', { query: city && city !== 'all' ? { city } : undefined }),
   getBrands: () => apiRequest<{ data: ApiBrand[] }>('/api/v1/brands', { query: { limit: 100, offset: 0 } }),
-  getPublicModels: (query?: { brand?: string; brand_id?: number; city?: string; q?: string; limit?: number }) =>
-    apiRequest('/api/v1/models', { query: { limit: 100, ...query } }),
+  getPublicModels: (query?: { brand?: string; brand_id?: number; city?: string; q?: string; limit?: number; offset?: number }) =>
+    apiRequest<{ data: ApiCatalogModel[] }>('/api/v1/models', { query: { limit: 100, ...query } }),
   searchListings: (query?: Record<string, string | number | undefined>) =>
     apiRequest('/api/v1/listings', { query: { limit: 100, ...query } }),
   getListing: (id: string | number) => apiRequest(`/api/v1/listings/${id}`),
-  getFeaturedStores: () => apiRequest('/api/v1/stores/featured', { query: { limit: 50, offset: 0 } }),
+  getFeaturedStores: (query?: { limit?: number; offset?: number }) =>
+    apiRequest('/api/v1/stores/featured', { query: { limit: 100, offset: 0, ...query } }),
   getStore: (id: string | number) => apiRequest(`/api/v1/stores/${id}`),
   getStoreListings: (id: string | number) => apiRequest(`/api/v1/stores/${id}/listings`, { query: { limit: 100 } }),
   getContactMethods: (listingId: string | number) =>
@@ -592,6 +593,14 @@ export const api = {
     }),
   editListing: (id: string | number, payload: Record<string, unknown>, idempotencyKey?: string) =>
     apiRequest(`/api/v1/stores/me/listings/${id}`, { method: 'PATCH', body: payload, idempotent: true, idempotencyKey }),
+  updateListingStatus: (
+    id: string | number,
+    payload: { status: 'paused' | 'published'; version?: number }
+  ) =>
+    apiRequest<{ data: any }>(`/api/v1/stores/me/listings/${id}/status`, {
+      method: 'PATCH',
+      body: payload,
+    }),
   duplicateListing: (id: string | number) =>
     apiRequest<{ data: any }>(`/api/v1/stores/me/listings/${id}/duplicate`, { method: 'POST' }),
   archiveListing: (id: string | number) =>

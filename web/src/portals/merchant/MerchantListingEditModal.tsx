@@ -66,6 +66,7 @@ export function MerchantListingEditModal({
     setSaving(true);
     try {
       const payload: Record<string, unknown> = {
+        version: (listing as any)._version || listing.version || 1,
         price: numPrice,
         usd_price: usdPrice.trim() ? Number(usdPrice) : null,
         storage_gb: Number(storageGb) || listing.storageGb,
